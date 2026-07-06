@@ -1,0 +1,59 @@
+{% extends "operations/base.html" %}
+{% block title %}Business Settings — Dad4dogs{% endblock %}
+{% block content %}
+<div class="card">
+    <h2>Business Settings</h2>
+    <p class="muted">Baseline details for Dad4dogs — used across the app, booking calendar invites, and client communications.</p>
+</div>
+
+<form method="post">
+    {% csrf_token %}
+    <div class="card">
+        <h2>Identity</h2>
+        {% if form.non_field_errors %}
+        <div class="message message-error">
+            {% for error in form.non_field_errors %}{{ error }}{% endfor %}
+        </div>
+        {% endif %}
+
+        <label for="{{ form.business_name.id_for_label }}">Business Name</label>
+        <p class="muted" style="margin-bottom:0.5rem">Shown as the calendar invite organizer (e.g. David Lundquist (Dad 4 Dogs)).</p>
+        {{ form.business_name }}
+        {% if form.business_name.errors %}<p class="muted" style="color:var(--danger)">{{ form.business_name.errors.0 }}</p>{% endif %}
+
+        <label for="{{ form.business_email.id_for_label }}">Business Email</label>
+        <p class="muted" style="margin-bottom:0.5rem">Organizer on calendar invites — should match the Gmail account you send from.</p>
+        {{ form.business_email }}
+        {% if form.business_email.errors %}<p class="muted" style="color:var(--danger)">{{ form.business_email.errors.0 }}</p>{% endif %}
+    </div>
+
+    <div class="card">
+        <h2>Location &amp; Hours</h2>
+
+        <label for="{{ form.address.id_for_label }}">Address</label>
+        <p class="muted" style="margin-bottom:0.5rem">Used as the event location on client calendar invites.</p>
+        {{ form.address }}
+
+        <label for="{{ form.hours_of_operation.id_for_label }}">Hours of Operation</label>
+        {{ form.hours_of_operation }}
+    </div>
+
+    <div class="card">
+        <h2>Phone Numbers</h2>
+        <p class="muted" style="margin-bottom:0.75rem">Main line, secondary line, and emergency contact for clients.</p>
+
+        <label for="{{ form.main_phone.id_for_label }}">Main Phone</label>
+        {{ form.main_phone }}
+        {% if form.main_phone.errors %}<p class="muted" style="color:var(--danger)">{{ form.main_phone.errors.0 }}</p>{% endif %}
+
+        <label for="{{ form.secondary_phone.id_for_label }}">Secondary Phone</label>
+        {{ form.secondary_phone }}
+
+        <label for="{{ form.emergency_phone.id_for_label }}">Emergency Contact Number</label>
+        {{ form.emergency_phone }}
+        {% if form.emergency_phone.errors %}<p class="muted" style="color:var(--danger)">{{ form.emergency_phone.errors.0 }}</p>{% endif %}
+
+        <button type="submit" class="btn btn-primary">Save Settings</button>
+    </div>
+</form>
+{% endblock %}

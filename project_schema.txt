@@ -1,0 +1,27 @@
+﻿Dad4dogs Internal Web App — project tree (source files; omit __pycache__)
+Regenerate: tree /F /A > project_schema.txt
+
+Dad4dogs Internal Web App/
+├── config/
+├── operations/
+│   ├── models/          customers.py, scheduling.py, billing.py
+│   ├── forms/           customers.py, scheduling.py
+│   ├── views/           customers.py, scheduling.py, billing.py
+│   ├── services/
+│   ├── templates/operations/
+│   ├── management/commands/
+│   ├── migrations/
+│   ├── pricing.py, capacity.py, middleware.py, urls.py, tests.py
+├── LLM/
+│   ├── PROJECT.md       ← start here
+│   ├── customers.md
+│   ├── scheduling.md
+│   ├── billing.md
+│   └── platform.md
+├── O-Auth Key/
+├── certs/
+├── scripts/
+├── Data samples/
+├── oauth_setup.py
+├── manage.py
+└── requirements.txt

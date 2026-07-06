@@ -1,0 +1,175 @@
+{% extends "operations/base.html" %}
+{% block title %}Import Preview — Dad4dogs{% endblock %}
+{% block content %}
+<div class="card">
+    <h2>Import Preview</h2>
+    <p class="muted">Select current clients to add. Nothing is saved until you tap Add Selected.</p>
+    <div class="stat-grid" style="margin-top:0.75rem">
+        <div class="stat">
+            <div class="number">{{ analysis.total_rows }}</div>
+            <div class="label">In CSV</div>
+        </div>
+        <div class="stat">
+            <div class="number">{{ analysis.new_count }}</div>
+            <div class="label">New</div>
+        </div>
+        <div class="stat">
+            <div class="number" style="color:{% if analysis.name_issues_count %}var(--danger){% else %}var(--brand){% endif %}">{{ analysis.name_issues_count }}</div>
+            <div class="label">Name Issues</div>
+        </div>
+    </div>
+</div>
+
+{% if analysis.name_review_contacts %}
+<div class="card" style="border-left:4px solid var(--danger)">
+    <h2>Names to Verify</h2>
+    <p class="muted">Ask these people for their real full name and confirm dog vs owner when you speak to them.</p>
+    {% for contact in analysis.name_review_contacts %}
+    <div class="name-flag" style="margin-bottom:0.75rem;padding:0.75rem;background:#fff5f5;border-radius:8px">
+        <strong>{{ contact.display_name }}</strong>
+        {% if contact.phones %}<span class="muted"> · {{ contact.phones.0 }}</span>{% endif %}
+        {% if contact.emails %}<span class="muted"> · {{ contact.emails.0 }}</span>{% endif %}
+        <ul style="margin:0.5rem 0 0 1rem;font-size:0.85rem;color:#721c24">
+            {% for issue in contact.name_issues %}
+            <li>{{ issue }}</li>
+            {% endfor %}
+        </ul>
+        <p class="muted" style="margin-top:0.35rem">Suggested: {{ contact.suggested_owner_name }} / dog: {{ contact.suggested_dog_name }}</p>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+<form method="post" action="{% url 'operations:contact_import_selected' %}">
+    {% csrf_token %}
+    <div class="card">
+        <h2>Select Contacts to Add</h2>
+        <p class="muted">Check only current clients. Edit names below before importing if needed.</p>
+
+        {% for contact in analysis.selectable_contacts %}
+        <div class="import-row {% if contact.needs_name_review %}import-row-flagged{% endif %} {% if not contact.can_import %}import-row-disabled{% endif %}"
+             style="margin-bottom:1rem;padding:0.75rem;border:1px solid #eee;border-radius:8px">
+            <label style="display:flex;align-items:flex-start;gap:0.75rem;font-weight:normal;cursor:pointer">
+                <input type="checkbox" name="selected_rows" value="{{ contact.row_number }}"
+                       {% if not contact.can_import %}disabled{% endif %}
+                       style="width:auto;margin:0.35rem 0 0">
+                <div style="flex:1">
+                    <div>
+                        <strong {% if contact.needs_name_review %}style="color:var(--danger)"{% endif %}>
+                            {{ contact.display_name }}
+                        </strong>
+                        {% if contact.needs_name_review %}
+                        <span class="badge badge-danger">VERIFY NAME</span>
+                        {% endif %}
+                        {% if contact.import_status == 'in_db' %}
+                        <span class="badge badge-warn">IN SYSTEM</span>
+                        {% elif contact.import_status == 'csv_duplicate' %}
+                        <span class="badge badge-warn">CSV DUPLICATE</span>
+                        {% elif contact.import_status == 'customer_exists' %}
+                        <span class="badge badge-warn">CUSTOMER ON FILE</span>
+                        {% elif contact.import_status == 'new' %}
+                        <span class="badge badge-ok">NEW</span>
+                        {% endif %}
+                        {% if contact.import_mode == 'customer_only' %}
+                        <span class="badge badge-ok">CUSTOMER ONLY</span>
+                        {% endif %}
+                    </div>
+                    {% if contact.emails %}<span class="muted">{{ contact.emails.0 }}</span>{% endif %}
+                    {% if contact.phones %}<span class="muted"> · {{ contact.phones.0 }}</span>{% endif %}
+                    {% if contact.notes %}
+                    <p class="muted" style="margin-top:0.25rem">{{ contact.notes|truncatechars:100 }}</p>
+                    {% endif %}
+                </div>
+            </label>
+
+            {% if contact.can_import %}
+            <div style="margin-top:0.75rem;padding-top:0.75rem;border-top:1px dashed #eee">
+                <label for="owner_name_{{ contact.row_number }}">Owner Name</label>
+                <input type="text" name="owner_name_{{ contact.row_number }}" id="owner_name_{{ contact.row_number }}"
+                       value="{{ contact.suggested_owner_name }}"
+                       {% if contact.needs_name_review %}style="border-color:var(--danger)"{% endif %}>
+
+                {% if contact.import_mode == 'customer_and_dog' or contact.suggested_dog_name %}
+                <label for="dog_name_{{ contact.row_number }}">Dog Name (optional — leave blank for customer only)</label>
+                <input type="text" name="dog_name_{{ contact.row_number }}" id="dog_name_{{ contact.row_number }}"
+                       value="{{ contact.suggested_dog_name }}"
+                       placeholder="Add later if unknown">
+                {% else %}
+                <p class="muted">No dog on file — import as customer only. Add dogs from their profile later.</p>
+                {% endif %}
+
+                <label for="owner_phone_{{ contact.row_number }}">Phone</label>
+                <input type="text" name="owner_phone_{{ contact.row_number }}" id="owner_phone_{{ contact.row_number }}"
+                       value="{{ contact.suggested_phone }}">
+            </div>
+            {% endif %}
+        </div>
+        {% endfor %}
+
+        <button type="submit" class="btn btn-primary">Add Selected to Dad4dogs</button>
+    </div>
+</form>
+
+{% if analysis.db_email_matches %}
+<div class="card">
+    <h2>Email Matches in Database</h2>
+    <p class="muted">Already in your system — not selectable for import.</p>
+    {% for group in analysis.db_email_matches %}
+    <div style="margin-bottom:1rem;padding-bottom:1rem;border-bottom:1px solid #eee">
+        <span class="badge badge-warn">EMAIL</span>
+        <strong style="margin-left:0.5rem">{{ group.match_value }}</strong>
+        {% for contact in group.contacts %}
+        <p style="margin-top:0.5rem">CSV row {{ contact.row_number }}: <strong>{{ contact.display_name }}</strong></p>
+        {% endfor %}
+        {% for client in group.existing_clients %}
+        <p class="muted">→ DB: {{ client.dog_name }} ({{ client.owner_name }})</p>
+        {% endfor %}
+        {% for owner in group.existing_owners %}
+        <p class="muted">→ Customer on file: {{ owner.owner_name }} (no dogs yet)</p>
+        {% endfor %}
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+{% if analysis.db_phone_matches %}
+<div class="card">
+    <h2>Phone Matches in Database</h2>
+    {% for group in analysis.db_phone_matches %}
+    <div style="margin-bottom:1rem;padding-bottom:1rem;border-bottom:1px solid #eee">
+        <span class="badge badge-warn">PHONE</span>
+        <strong style="margin-left:0.5rem">{{ group.match_value }}</strong>
+        {% for contact in group.contacts %}
+        <p style="margin-top:0.5rem">Row {{ contact.row_number }}: {{ contact.display_name }}</p>
+        {% endfor %}
+        {% for client in group.existing_clients %}
+        <p class="muted">→ DB: {{ client.dog_name }} ({{ client.owner_name }})</p>
+        {% endfor %}
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+{% if analysis.csv_email_duplicates or analysis.csv_phone_duplicates %}
+<div class="card">
+    <h2>Duplicates Within CSV</h2>
+    <p class="muted">Review carefully — you can still import one, but pick the correct row.</p>
+    {% for group in analysis.csv_email_duplicates %}
+    <div style="margin-bottom:0.75rem">
+        <span class="badge badge-danger">EMAIL</span> {{ group.match_value }}
+        {% for contact in group.contacts %}<span class="muted"> · row {{ contact.row_number }}</span>{% endfor %}
+    </div>
+    {% endfor %}
+    {% for group in analysis.csv_phone_duplicates %}
+    <div style="margin-bottom:0.75rem">
+        <span class="badge badge-danger">PHONE</span> {{ group.match_value }}
+        {% for contact in group.contacts %}<span class="muted"> · row {{ contact.row_number }} ({{ contact.display_name }})</span>{% endfor %}
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+<div class="card">
+    <a href="{% url 'operations:contact_sync' %}" class="btn btn-outline">Upload Another CSV</a>
+</div>
+{% endblock %}

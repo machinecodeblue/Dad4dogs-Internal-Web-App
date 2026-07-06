@@ -1,0 +1,24 @@
+{% extends "operations/base.html" %}
+{% block title %}Statement — {{ statement.client.dog_name }}{% endblock %}
+{% block content %}
+<div class="card">
+    <h2>Statement of Account</h2>
+    <p><strong>{{ statement.client.owner_name }}</strong> — {{ statement.client.dog_name }}</p>
+    <p class="muted">Week of {{ statement.week_start }} to {{ statement.week_end }}</p>
+    <p style="font-size:1.5rem;font-weight:700;color:var(--brand)">${{ statement.total_amount }} CAD</p>
+</div>
+
+<div class="card">
+    <h2>Line Items</h2>
+    {% for item in statement.line_items %}
+    <div style="margin-bottom:0.5rem">
+        <strong>{{ item.date }}</strong> — ${{ item.fee }} CAD
+    </div>
+    {% endfor %}
+</div>
+
+<div class="card">
+    <h2>Email Preview</h2>
+    <pre style="white-space:pre-wrap;font-size:0.85rem;background:#f1f3f5;padding:1rem;border-radius:8px">{{ email_body }}</pre>
+</div>
+{% endblock %}

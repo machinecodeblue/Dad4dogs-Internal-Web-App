@@ -1,0 +1,51 @@
+from django.urls import path
+
+from . import views
+
+app_name = 'operations'
+
+urlpatterns = [
+    path('', views.dashboard, name='dashboard'),
+    path('checkin/', views.mobile_checkin, name='mobile_checkin'),
+    path('visits/<int:pk>/check-in/', views.visit_check_in, name='visit_check_in'),
+    path('visits/<int:pk>/check-out/', views.visit_check_out, name='visit_check_out'),
+    path('visits/<int:pk>/timeline/', views.visit_timeline, name='visit_timeline'),
+    path(
+        'visits/<int:pk>/timeline/<int:event_pk>/forward/',
+        views.visit_timeline_forward,
+        name='visit_timeline_forward',
+    ),
+    path('clients/', views.client_list, name='client_list'),
+    path('clients/add/', views.client_create, name='client_create'),
+    path('clients/<int:pk>/', views.client_detail, name='client_detail'),
+    path('clients/<int:pk>/edit/', views.client_edit, name='client_edit'),
+    path('customers/<int:pk>/edit/', views.customer_edit, name='customer_edit'),
+    path('clients/<int:pk>/add-dog/', views.client_add_dog, name='client_add_dog'),
+    path('clients/<int:pk>/vcard/', views.client_vcard, name='client_vcard'),
+    path('clients/<int:pk>/advance/', views.advance_pipeline, name='advance_pipeline'),
+    path('clients/<int:pk>/duplicate/', views.duplicate_visit, name='duplicate_visit'),
+    path('visits/parse-datetime/', views.parse_datetime_field, name='parse_datetime'),
+    path('dogs/<int:pk>/visits/add/', views.visit_create, name='visit_create'),
+    path('visits/<int:pk>/edit/', views.visit_edit, name='visit_edit'),
+    path('visits/<int:pk>/delete/', views.visit_delete, name='visit_delete'),
+    path('customers/<int:pk>/', views.customer_detail, name='customer_detail'),
+    path('customers/<int:pk>/add-dog/', views.customer_add_dog, name='customer_add_dog'),
+    path('customers/<int:pk>/coi/', views.update_coi, name='update_coi'),
+    path('dogs/<int:pk>/', views.dog_detail, name='dog_detail'),
+    path('dogs/<int:pk>/edit/', views.dog_edit, name='dog_edit'),
+    path('dogs/<int:pk>/delete/', views.dog_delete, name='dog_delete'),
+    path('dogs/<int:pk>/vaccinations/', views.dog_vaccinations, name='dog_vaccinations'),
+    path('dogs/<int:pk>/vaccination/add/', views.add_vaccination, name='add_vaccination'),
+    path('dogs/<int:pk>/vaccination/<int:record_pk>/validate/', views.validate_vaccination, name='validate_vaccination'),
+    path('contacts/sync/', views.contact_sync, name='contact_sync'),
+    path('contacts/import/', views.contact_import_preview, name='contact_import_preview'),
+    path('contacts/import/add/', views.contact_import_selected, name='contact_import_selected'),
+    path('calendar/pending/', views.pending_events, name='pending_events'),
+    path('calendar/pending/<int:pk>/approve/', views.approve_pending_event, name='approve_pending_event'),
+    path('calendar/pending/<int:pk>/reject/', views.reject_pending_event, name='reject_pending_event'),
+    path('statements/', views.statements_list, name='statements'),
+    path('statements/<int:pk>/', views.statement_detail, name='statement_detail'),
+    path('settings/', views.business_settings, name='business_settings'),
+
+    path('ical/', views.ical_feed, name='ical_feed'),
+]

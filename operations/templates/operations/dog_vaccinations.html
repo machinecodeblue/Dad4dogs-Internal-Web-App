@@ -1,0 +1,69 @@
+{% extends "operations/base.html" %}
+{% block title %}{{ dog.dog_name }} Vaccinations — Dad4dogs{% endblock %}
+{% block content %}
+<div class="card">
+    <p class="muted">
+        <a href="{% url 'operations:dog_detail' dog.pk %}" style="color:var(--brand)">← {{ dog.dog_name }}</a>
+        · <a href="{% url 'operations:customer_detail' customer_owner.pk %}" style="color:var(--brand)">{{ customer_owner.owner_name }}</a>
+    </p>
+    <h2>{{ dog.dog_name }} — Vaccination Records</h2>
+    <p class="muted">Vaccination papers belong to this dog only. Expiry date is required.</p>
+    {% if dog.has_current_vaccination %}
+    <span class="badge badge-ok">CURRENT VALIDATED VAX</span>
+    {% elif has_expired_validated %}
+    <span class="badge badge-danger">VAX EXPIRED</span>
+    {% else %}
+    <span class="badge badge-warn">NO VALIDATED VAX</span>
+    {% endif %}
+</div>
+
+{% for record in vaccinations %}
+<div class="card" style="border-left:4px solid {% if record.is_expired %}var(--danger){% elif record.validated %}var(--brand-light){% else %}var(--warn){% endif %}">
+    <strong>Expires {{ record.expires_at|date:"M j, Y" }}</strong>
+    <span class="muted"> · received {{ record.received_at|date:"M j, Y" }}</span>
+    {% if record.is_expired %}
+    <span class="badge badge-danger">EXPIRED</span>
+    {% elif record.validated %}
+    <span class="badge badge-ok">VALIDATED</span>
+    {% elif record.papers_received %}
+    <span class="badge badge-warn">RECEIVED — NOT VALIDATED</span>
+    {% endif %}
+    {% if record.vet_clinic %}<p class="muted">{{ record.vet_clinic }}</p>{% endif %}
+    {% if record.vaccination_details %}<p style="font-size:0.9rem">{{ record.vaccination_details }}</p>{% endif %}
+    {% if record.notes %}<p class="muted">{{ record.notes }}</p>{% endif %}
+    {% if record.papers_received and not record.validated %}
+    <form method="post" action="{% url 'operations:validate_vaccination' dog.pk record.pk %}" style="margin-top:0.5rem">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-success btn-sm">Validate Papers</button>
+    </form>
+    {% endif %}
+</div>
+{% empty %}
+<div class="card">
+    <p class="muted">No vaccination records for {{ dog.dog_name }} yet.</p>
+</div>
+{% endfor %}
+
+<div class="card">
+    <h2>Add Vaccination Record</h2>
+    <form method="post" action="{% url 'operations:add_vaccination' dog.pk %}">
+        {% csrf_token %}
+        {{ vaccination_form.client }}
+        <label for="{{ vaccination_form.received_at.id_for_label }}">Date Papers Received</label>
+        {{ vaccination_form.received_at }}
+        <label for="{{ vaccination_form.expires_at.id_for_label }}">Vaccination Expiry Date</label>
+        {{ vaccination_form.expires_at }}
+        <label for="{{ vaccination_form.vet_clinic.id_for_label }}">Vet Clinic (optional)</label>
+        {{ vaccination_form.vet_clinic }}
+        <label for="{{ vaccination_form.vaccination_details.id_for_label }}">Vaccinations</label>
+        {{ vaccination_form.vaccination_details }}
+        <label for="{{ vaccination_form.notes.id_for_label }}">Notes (optional)</label>
+        {{ vaccination_form.notes }}
+        <label style="font-weight:normal;display:flex;align-items:center;gap:0.5rem;margin-bottom:0.75rem">
+            {{ vaccination_form.papers_received }}
+            Papers received from owner
+        </label>
+        <button type="submit" class="btn btn-primary">Add Vaccination Record</button>
+    </form>
+</div>
+{% endblock %}

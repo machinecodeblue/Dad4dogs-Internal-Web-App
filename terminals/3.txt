@@ -1,0 +1,306 @@
+---
+pid: 17564
+cwd: "C:\Users\David\Python project\Dad4dogs Internal Web App"
+command: "Set-Location 'C:\\Users\\David\\Python project\\Dad4dogs Internal Web App'; python manage.py runserver_https 9000"
+started_at: 2026-07-05T20:02:02.348Z
+running_for_ms: 63194997 
+---
+Starting HTTPS development server at https://127.0.0.1:9000/
+WARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.Quit the server with CTRL-BREAK.
+
+ * Running on https://127.0.0.1:9000
+Press CTRL+C to quit
+ * Restarting with stat
+Starting HTTPS development server at https://127.0.0.1:9000/
+ * Debugger is active!
+ * Debugger PIN: 559-396-595
+Quit the server with CTRL-BREAK.
+ * Detected change in 'C:\\Users\\David\\Python project\\Dad4dogs Internal Web App\\config\\settings.py', reloading
+ * Restarting with stat
+Starting HTTPS development server at https://127.0.0.1:9000/
+ * Debugger is active!
+Quit the server with CTRL-BREAK.
+ * Debugger PIN: 559-396-595
+127.0.0.1 - - [05/Jul/2026 16:02:46] "GET / HTTP/1.1" 302 -
+127.0.0.1 - - [05/Jul/2026 16:04:26] "GET / HTTP/1.1" 200 -
+127.0.0.1 - - [05/Jul/2026 16:07:07] "GET / HTTP/1.1" 302 -
+127.0.0.1 - - [05/Jul/2026 16:07:07] "GET /admin/login/?next=/ HTTP/1.1" 200 -
+Not Found: /static/admin/css/login.css
+127.0.0.1 - - [05/Jul/2026 16:07:08] "GET /static/admin/css/login.css HTTP/1.1" 404 -
+Not Found: /static/admin/css/responsive.css
+127.0.0.1 - - [05/Jul/2026 16:07:08] "GET /static/admin/css/responsive.css HTTP/1.1" 404 -
+Not Found: /static/admin/css/base.css
+127.0.0.1 - - [05/Jul/2026 16:07:08] "GET /static/admin/css/base.css HTTP/1.1" 404 -
+Not Found: /static/admin/js/theme.js
+127.0.0.1 - - [05/Jul/2026 16:07:08] "GET /static/admin/js/theme.js HTTP/1.1" 404 -
+Not Found: /static/admin/css/dark_mode.css
+127.0.0.1 - - [05/Jul/2026 16:07:08] "GET /static/admin/css/dark_mode.css HTTP/1.1" 404 -
+Not Found: /static/admin/css/nav_sidebar.css
+127.0.0.1 - - [05/Jul/2026 16:07:08] "GET /static/admin/css/nav_sidebar.css HTTP/1.1" 404 -
+Not Found: /static/admin/css/login.css
+127.0.0.1 - - [05/Jul/2026 16:07:08] "GET /static/admin/css/login.css HTTP/1.1" 404 -
+Not Found: /static/admin/js/nav_sidebar.js
+127.0.0.1 - - [05/Jul/2026 16:07:08] "GET /static/admin/js/nav_sidebar.js HTTP/1.1" 404 -
+Not Found: /static/admin/css/responsive.css
+127.0.0.1 - - [05/Jul/2026 16:07:08] "GET /static/admin/css/responsive.css HTTP/1.1" 404 -
+Not Found: /favicon.ico
+127.0.0.1 - - [05/Jul/2026 16:07:08] "GET /favicon.ico HTTP/1.1" 404 -
+Not Found: /static/admin/css/login.css
+127.0.0.1 - - [05/Jul/2026 16:07:19] "GET /static/admin/css/login.css HTTP/1.1" 404 -
+Not Found: /static/admin/css/nav_sidebar.css
+127.0.0.1 - - [05/Jul/2026 16:07:19] "Not Found: /static/admin/css/base.css
+GET /static/admin/css/nav_sidebar.css HTTP/1.1" 404 -
+Not Found: /static/admin/css/responsive.css
+127.0.0.1 - - [05/Jul/2026 16:07:19] "GET /static/admin/css/responsive.css HTTP/1.1" 404 -
+127.0.0.1 - - [05/Jul/2026 16:07:19] "GET /static/admin/css/base.css HTTP/1.1" 404 -
+Not Found: /static/admin/css/dark_mode.css
+127.0.0.1 - - [05/Jul/2026 16:07:19] "GET /static/admin/css/dark_mode.css HTTP/1.1" 404 -
+ * Detected change in 'C:\\Users\\David\\Python project\\Dad4dogs Internal Web App\\config\\settings.py', reloading
+ * Restarting with stat
+Starting HTTPS development server at https://127.0.0.1:9000/
+ * Debugger is active!
+Quit the server with CTRL-BREAK.
+ * Debugger PIN: 585-699-176
+127.0.0.1 - - [05/Jul/2026 16:08:34] "GET /static/admin/css/login.css HTTP/1.1" 200 -
+127.0.0.1 - - [05/Jul/2026 16:08:37] "GET /static/admin/js/theme.js HTTP/1.1" 200 -
+127.0.0.1 - - [05/Jul/2026 16:08:51] "GET / HTTP/1.1" 302 -
+127.0.0.1 - - [05/Jul/2026 16:08:51] "GET /admin/login/?next=/ HTTP/1.1" 200 -
+127.0.0.1 - - [05/Jul/2026 16:08:51] "GET /static/admin/css/base.css HTTP/1.1" 200 -
+127.0.0.1 - - [05/Jul/2026 16:08:51] "GET /static/admin/css/login.css HTTP/1.1" 200 -
+127.0.0.1 - - [05/Jul/2026 16:08:51] "GET /static/admin/css/nav_sidebar.css HTTP/1.1" 200 -
+127.0.0.1 - - [05/Jul/2026 16:08:51] "GET /static/admin/css/responsive.css HTTP/1.1" 200 -
+127.0.0.1 - - [05/Jul/2026 16:08:51] "GET /static/admin/js/theme.js HTTP/1.1" 200 -
+127.0.0.1 - - [05/Jul/2026 16:08:51] "GET /static/admin/css/dark_mode.css HTTP/1.1" 200 -
+127.0.0.1 - - [05/Jul/2026 16:08:52] "GET /static/admin/js/nav_sidebar.js HTTP/1.1" 200 -
+127.0.0.1 - - [05/Jul/2026 16:11:28] "GET /admin/login/?next=/ HTTP/1.1" 200 -
+127.0.0.1 - - [05/Jul/2026 16:11:33] "GET /admin/login/?next=/ HTTP/1.1" 200 -
+127.0.0.1 - - [05/Jul/2026 16:11:33] "GET /static/admin/css/base.css HTTP/1.1" 200 -
+127.0.0.1 - - [05/Jul/2026 16:11:33] "GET /static/admin/js/theme.js HTTP/1.1" 200 -
+127.0.0.1 - - [05/Jul/2026 16:11:33] "GET /static/admin/css/nav_sidebar.css HTTP/1.1" 200 -
+127.0.0.1 - - [05/Jul/2026 16:11:33] "GET /static/admin/css/login.css HTTP/1.1" 200 -
+127.0.0.1 - - [05/Jul/2026 16:11:33] "GET /static/admin/css/dark_mode.css HTTP/1.1" 200 -
+127.0.0.1 - - [05/Jul/2026 16:11:33] "GET /static/admin/css/responsive.css HTTP/1.1" 200 -
+127.0.0.1 - - [05/Jul/2026 16:11:34] "GET /static/admin/js/nav_sidebar.js HTTP/1.1" 200 -
+Not Found: /favicon.ico
+127.0.0.1 - - [05/Jul/2026 16:11:34] "GET /favicon.ico HTTP/1.1" 404 -
+127.0.0.1 - - [05/Jul/2026 16:11:45] "GET /admin/login/?next=/ HTTP/1.1" 200 -
+127.0.0.1 - - [05/Jul/2026 16:11:46] "GET /static/admin/css/base.css HTTP/1.1" 200 -
+127.0.0.1 - - [05/Jul/2026 16:11:46] "GET /static/admin/css/nav_sidebar.css HTTP/1.1" 200 -
+127.0.0.1 - - [05/Jul/2026 16:11:46] "GET /static/admin/js/theme.js HTTP/1.1" 200 -
+127.0.0.1 - - [05/Jul/2026 16:11:46] "GET /static/admin/css/login.css HTTP/1.1" 200 -
+127.0.0.1 - - [05/Jul/2026 16:11:46] "GET /static/admin/css/responsive.css HTTP/1.1" 200 -
+127.0.0.1 - - [05/Jul/2026 16:11:46] "GET /static/admin/css/dark_mode.css HTTP/1.1" 200 -
+127.0.0.1 - - [05/Jul/2026 16:11:46] "GET /static/admin/js/nav_sidebar.js HTTP/1.1" 200 -
+Not Found: /favicon.ico
+127.0.0.1 - - [05/Jul/2026 16:11:46] "GET /favicon.ico HTTP/1.1" 404 -
+127.0.0.1 - - [05/Jul/2026 16:12:12] "POST /admin/login/?next=/ HTTP/1.1" 200 -
+127.0.0.1 - - [05/Jul/2026 16:12:26] "POST /admin/login/?next=/ HTTP/1.1" 200 -
+127.0.0.1 - - [05/Jul/2026 16:12:58] "POST /admin/login/?next=/ HTTP/1.1" 200 -
+127.0.0.1 - - [05/Jul/2026 16:13:18] "POST /admin/login/?next=/ HTTP/1.1" 200 -
+127.0.0.1 - - [05/Jul/2026 16:13:34] "POST /admin/login/?next=/ HTTP/1.1" 200 -
+127.0.0.1 - - [05/Jul/2026 16:14:20] "POST /admin/login/?next=/ HTTP/1.1" 200 -
+127.0.0.1 - - [05/Jul/2026 16:15:44] "POST /admin/login/?next=/ HTTP/1.1" 200 -
+127.0.0.1 - - [05/Jul/2026 16:16:00] "POST /admin/login/?next=/ HTTP/1.1" 302 -
+127.0.0.1 - - [05/Jul/2026 16:16:00] "GET / HTTP/1.1" 200 -
+127.0.0.1 - - [05/Jul/2026 16:16:37] "POST /admin/login/?next=/ HTTP/1.1" 302 -
+127.0.0.1 - - [05/Jul/2026 16:16:37] "GET / HTTP/1.1" 200 -
+127.0.0.1 - - [05/Jul/2026 16:16:49] "GET /clients/ HTTP/1.1" 200 -
+127.0.0.1 - - [05/Jul/2026 16:16:59] "GET /dogs/4/ HTTP/1.1" 200 -
+127.0.0.1 - - [05/Jul/2026 16:17:10] "POST /visits/11/delete/ HTTP/1.1" 302 -
+127.0.0.1 - - [05/Jul/2026 16:17:11] "GET /dogs/4/ HTTP/1.1" 200 -
+127.0.0.1 - - [05/Jul/2026 16:17:12] "POST /visits/29/delete/ HTTP/1.1" 302 -
+127.0.0.1 - - [05/Jul/2026 16:17:13] "GET /dogs/4/ HTTP/1.1" 200 -
+127.0.0.1 - - [05/Jul/2026 16:17:14] "POST /visits/30/delete/ HTTP/1.1" 302 -
+127.0.0.1 - - [05/Jul/2026 16:17:14] "GET /dogs/4/ HTTP/1.1" 200 -
+127.0.0.1 - - [05/Jul/2026 16:17:15] "POST /visits/27/delete/ HTTP/1.1" 302 -
+127.0.0.1 - - [05/Jul/2026 16:17:15] "GET /dogs/4/ HTTP/1.1" 200 -
+127.0.0.1 - - [05/Jul/2026 16:17:16] "POST /visits/26/delete/ HTTP/1.1" 302 -
+127.0.0.1 - - [05/Jul/2026 16:17:16] "GET /dogs/4/ HTTP/1.1" 200 -
+127.0.0.1 - - [05/Jul/2026 16:17:17] "POST /visits/25/delete/ HTTP/1.1" 302 -
+127.0.0.1 - - [05/Jul/2026 16:17:17] "GET /dogs/4/ HTTP/1.1" 200 -
+127.0.0.1 - - [05/Jul/2026 16:17:18] "POST /visits/24/delete/ HTTP/1.1" 302 -
+127.0.0.1 - - [05/Jul/2026 16:17:18] "GET /dogs/4/ HTTP/1.1" 200 -
+127.0.0.1 - - [05/Jul/2026 16:17:19] "POST /visits/23/delete/ HTTP/1.1" 302 -
+127.0.0.1 - - [05/Jul/2026 16:17:19] "GET /dogs/4/ HTTP/1.1" 200 -
+127.0.0.1 - - [05/Jul/2026 16:17:21] "POST /visits/22/delete/ HTTP/1.1" 302 -
+127.0.0.1 - - [05/Jul/2026 16:17:21] "GET /dogs/4/ HTTP/1.1" 200 -
+127.0.0.1 - - [05/Jul/2026 16:17:23] "POST /visits/21/delete/ HTTP/1.1" 302 -
+127.0.0.1 - - [05/Jul/2026 16:17:23] "GET /dogs/4/ HTTP/1.1" 200 -
+127.0.0.1 - - [05/Jul/2026 16:17:25] "POST /visits/20/delete/ HTTP/1.1" 302 -
+127.0.0.1 - - [05/Jul/2026 16:17:25] "GET /dogs/4/ HTTP/1.1" 200 -
+127.0.0.1 - - [05/Jul/2026 16:17:26] "POST /visits/19/delete/ HTTP/1.1" 302 -
+127.0.0.1 - - [05/Jul/2026 16:17:26] "GET /dogs/4/ HTTP/1.1" 200 -
+127.0.0.1 - - [05/Jul/2026 16:17:27] "POST /visits/18/delete/ HTTP/1.1" 302 -
+127.0.0.1 - - [05/Jul/2026 16:17:28] "GET /dogs/4/ HTTP/1.1" 200 -
+127.0.0.1 - - [05/Jul/2026 16:17:29] "POST /visits/17/delete/ HTTP/1.1" 302 -
+127.0.0.1 - - [05/Jul/2026 16:17:29] "GET /dogs/4/ HTTP/1.1" 200 -
+127.0.0.1 - - [05/Jul/2026 16:17:30] "POST /visits/16/delete/ HTTP/1.1" 302 -
+127.0.0.1 - - [05/Jul/2026 16:17:30] "GET /dogs/4/ HTTP/1.1" 200 -
+127.0.0.1 - - [05/Jul/2026 16:17:31] "POST /visits/15/delete/ HTTP/1.1" 302 -
+127.0.0.1 - - [05/Jul/2026 16:17:31] "GET /dogs/4/ HTTP/1.1" 200 -
+127.0.0.1 - - [05/Jul/2026 16:17:32] "POST /visits/14/delete/ HTTP/1.1" 302 -
+127.0.0.1 - - [05/Jul/2026 16:17:32] "GET /dogs/4/ HTTP/1.1" 200 -
+127.0.0.1 - - [05/Jul/2026 16:17:33] "POST /visits/13/delete/ HTTP/1.1" 302 -
+127.0.0.1 - - [05/Jul/2026 16:17:33] "GET /dogs/4/ HTTP/1.1" 200 -
+127.0.0.1 - - [05/Jul/2026 16:17:33] "POST /visits/12/delete/ HTTP/1.1" 302 -
+127.0.0.1 - - [05/Jul/2026 16:17:34] "GET /dogs/4/ HTTP/1.1" 200 -
+127.0.0.1 - - [05/Jul/2026 16:17:45] "GET /statements/ HTTP/1.1" 200 -
+127.0.0.1 - - [05/Jul/2026 16:17:53] "GET /statements/ HTTP/1.1" 200 -
+127.0.0.1 - - [05/Jul/2026 16:17:54] "GET /clients/ HTTP/1.1" 200 -
+127.0.0.1 - - [05/Jul/2026 16:17:55] "GET /checkin/ HTTP/1.1" 200 -
+127.0.0.1 - - [05/Jul/2026 16:17:58] "GET / HTTP/1.1" 200 -
+127.0.0.1 - - [05/Jul/2026 16:18:14] "GET /statements/ HTTP/1.1" 200 -
+127.0.0.1 - - [05/Jul/2026 16:18:17] "GET /clients/ HTTP/1.1" 200 -
+127.0.0.1 - - [05/Jul/2026 16:18:22] "GET /clients/add/ HTTP/1.1" 200 -
+127.0.0.1 - - [05/Jul/2026 16:18:58] "POST /clients/add/ HTTP/1.1" 302 -
+127.0.0.1 - - [05/Jul/2026 16:18:58] "GET /customers/3/ HTTP/1.1" 200 -
+127.0.0.1 - - [05/Jul/2026 16:19:01] "POST /customers/3/coi/ HTTP/1.1" 302 -
+127.0.0.1 - - [05/Jul/2026 16:19:01] "GET /customers/3/ HTTP/1.1" 200 -
+127.0.0.1 - - [05/Jul/2026 16:19:02] "POST /customers/3/coi/ HTTP/1.1" 302 -
+127.0.0.1 - - [05/Jul/2026 16:19:02] "GET /customers/3/ HTTP/1.1" 200 -
+127.0.0.1 - - [05/Jul/2026 16:19:07] "GET /customers/3/add-dog/ HTTP/1.1" 200 -
+127.0.0.1 - - [05/Jul/2026 16:19:20] "POST /customers/3/add-dog/ HTTP/1.1" 302 -
+127.0.0.1 - - [05/Jul/2026 16:19:20] "GET /dogs/5/ HTTP/1.1" 200 -
+127.0.0.1 - - [05/Jul/2026 16:19:21] "GET /dogs/5/ HTTP/1.1" 302 -
+127.0.0.1 - - [05/Jul/2026 16:19:21] "GET /admin/login/?next=/dogs/5/ HTTP/1.1" 200 -
+127.0.0.1 - - [05/Jul/2026 16:19:22] "GET /dogs/5/visits/add/ HTTP/1.1" 200 -
+127.0.0.1 - - [05/Jul/2026 16:19:23] "GET /dogs/5/visits/add/ HTTP/1.1" 302 -
+127.0.0.1 - - [05/Jul/2026 16:19:24] "GET /admin/login/?next=/dogs/5/visits/add/ HTTP/1.1" 200 -
+127.0.0.1 - - [05/Jul/2026 16:19:34] "GET /visits/parse-datetime/?q=July%206th%202026%202:00%20p.m. HTTP/1.1" 200 -
+127.0.0.1 - - [05/Jul/2026 16:19:45] "GET /visits/parse-datetime/?q=July%2017th%202026%202:00%20p.m.&default=2026-07-06T14:00:00-04:00 HTTP/1.1" 200 -
+127.0.0.1 - - [05/Jul/2026 16:19:58] "POST /dogs/5/visits/add/ HTTP/1.1" 302 -
+127.0.0.1 - - [05/Jul/2026 16:19:58] "GET /dogs/5/ HTTP/1.1" 200 -
+127.0.0.1 - - [05/Jul/2026 16:20:12] "GET /visits/31/edit/ HTTP/1.1" 200 -
+127.0.0.1 - - [05/Jul/2026 16:20:12] "GET /visits/parse-datetime/?q=July%2017,%202026%202:00%20PM HTTP/1.1" 200 -
+127.0.0.1 - - [05/Jul/2026 16:20:12] "GET /visits/parse-datetime/?q=July%2006,%202026%202:00%20PM HTTP/1.1" 200 -
+127.0.0.1 - - [05/Jul/2026 16:20:13] "GET /visits/31/edit/ HTTP/1.1" 302 -
+127.0.0.1 - - [05/Jul/2026 16:20:13] "GET /admin/login/?next=/visits/31/edit/ HTTP/1.1" 200 -
+127.0.0.1 - - [05/Jul/2026 16:20:18] "GET / HTTP/1.1" 200 -
+127.0.0.1 - - [05/Jul/2026 16:20:20] "GET /?year=2026&month=7&date=2026-07-06 HTTP/1.1" 200 -
+127.0.0.1 - - [05/Jul/2026 16:20:31] "GET /dogs/5/ HTTP/1.1" 200 -
+127.0.0.1 - - [05/Jul/2026 16:21:29] "GET /checkin/ HTTP/1.1" 200 -
+127.0.0.1 - - [05/Jul/2026 16:21:32] "GET / HTTP/1.1" 200 -
+127.0.0.1 - - [05/Jul/2026 16:21:35] "GET /clients/ HTTP/1.1" 200 -
+127.0.0.1 - - [05/Jul/2026 16:21:37] "GET /checkin/ HTTP/1.1" 200 -
+127.0.0.1 - - [05/Jul/2026 16:21:46] "GET /statements/ HTTP/1.1" 200 -
+127.0.0.1 - - [05/Jul/2026 16:21:48] "GET /statements/ HTTP/1.1" 200 -
+127.0.0.1 - - [05/Jul/2026 16:21:49] "GET /clients/ HTTP/1.1" 200 -
+127.0.0.1 - - [05/Jul/2026 16:21:51] "GET /checkin/ HTTP/1.1" 200 -
+127.0.0.1 - - [05/Jul/2026 16:21:51] "GET / HTTP/1.1" 200 -
+127.0.0.1 - - [05/Jul/2026 16:26:42] "POST /admin/login/?next=/ HTTP/1.1" 302 -
+127.0.0.1 - - [05/Jul/2026 16:26:42] "GET / HTTP/1.1" 200 -
+ * Detected change in 'C:\\Users\\David\\Python project\\Dad4dogs Internal Web App\\operations\\models.py', reloading
+ * Restarting with stat
+Starting HTTPS development server at https://127.0.0.1:9000/
+Quit the server with CTRL-BREAK.
+ * Debugger is active!
+ * Debugger PIN: 585-699-176
+ * Detected change in 'C:\\Users\\David\\Python project\\Dad4dogs Internal Web App\\operations\\views.py', reloading
+ * Restarting with stat
+Starting HTTPS development server at https://127.0.0.1:9000/
+Quit the server with CTRL-BREAK.
+ * Debugger is active!
+ * Debugger PIN: 585-699-176
+ * Detected change in 'C:\\Users\\David\\Python project\\Dad4dogs Internal Web App\\operations\\tests.py', reloading
+ * Restarting with stat
+Starting HTTPS development server at https://127.0.0.1:9000/
+ * Debugger is active!
+Quit the server with CTRL-BREAK.
+ * Debugger PIN: 585-699-176
+ * Detected change in 'C:\\Users\\David\\Python project\\Dad4dogs Internal Web App\\config\\settings.py', reloading
+ * Restarting with stat
+Starting HTTPS development server at https://127.0.0.1:9000/
+ * Debugger is active!
+Quit the server with CTRL-BREAK.
+ * Debugger PIN: 585-699-176
+ * Detected change in 'C:\\Users\\David\\Python project\\Dad4dogs Internal Web App\\operations\\tests.py', reloading
+ * Restarting with stat
+Starting HTTPS development server at https://127.0.0.1:9000/
+ * Debugger is active!
+ * Debugger PIN: 585-699-176
+Quit the server with CTRL-BREAK.
+ * Detected change in 'C:\\Users\\David\\Python project\\Dad4dogs Internal Web App\\operations\\tests.py', reloading
+ * Restarting with stat
+Starting HTTPS development server at https://127.0.0.1:9000/
+ * Debugger is active!
+ * Debugger PIN: 585-699-176
+Quit the server with CTRL-BREAK.
+ * Detected change in 'C:\\Users\\David\\Python project\\Dad4dogs Internal Web App\\operations\\services\\gmail_send.py', reloading
+ * Restarting with stat
+Starting HTTPS development server at https://127.0.0.1:9000/
+Quit the server with CTRL-BREAK.
+ * Debugger is active!
+ * Debugger PIN: 585-699-176
+ * Detected change in 'C:\\Users\\David\\Python project\\Dad4dogs Internal Web App\\operations\\tests.py', reloading
+ * Restarting with stat
+Starting HTTPS development server at https://127.0.0.1:9000/
+ * Debugger is active!
+Quit the server with CTRL-BREAK.
+ * Debugger PIN: 585-699-176
+127.0.0.1 - - [05/Jul/2026 16:45:10] "GET /clients/ HTTP/1.1" 200 -
+127.0.0.1 - - [05/Jul/2026 16:45:11] "GET /clients/add/ HTTP/1.1" 200 -
+127.0.0.1 - - [05/Jul/2026 16:45:20] "POST /clients/add/ HTTP/1.1" 302 -
+127.0.0.1 - - [05/Jul/2026 16:45:20] "GET /customers/4/ HTTP/1.1" 200 -
+127.0.0.1 - - [05/Jul/2026 16:45:23] "POST /customers/4/coi/ HTTP/1.1" 302 -
+127.0.0.1 - - [05/Jul/2026 16:45:23] "GET /customers/4/ HTTP/1.1" 200 -
+127.0.0.1 - - [05/Jul/2026 16:45:24] "POST /customers/4/coi/ HTTP/1.1" 302 -
+127.0.0.1 - - [05/Jul/2026 16:45:24] "GET /customers/4/ HTTP/1.1" 200 -
+127.0.0.1 - - [05/Jul/2026 16:45:25] "POST /customers/4/coi/ HTTP/1.1" 302 -
+127.0.0.1 - - [05/Jul/2026 16:45:25] "GET /customers/4/ HTTP/1.1" 200 -
+127.0.0.1 - - [05/Jul/2026 16:45:27] "POST /customers/4/coi/ HTTP/1.1" 302 -
+127.0.0.1 - - [05/Jul/2026 16:45:27] "GET /customers/4/ HTTP/1.1" 200 -
+127.0.0.1 - - [05/Jul/2026 16:45:29] "POST /customers/4/coi/ HTTP/1.1" 302 -
+127.0.0.1 - - [05/Jul/2026 16:45:29] "GET /customers/4/ HTTP/1.1" 200 -
+127.0.0.1 - - [05/Jul/2026 16:45:31] "POST /customers/4/coi/ HTTP/1.1" 302 -
+127.0.0.1 - - [05/Jul/2026 16:45:31] "GET /customers/4/ HTTP/1.1" 200 -
+127.0.0.1 - - [05/Jul/2026 16:45:34] "GET /customers/4/add-dog/ HTTP/1.1" 200 -
+127.0.0.1 - - [05/Jul/2026 16:46:01] "POST /customers/4/add-dog/ HTTP/1.1" 302 -
+127.0.0.1 - - [05/Jul/2026 16:46:01] "GET /dogs/6/ HTTP/1.1" 200 -
+127.0.0.1 - - [05/Jul/2026 16:46:02] "GET /dogs/6/ HTTP/1.1" 302 -
+127.0.0.1 - - [05/Jul/2026 16:46:02] "GET /admin/login/?next=/dogs/6/ HTTP/1.1" 200 -
+127.0.0.1 - - [05/Jul/2026 16:46:04] "GET /dogs/6/visits/add/ HTTP/1.1" 200 -
+127.0.0.1 - - [05/Jul/2026 16:46:05] "GET /dogs/6/visits/add/ HTTP/1.1" 302 -
+127.0.0.1 - - [05/Jul/2026 16:46:05] "GET /admin/login/?next=/dogs/6/visits/add/ HTTP/1.1" 200 -
+127.0.0.1 - - [05/Jul/2026 16:46:17] "GET /visits/parse-datetime/?q=July%206th%202026%208:00%20a.m. HTTP/1.1" 200 -
+127.0.0.1 - - [05/Jul/2026 16:46:26] "GET /visits/parse-datetime/?q=July%206th%202026%208:00%20p.m.&default=2026-07-06T08:00:00-04:00 HTTP/1.1" 200 -
+127.0.0.1 - - [05/Jul/2026 16:46:41] "POST /dogs/6/visits/add/ HTTP/1.1" 302 -
+127.0.0.1 - - [05/Jul/2026 16:46:42] "GET /dogs/6/ HTTP/1.1" 200 -
+ * Detected change in 'C:\\Users\\David\\Python project\\Dad4dogs Internal Web App\\oauth_setup.py', reloading
+ * Restarting with stat
+Starting HTTPS development server at https://127.0.0.1:9000/
+ * Debugger is active!
+Quit the server with CTRL-BREAK.
+ * Debugger PIN: 585-699-176
+ * Detected change in 'C:\\Users\\David\\Python project\\Dad4dogs Internal Web App\\operations\\management\\commands\\gmail_auth.py', reloading
+ * Restarting with stat
+Starting HTTPS development server at https://127.0.0.1:9000/
+ * Debugger is active!
+Quit the server with CTRL-BREAK.
+ * Debugger PIN: 585-699-176
+ * Detected change in 'C:\\Users\\David\\Python project\\Dad4dogs Internal Web App\\operations\\services\\gmail_send.py', reloading
+ * Restarting with stat
+Starting HTTPS development server at https://127.0.0.1:9000/
+ * Debugger is active!
+Quit the server with CTRL-BREAK.
+ * Debugger PIN: 585-699-176
+127.0.0.1 - - [05/Jul/2026 17:12:38] "GET /visits/32/edit/ HTTP/1.1" 200 -
+127.0.0.1 - - [05/Jul/2026 17:12:38] "GET /visits/parse-datetime/?q=July%2006,%202026%208:00%20AM HTTP/1.1" 200 -
+127.0.0.1 - - [05/Jul/2026 17:12:38] "GET /visits/parse-datetime/?q=July%2006,%202026%208:00%20PM HTTP/1.1" 200 -
+127.0.0.1 - - [05/Jul/2026 17:12:39] "GET /visits/32/edit/ HTTP/1.1" 302 -
+127.0.0.1 - - [05/Jul/2026 17:12:39] "GET /admin/login/?next=/visits/32/edit/ HTTP/1.1" 200 -
+127.0.0.1 - - [05/Jul/2026 17:12:41] "POST /visits/32/edit/ HTTP/1.1" 302 -
+127.0.0.1 - - [05/Jul/2026 17:12:41] "GET /dogs/6/ HTTP/1.1" 200 -
+127.0.0.1 - - [05/Jul/2026 17:12:45] "GET /visits/32/edit/ HTTP/1.1" 200 -
+127.0.0.1 - - [05/Jul/2026 17:12:45] "GET /visits/parse-datetime/?q=July%2006,%202026%208:00%20PM HTTP/1.1" 200 -
+127.0.0.1 - - [05/Jul/2026 17:12:45] "GET /visits/parse-datetime/?q=July%2006,%202026%208:00%20AM HTTP/1.1" 200 -
+127.0.0.1 - - [05/Jul/2026 17:12:58] "POST /visits/32/edit/ HTTP/1.1" 302 -
+127.0.0.1 - - [05/Jul/2026 17:12:58] "GET /visits/parse-datetime/?q=July%2006,%202026%207:00%20PM&default=2026-07-06T08:00:00-04:00 HTTP/1.1" 200 -
+127.0.0.1 - - [05/Jul/2026 17:12:58] "GET /dogs/6/ HTTP/1.1" 200 -
+127.0.0.1 - - [05/Jul/2026 17:33:07] "GET /dogs/6/visits/add/ HTTP/1.1" 200 -
+127.0.0.1 - - [05/Jul/2026 17:33:18] "GET /visits/parse-datetime/?q=July%2023rd%202026 HTTP/1.1" 200 -
+127.0.0.1 - - [05/Jul/2026 17:33:24] "GET /visits/parse-datetime/?q=July%2023rd%202026&default=2026-07-23T17:00:00-04:00 HTTP/1.1" 200 -
+127.0.0.1 - - [05/Jul/2026 17:33:32] "GET /visits/parse-datetime/?q=July%2023rd%202026%208am HTTP/1.1" 200 -
+127.0.0.1 - - [05/Jul/2026 17:33:36] "GET /visits/parse-datetime/?q=July%2023rd%202026&default=2026-07-23T08:00:00-04:00 HTTP/1.1" 200 -
+127.0.0.1 - - [05/Jul/2026 17:33:46] "GET /visits/parse-datetime/?q=July%2023rd%202026%205pm&default=2026-07-23T08:00:00-04:00 HTTP/1.1" 200 -
+127.0.0.1 - - [05/Jul/2026 17:33:55] "POST /dogs/6/visits/add/ HTTP/1.1" 302 -
+127.0.0.1 - - [05/Jul/2026 17:33:56] "GET /dogs/6/ HTTP/1.1" 200 -

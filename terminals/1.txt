@@ -1,0 +1,827 @@
+---
+pid: 3556
+cwd: "C:\Users\David\Python project\Dad4dogs Internal Web App"
+command: "Set-Location \"C:\\Users\\David\\Python project\\Dad4dogs Internal Web App\"; python manage.py runserver 9000"
+started_at: 2026-07-05T16:15:02.019Z
+running_for_ms: 76815013 
+---
+Performing system checks...
+
+Watching for file changes with StatReloader
+System check identified no issues (0 silenced).
+July 05, 2026 - 12:15:03
+Django version 5.2.14, using settings 'config.settings'
+Starting development server at http://127.0.0.1:9000/
+Quit the server with CTRL-BREAK.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
+[05/Jul/2026 12:16:17] "GET / HTTP/1.1" 302 0
+[05/Jul/2026 12:16:17] "GET /admin/login/?next=/ HTTP/1.1" 200 4150
+[05/Jul/2026 12:16:17] "GET /static/admin/css/nav_sidebar.css HTTP/1.1" 200 2810
+[05/Jul/2026 12:16:17] "GET /static/admin/css/dark_mode.css HTTP/1.1" 200 2808
+[05/Jul/2026 12:16:17] "GET /static/admin/css/base.css HTTP/1.1" 200 22120
+[05/Jul/2026 12:16:17] "GET /static/admin/css/login.css HTTP/1.1" 200 951
+[05/Jul/2026 12:16:17] "GET /static/admin/css/responsive.css HTTP/1.1" 200 16565
+[05/Jul/2026 12:16:17] "GET /static/admin/js/theme.js HTTP/1.1" 200 1653
+[05/Jul/2026 12:16:17] "GET /static/admin/js/nav_sidebar.js HTTP/1.1" 200 3063
+Not Found: /favicon.ico
+[05/Jul/2026 12:16:17] "GET /favicon.ico HTTP/1.1" 404 6532
+[05/Jul/2026 12:19:27] "POST /admin/login/?next=/ HTTP/1.1" 302 0
+[05/Jul/2026 12:19:27] "GET / HTTP/1.1" 200 6422
+[05/Jul/2026 12:19:43] "GET /checkin/ HTTP/1.1" 200 5440
+[05/Jul/2026 12:20:11] "GET /ical/ HTTP/1.1" 200 151
+[05/Jul/2026 12:20:22] "GET /checkin/ HTTP/1.1" 200 5440
+C:\Users\David\Python project\Dad4dogs Internal Web App\operations\views.py changed, reloading.
+Performing system checks...
+
+Watching for file changes with StatReloader
+System check identified no issues (0 silenced).
+July 05, 2026 - 12:21:45
+Django version 5.2.14, using settings 'config.settings'
+Starting development server at http://127.0.0.1:9000/
+Quit the server with CTRL-BREAK.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
+[05/Jul/2026 12:22:06] "GET / HTTP/1.1" 200 6422
+[05/Jul/2026 12:22:08] "GET / HTTP/1.1" 200 6422
+Not Found: /favicon.ico
+[05/Jul/2026 12:22:08] "GET /favicon.ico HTTP/1.1" 404 6799
+[05/Jul/2026 12:22:09] "GET / HTTP/1.1" 200 6422
+Not Found: /favicon.ico
+[05/Jul/2026 12:22:09] "GET /favicon.ico HTTP/1.1" 404 6799
+[05/Jul/2026 12:22:33] "GET / HTTP/1.1" 200 6422
+[05/Jul/2026 12:22:56] "GET /clients/ HTTP/1.1" 200 5900
+[05/Jul/2026 12:23:01] "GET /clients/add/ HTTP/1.1" 200 6988
+[05/Jul/2026 12:23:37] "GET / HTTP/1.1" 200 6422
+[05/Jul/2026 12:23:40] "GET /checkin/ HTTP/1.1" 200 5440
+[05/Jul/2026 12:23:43] "GET /clients/ HTTP/1.1" 200 5900
+[05/Jul/2026 12:23:44] "GET /statements/ HTTP/1.1" 200 5329
+[05/Jul/2026 12:23:47] "GET /clients/ HTTP/1.1" 200 5900
+C:\Users\David\Python project\Dad4dogs Internal Web App\operations\views.py changed, reloading.
+Performing system checks...
+
+Watching for file changes with StatReloader
+System check identified no issues (0 silenced).
+July 05, 2026 - 12:30:49
+Django version 5.2.14, using settings 'config.settings'
+Starting development server at http://127.0.0.1:9000/
+Quit the server with CTRL-BREAK.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
+C:\Users\David\Python project\Dad4dogs Internal Web App\operations\services\contacts.py changed, reloading.
+Performing system checks...
+
+Watching for file changes with StatReloader
+System check identified no issues (0 silenced).
+July 05, 2026 - 12:37:39
+Django version 5.2.14, using settings 'config.settings'
+Starting development server at http://127.0.0.1:9000/
+Quit the server with CTRL-BREAK.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
+C:\Users\David\Python project\Dad4dogs Internal Web App\operations\views.py changed, reloading.
+Performing system checks...
+
+Watching for file changes with StatReloader
+System check identified no issues (0 silenced).
+July 05, 2026 - 12:37:56
+Django version 5.2.14, using settings 'config.settings'
+Starting development server at http://127.0.0.1:9000/
+Quit the server with CTRL-BREAK.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
+[05/Jul/2026 12:48:24] "GET / HTTP/1.1" 200 6653
+[05/Jul/2026 12:48:29] "GET /clients/ HTTP/1.1" 200 6238
+[05/Jul/2026 12:48:32] "GET /contacts/sync/ HTTP/1.1" 200 6595
+[05/Jul/2026 12:48:41] "POST /contacts/import/ HTTP/1.1" 200 216933
+[05/Jul/2026 12:49:50] "POST /contacts/import/add/ HTTP/1.1" 302 0
+[05/Jul/2026 12:49:50] "GET /clients/ HTTP/1.1" 200 6724
+[05/Jul/2026 12:49:56] "GET /clients/1/ HTTP/1.1" 200 6149
+[05/Jul/2026 12:50:03] "POST /clients/1/advance/ HTTP/1.1" 302 0
+[05/Jul/2026 12:50:03] "GET /clients/1/ HTTP/1.1" 200 6330
+[05/Jul/2026 12:50:07] "POST /clients/1/advance/ HTTP/1.1" 302 0
+[05/Jul/2026 12:50:07] "GET /clients/1/ HTTP/1.1" 200 6318
+[05/Jul/2026 12:50:08] "POST /clients/1/advance/ HTTP/1.1" 302 0
+[05/Jul/2026 12:50:08] "GET /clients/1/ HTTP/1.1" 200 6033
+[05/Jul/2026 12:50:30] "GET /clients/ HTTP/1.1" 200 6567
+[05/Jul/2026 12:50:33] "GET /clients/2/ HTTP/1.1" 200 6154
+[05/Jul/2026 12:50:34] "POST /clients/2/advance/ HTTP/1.1" 302 0
+[05/Jul/2026 12:50:34] "GET /clients/2/ HTTP/1.1" 200 6338
+[05/Jul/2026 12:50:35] "POST /clients/2/advance/ HTTP/1.1" 302 0
+[05/Jul/2026 12:50:35] "GET /clients/2/ HTTP/1.1" 200 6326
+[05/Jul/2026 12:50:38] "POST /clients/2/advance/ HTTP/1.1" 302 0
+[05/Jul/2026 12:50:38] "GET /clients/2/ HTTP/1.1" 200 6041
+[05/Jul/2026 12:50:44] "GET /clients/ HTTP/1.1" 200 6582
+[05/Jul/2026 12:50:48] "GET /clients/2/ HTTP/1.1" 200 5860
+[05/Jul/2026 12:51:18] "GET /clients/1/ HTTP/1.1" 200 5855
+[05/Jul/2026 12:51:28] "GET /clients/ HTTP/1.1" 200 6582
+[05/Jul/2026 12:51:36] "GET /clients/1/ HTTP/1.1" 200 5855
+C:\Users\David\Python project\Dad4dogs Internal Web App\operations\models.py changed, reloading.
+Performing system checks...
+
+Watching for file changes with StatReloader
+System check identified no issues (0 silenced).
+July 05, 2026 - 12:54:01
+Django version 5.2.14, using settings 'config.settings'
+Starting development server at http://127.0.0.1:9000/
+Quit the server with CTRL-BREAK.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
+C:\Users\David\Python project\Dad4dogs Internal Web App\operations\views.py changed, reloading.
+Performing system checks...
+
+Watching for file changes with StatReloader
+System check identified no issues (0 silenced).
+July 05, 2026 - 12:54:20
+Django version 5.2.14, using settings 'config.settings'
+Starting development server at http://127.0.0.1:9000/
+Quit the server with CTRL-BREAK.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
+C:\Users\David\Python project\Dad4dogs Internal Web App\operations\views.py changed, reloading.
+Performing system checks...
+
+Watching for file changes with StatReloader
+System check identified no issues (0 silenced).
+July 05, 2026 - 12:56:05
+Django version 5.2.14, using settings 'config.settings'
+Starting development server at http://127.0.0.1:9000/
+Quit the server with CTRL-BREAK.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
+[05/Jul/2026 12:56:26] "GET /clients/1/ HTTP/1.1" 200 9023
+[05/Jul/2026 12:56:30] "POST /clients/1/coi/ HTTP/1.1" 302 0
+[05/Jul/2026 12:56:30] "GET /clients/1/ HTTP/1.1" 200 8903
+C:\Users\David\Python project\Dad4dogs Internal Web App\operations\models.py changed, reloading.
+Performing system checks...
+
+Watching for file changes with StatReloader
+Exception in thread django-main-thread:
+Traceback (most recent call last):
+  File "C:\Users\David\AppData\Local\Python\pythoncore-3.14-64\Lib\threading.py", line 1082, in _bootstrap_inner
+    self._context.run(self.run)
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^
+  File "C:\Users\David\AppData\Local\Python\pythoncore-3.14-64\Lib\threading.py", line 1024, in run
+    self._target(*self._args, **self._kwargs)
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\David\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\django\utils\autoreload.py", line 64, in wrapper
+    fn(*args, **kwargs)
+    ~~^^^^^^^^^^^^^^^^^
+  File "C:\Users\David\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\django\core\management\commands\runserver.py", line 134, in inner_run
+    self.check(**check_kwargs)
+    ~~~~~~~~~~^^^^^^^^^^^^^^^^
+  File "C:\Users\David\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\django\core\management\base.py", line 573, in check
+    raise SystemCheckError(msg)
+django.core.management.base.SystemCheckError: SystemCheckError: System check identified some issues:
+
+ERRORS:
+<class 'operations.admin.ClientProfileAdmin'>: (admin.E035) The value of 'readonly_fields[0]' refers to 'coi_sent_at', which is not a callable, an attribute of 'ClientProfileAdmin', or an attribute of 'operations.ClientProfile'.
+<class 'operations.admin.ClientProfileAdmin'>: (admin.E035) The value of 'readonly_fields[1]' refers to 'coi_confirmed_at', which is not a callable, an attribute of 'ClientProfileAdmin', or an attribute of 'operations.ClientProfile'.
+<class 'operations.admin.ClientProfileAdmin'>: (admin.E108) The value of 'list_display[4]' refers to 'coi_confirmed_received', which is not a callable or attribute of 'ClientProfileAdmin', or an attribute, method, or field on 'operations.ClientProfile'.
+<class 'operations.admin.ClientProfileAdmin'>: (admin.E116) The value of 'list_filter[1]' refers to 'coi_confirmed_received', which does not refer to a Field.
+
+System check identified 4 issues (0 silenced).
+C:\Users\David\Python project\Dad4dogs Internal Web App\operations\admin.py changed, reloading.
+Performing system checks...
+
+Watching for file changes with StatReloader
+System check identified no issues (0 silenced).
+July 05, 2026 - 12:58:10
+Django version 5.2.14, using settings 'config.settings'
+Starting development server at http://127.0.0.1:9000/
+Quit the server with CTRL-BREAK.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
+Internal Server Error: /clients/1/coi/
+Traceback (most recent call last):
+  File "C:\Users\David\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\django\db\backends\utils.py", line 105, in _execute
+    return self.cursor.execute(sql, params)
+           ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "C:\Users\David\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\django\db\backends\sqlite3\base.py", line 360, in execute
+    return super().execute(query, params)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^
+sqlite3.OperationalError: no such table: operations_customerowner
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Users\David\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+  File "C:\Users\David\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\django\core\handlers\base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+  File "C:\Users\David\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\django\contrib\auth\decorators.py", line 59, in _view_wrapper
+    return view_func(request, *args, **kwargs)
+  File "C:\Users\David\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\django\views\decorators\http.py", line 64, in inner
+    return func(request, *args, **kwargs)
+  File "C:\Users\David\Python project\Dad4dogs Internal Web App\operations\views.py", line 200, in update_coi
+    owner = CustomerOwner.ensure_for_client(client)
+  File "C:\Users\David\Python project\Dad4dogs Internal Web App\operations\models.py", line 56, in ensure_for_client
+    owner, _ = cls.objects.get_or_create(
+               ~~~~~~~~~~~~~~~~~~~~~~~~~^
+        owner_email=client.owner_email.lower().strip(),
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<3 lines>...
+        },
+        ^^
+    )
+    ^
+  File "C:\Users\David\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\django\db\models\manager.py", line 87, in manager_method
+    return getattr(self.get_queryset(), name)(*args, **kwargs)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "C:\Users\David\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\django\db\models\query.py", line 948, in get_or_create
+    return self.get(**kwargs), False
+           ~~~~~~~~^^^^^^^^^^
+  File "C:\Users\David\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\django\db\models\query.py", line 631, in get
+    num = len(clone)
+  File "C:\Users\David\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\django\db\models\query.py", line 368, in __len__
+    self._fetch_all()
+    ~~~~~~~~~~~~~~~^^
+  File "C:\Users\David\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\django\db\models\query.py", line 1954, in _fetch_all
+    self._result_cache = list(self._iterable_class(self))
+                         ~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\David\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\django\db\models\query.py", line 93, in __iter__
+    results = compiler.execute_sql(
+        chunked_fetch=self.chunked_fetch, chunk_size=self.chunk_size
+    )
+  File "C:\Users\David\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\django\db\models\sql\compiler.py", line 1623, in execute_sql
+    cursor.execute(sql, params)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "C:\Users\David\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\django\db\backends\utils.py", line 122, in execute
+    return super().execute(sql, params)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "C:\Users\David\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\django\db\backends\utils.py", line 79, in execute
+    return self._execute_with_wrappers(
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        sql, params, many=False, executor=self._execute
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\David\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\django\db\backends\utils.py", line 92, in _execute_with_wrappers
+    return executor(sql, params, many, context)
+  File "C:\Users\David\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\django\db\backends\utils.py", line 100, in _execute
+    with self.db.wrap_database_errors:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\David\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\django\db\utils.py", line 91, in __exit__
+    raise dj_exc_value.with_traceback(traceback) from exc_value
+  File "C:\Users\David\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\django\db\backends\utils.py", line 105, in _execute
+    return self.cursor.execute(sql, params)
+           ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "C:\Users\David\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\django\db\backends\sqlite3\base.py", line 360, in execute
+    return super().execute(query, params)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^
+django.db.utils.OperationalError: no such table: operations_customerowner
+[05/Jul/2026 12:58:21] "POST /clients/1/coi/ HTTP/1.1" 500 163296
+[05/Jul/2026 12:58:51] "GET /clients/1/ HTTP/1.1" 200 9111
+[05/Jul/2026 12:59:03] "GET /clients/ HTTP/1.1" 200 6878
+[05/Jul/2026 12:59:05] "GET /clients/1/ HTTP/1.1" 200 9111
+[05/Jul/2026 12:59:09] "POST /clients/1/coi/ HTTP/1.1" 302 0
+[05/Jul/2026 12:59:09] "GET /clients/1/ HTTP/1.1" 200 9266
+[05/Jul/2026 12:59:12] "GET /clients/1/add-dog/ HTTP/1.1" 200 7316
+[05/Jul/2026 12:59:17] "GET /clients/1/add-dog/ HTTP/1.1" 200 7316
+Not Found: /favicon.ico
+[05/Jul/2026 12:59:17] "GET /favicon.ico HTTP/1.1" 404 9386
+[05/Jul/2026 12:59:40] "POST /clients/1/add-dog/ HTTP/1.1" 302 0
+[05/Jul/2026 12:59:40] "GET /clients/3/ HTTP/1.1" 200 9779
+[05/Jul/2026 12:59:56] "GET /clients/1/ HTTP/1.1" 200 9604
+[05/Jul/2026 13:00:15] "GET /clients/2/ HTTP/1.1" 200 9419
+C:\Users\David\Python project\Dad4dogs Internal Web App\operations\views.py changed, reloading.
+Performing system checks...
+
+Watching for file changes with StatReloader
+System check identified no issues (0 silenced).
+July 05, 2026 - 13:02:03
+Django version 5.2.14, using settings 'config.settings'
+Starting development server at http://127.0.0.1:9000/
+Quit the server with CTRL-BREAK.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
+C:\Users\David\Python project\Dad4dogs Internal Web App\operations\views.py changed, reloading.
+Performing system checks...
+
+Watching for file changes with StatReloader
+System check identified no issues (0 silenced).
+July 05, 2026 - 13:02:16
+Django version 5.2.14, using settings 'config.settings'
+Starting development server at http://127.0.0.1:9000/
+Quit the server with CTRL-BREAK.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
+[05/Jul/2026 13:02:47] "GET /clients/2/ HTTP/1.1" 302 0
+[05/Jul/2026 13:02:47] "GET /customers/2/ HTTP/1.1" 200 7128
+[05/Jul/2026 13:02:54] "GET /dogs/2/ HTTP/1.1" 200 6070
+[05/Jul/2026 13:02:57] "GET /customers/2/ HTTP/1.1" 200 7128
+[05/Jul/2026 13:03:00] "GET /dogs/2/ HTTP/1.1" 200 6070
+C:\Users\David\Python project\Dad4dogs Internal Web App\operations\views.py changed, reloading.
+Performing system checks...
+
+Watching for file changes with StatReloader
+System check identified no issues (0 silenced).
+July 05, 2026 - 13:04:40
+Django version 5.2.14, using settings 'config.settings'
+Starting development server at http://127.0.0.1:9000/
+Quit the server with CTRL-BREAK.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
+C:\Users\David\Python project\Dad4dogs Internal Web App\operations\services\contacts.py changed, reloading.
+Performing system checks...
+
+Watching for file changes with StatReloader
+System check identified no issues (0 silenced).
+July 05, 2026 - 13:04:46
+Django version 5.2.14, using settings 'config.settings'
+Starting development server at http://127.0.0.1:9000/
+Quit the server with CTRL-BREAK.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
+C:\Users\David\Python project\Dad4dogs Internal Web App\operations\services\contacts.py changed, reloading.
+Performing system checks...
+
+Watching for file changes with StatReloader
+Exception in thread django-main-thread:
+Traceback (most recent call last):
+  File "C:\Users\David\AppData\Local\Python\pythoncore-3.14-64\Lib\threading.py", line 1082, in _bootstrap_inner
+    self._context.run(self.run)
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^
+  File "C:\Users\David\AppData\Local\Python\pythoncore-3.14-64\Lib\threading.py", line 1024, in run
+    self._target(*self._args, **self._kwargs)
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\David\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\django\utils\autoreload.py", line 64, in wrapper
+    fn(*args, **kwargs)
+    ~~^^^^^^^^^^^^^^^^^
+  File "C:\Users\David\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\django\core\management\commands\runserver.py", line 134, in inner_run
+    self.check(**check_kwargs)
+    ~~~~~~~~~~^^^^^^^^^^^^^^^^
+  File "C:\Users\David\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\django\core\management\base.py", line 496, in check
+    all_issues = checks.run_checks(
+        app_configs=app_configs,
+    ...<2 lines>...
+        databases=databases,
+    )
+  File "C:\Users\David\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\django\core\checks\registry.py", line 89, in run_checks
+    new_errors = check(app_configs=app_configs, databases=databases)
+  File "C:\Users\David\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\django\core\checks\urls.py", line 16, in check_url_config
+    return check_resolver(resolver)
+  File "C:\Users\David\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\django\core\checks\urls.py", line 26, in check_resolver
+    return check_method()
+  File "C:\Users\David\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\django\urls\resolvers.py", line 531, in check
+    for pattern in self.url_patterns:
+                   ^^^^^^^^^^^^^^^^^
+  File "C:\Users\David\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\django\utils\functional.py", line 47, in __get__
+    res = instance.__dict__[self.name] = self.func(instance)
+                                         ~~~~~~~~~^^^^^^^^^^
+  File "C:\Users\David\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\django\urls\resolvers.py", line 718, in url_patterns
+    patterns = getattr(self.urlconf_module, "urlpatterns", self.urlconf_module)
+                       ^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\David\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\django\utils\functional.py", line 47, in __get__
+    res = instance.__dict__[self.name] = self.func(instance)
+                                         ~~~~~~~~~^^^^^^^^^^
+  File "C:\Users\David\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\django\urls\resolvers.py", line 711, in urlconf_module
+    return import_module(self.urlconf_name)
+  File "C:\Users\David\AppData\Local\Python\pythoncore-3.14-64\Lib\importlib\__init__.py", line 88, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen importlib._bootstrap>", line 1398, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1371, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1342, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 938, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 759, in exec_module
+  File "<frozen importlib._bootstrap>", line 491, in _call_with_frames_removed
+  File "C:\Users\David\Python project\Dad4dogs Internal Web App\config\urls.py", line 28, in <module>
+    path('', include('operations.urls')),
+             ~~~~~~~^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\David\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\django\urls\conf.py", line 39, in include
+    urlconf_module = import_module(urlconf_module)
+  File "C:\Users\David\AppData\Local\Python\pythoncore-3.14-64\Lib\importlib\__init__.py", line 88, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen importlib._bootstrap>", line 1398, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1371, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1342, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 938, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 759, in exec_module
+  File "<frozen importlib._bootstrap>", line 491, in _call_with_frames_removed
+  File "C:\Users\David\Python project\Dad4dogs Internal Web App\operations\urls.py", line 3, in <module>
+    from . import views
+  File "C:\Users\David\Python project\Dad4dogs Internal Web App\operations\views.py", line 12, in <module>
+    from .forms import ClientProfileForm, VaccinationRecordForm
+ImportError: cannot import name 'ClientProfileForm' from 'operations.forms' (C:\Users\David\Python project\Dad4dogs Internal Web App\operations\forms.py)
+C:\Users\David\Python project\Dad4dogs Internal Web App\operations\views.py changed, reloading.
+Watching for file changes with StatReloader
+Performing system checks...
+
+System check identified no issues (0 silenced).
+July 05, 2026 - 13:05:54
+Django version 5.2.14, using settings 'config.settings'
+Starting development server at http://127.0.0.1:9000/
+Quit the server with CTRL-BREAK.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
+C:\Users\David\Python project\Dad4dogs Internal Web App\operations\urls.py changed, reloading.
+Performing system checks...
+
+Watching for file changes with StatReloader
+System check identified no issues (0 silenced).
+July 05, 2026 - 13:05:57
+Django version 5.2.14, using settings 'config.settings'
+Starting development server at http://127.0.0.1:9000/
+Quit the server with CTRL-BREAK.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
+C:\Users\David\Python project\Dad4dogs Internal Web App\operations\views.py changed, reloading.
+Performing system checks...
+
+Watching for file changes with StatReloader
+System check identified no issues (0 silenced).
+July 05, 2026 - 13:06:55
+Django version 5.2.14, using settings 'config.settings'
+Starting development server at http://127.0.0.1:9000/
+Quit the server with CTRL-BREAK.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
+[05/Jul/2026 13:09:36] "GET /dogs/2/ HTTP/1.1" 302 0
+[05/Jul/2026 13:09:36] "GET /admin/login/?next=/dogs/2/ HTTP/1.1" 200 4164
+[05/Jul/2026 13:09:37] "GET /static/admin/css/dark_mode.css HTTP/1.1" 200 2808
+[05/Jul/2026 13:09:37] "GET /static/admin/js/theme.js HTTP/1.1" 200 1653
+[05/Jul/2026 13:09:37] "GET /static/admin/css/login.css HTTP/1.1" 200 951
+[05/Jul/2026 13:09:37] "GET /static/admin/css/responsive.css HTTP/1.1" 200 16565
+[05/Jul/2026 13:09:37] "GET /static/admin/css/nav_sidebar.css HTTP/1.1" 200 2810
+[05/Jul/2026 13:09:37] "GET /static/admin/css/base.css HTTP/1.1" 200 22120
+[05/Jul/2026 13:09:37] "GET /static/admin/js/nav_sidebar.js HTTP/1.1" 200 3063
+Not Found: /favicon.ico
+[05/Jul/2026 13:09:37] "GET /favicon.ico HTTP/1.1" 404 11357
+C:\Users\David\Python project\Dad4dogs Internal Web App\operations\services\contacts.py changed, reloading.
+Performing system checks...
+
+Watching for file changes with StatReloader
+System check identified no issues (0 silenced).
+July 05, 2026 - 13:09:41
+Django version 5.2.14, using settings 'config.settings'
+Starting development server at http://127.0.0.1:9000/
+Quit the server with CTRL-BREAK.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
+C:\Users\David\Python project\Dad4dogs Internal Web App\operations\services\contacts.py changed, reloading.
+Performing system checks...
+
+Watching for file changes with StatReloader
+System check identified no issues (0 silenced).
+July 05, 2026 - 13:10:29
+Django version 5.2.14, using settings 'config.settings'
+Starting development server at http://127.0.0.1:9000/
+Quit the server with CTRL-BREAK.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
+C:\Users\David\Python project\Dad4dogs Internal Web App\operations\views.py changed, reloading.
+Performing system checks...
+
+Watching for file changes with StatReloader
+System check identified no issues (0 silenced).
+July 05, 2026 - 13:34:31
+Django version 5.2.14, using settings 'config.settings'
+Starting development server at http://127.0.0.1:9000/
+Quit the server with CTRL-BREAK.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
+[05/Jul/2026 13:41:17] "GET /clients/4/duplicate/ HTTP/1.1" 200 6801
+[05/Jul/2026 13:41:24] "GET /dogs/4/ HTTP/1.1" 200 6608
+[05/Jul/2026 13:41:29] "GET /clients/4/duplicate/ HTTP/1.1" 200 6801
+[05/Jul/2026 13:45:29] "GET /dogs/4/ HTTP/1.1" 200 6608
+[05/Jul/2026 13:45:34] "GET /clients/ HTTP/1.1" 200 7618
+C:\Users\David\Python project\Dad4dogs Internal Web App\operations\forms.py changed, reloading.
+Performing system checks...
+
+Watching for file changes with StatReloader
+System check identified no issues (0 silenced).
+July 05, 2026 - 13:45:39
+Django version 5.2.14, using settings 'config.settings'
+Starting development server at http://127.0.0.1:9000/
+Quit the server with CTRL-BREAK.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
+C:\Users\David\Python project\Dad4dogs Internal Web App\operations\models.py changed, reloading.
+Performing system checks...
+
+Watching for file changes with StatReloader
+System check identified no issues (0 silenced).
+July 05, 2026 - 13:46:00
+Django version 5.2.14, using settings 'config.settings'
+Starting development server at http://127.0.0.1:9000/
+Quit the server with CTRL-BREAK.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
+C:\Users\David\Python project\Dad4dogs Internal Web App\operations\urls.py changed, reloading.
+Performing system checks...
+
+Watching for file changes with StatReloader
+System check identified no issues (0 silenced).
+July 05, 2026 - 14:08:44
+Django version 5.2.14, using settings 'config.settings'
+Starting development server at http://127.0.0.1:9000/
+Quit the server with CTRL-BREAK.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
+C:\Users\David\Python project\Dad4dogs Internal Web App\operations\views.py changed, reloading.
+Performing system checks...
+
+Watching for file changes with StatReloader
+System check identified no issues (0 silenced).
+July 05, 2026 - 14:08:55
+Django version 5.2.14, using settings 'config.settings'
+Starting development server at http://127.0.0.1:9000/
+Quit the server with CTRL-BREAK.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
+C:\Users\David\Python project\Dad4dogs Internal Web App\operations\services\datetime_parse.py changed, reloading.
+Performing system checks...
+
+Watching for file changes with StatReloader
+System check identified no issues (0 silenced).
+July 05, 2026 - 14:09:08
+Django version 5.2.14, using settings 'config.settings'
+Starting development server at http://127.0.0.1:9000/
+Quit the server with CTRL-BREAK.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
+[05/Jul/2026 14:13:45] "GET /dogs/4/visits/add/ HTTP/1.1" 200 12391
+[05/Jul/2026 14:14:03] "GET /visits/parse-datetime/?q=July%2027th%202026%204pm HTTP/1.1" 200 83
+[05/Jul/2026 14:14:16] "GET /visits/parse-datetime/?q=July%2028th%2C%202026%2C%204%20p.m&default=2026-07-27T16%3A00%3A00-04%3A00 HTTP/1.1" 200 83
+[05/Jul/2026 14:14:25] "POST /dogs/4/visits/add/ HTTP/1.1" 302 0
+[05/Jul/2026 14:14:25] "GET /dogs/4/ HTTP/1.1" 200 8621
+[05/Jul/2026 14:14:41] "GET /visits/2/edit/ HTTP/1.1" 200 12920
+[05/Jul/2026 14:14:42] "GET /visits/parse-datetime/?q=July%2027%2C%202026%204%3A00%20PM HTTP/1.1" 200 83
+[05/Jul/2026 14:14:42] "GET /visits/parse-datetime/?q=July%2028%2C%202026%204%3A00%20PM HTTP/1.1" 200 83
+[05/Jul/2026 14:14:51] "POST /visits/2/edit/ HTTP/1.1" 302 0
+[05/Jul/2026 14:14:51] "GET /dogs/4/ HTTP/1.1" 200 8629
+[05/Jul/2026 14:14:51] "GET /visits/parse-datetime/?q=July%2028%2C%202026%206%3A00%20PM&default=2026-07-27T16%3A00%3A00-04%3A00 HTTP/1.1" 200 83
+[05/Jul/2026 14:15:01] "GET / HTTP/1.1" 200 6653
+[05/Jul/2026 14:15:15] "GET /checkin/ HTTP/1.1" 200 5671
+[05/Jul/2026 14:15:24] "GET /clients/ HTTP/1.1" 200 7618
+[05/Jul/2026 14:15:27] "GET /dogs/3/ HTTP/1.1" 200 6824
+[05/Jul/2026 14:15:29] "GET /dogs/3/visits/add/ HTTP/1.1" 200 12400
+[05/Jul/2026 14:15:41] "GET /visits/parse-datetime/?q=September%201st%2C%202026%2C%208%3A00%20AM HTTP/1.1" 200 83
+[05/Jul/2026 14:15:55] "GET /visits/parse-datetime/?q=September%201st%2C%202026%2C%205pm&default=2026-09-01T08%3A00%3A00-04%3A00 HTTP/1.1" 200 83
+[05/Jul/2026 14:16:02] "POST /dogs/3/visits/add/ HTTP/1.1" 302 0
+[05/Jul/2026 14:16:02] "GET /dogs/3/ HTTP/1.1" 200 7732
+C:\Users\David\Python project\Dad4dogs Internal Web App\operations\views.py changed, reloading.
+Performing system checks...
+
+Watching for file changes with StatReloader
+System check identified no issues (0 silenced).
+July 05, 2026 - 14:18:17
+Django version 5.2.14, using settings 'config.settings'
+Starting development server at http://127.0.0.1:9000/
+Quit the server with CTRL-BREAK.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
+C:\Users\David\Python project\Dad4dogs Internal Web App\operations\admin.py changed, reloading.
+Performing system checks...
+
+Watching for file changes with StatReloader
+System check identified no issues (0 silenced).
+July 05, 2026 - 14:43:38
+Django version 5.2.14, using settings 'config.settings'
+Starting development server at http://127.0.0.1:9000/
+Quit the server with CTRL-BREAK.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
+C:\Users\David\Python project\Dad4dogs Internal Web App\operations\forms.py changed, reloading.
+Performing system checks...
+
+Watching for file changes with StatReloader
+System check identified no issues (0 silenced).
+July 05, 2026 - 14:49:20
+Django version 5.2.14, using settings 'config.settings'
+Starting development server at http://127.0.0.1:9000/
+Quit the server with CTRL-BREAK.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
+C:\Users\David\Python project\Dad4dogs Internal Web App\operations\views.py changed, reloading.
+Performing system checks...
+
+Watching for file changes with StatReloader
+System check identified no issues (0 silenced).
+July 05, 2026 - 14:49:30
+Django version 5.2.14, using settings 'config.settings'
+Starting development server at http://127.0.0.1:9000/
+Quit the server with CTRL-BREAK.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
+C:\Users\David\Python project\Dad4dogs Internal Web App\operations\forms.py changed, reloading.
+Performing system checks...
+
+Watching for file changes with StatReloader
+System check identified no issues (0 silenced).
+July 05, 2026 - 14:49:40
+Django version 5.2.14, using settings 'config.settings'
+Starting development server at http://127.0.0.1:9000/
+Quit the server with CTRL-BREAK.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
+[05/Jul/2026 14:53:19] "GET /visits/parse-datetime/?q=July%205th%2C%202026%2C%202%20p.m HTTP/1.1" 200 83
+[05/Jul/2026 14:53:26] "GET /visits/parse-datetime/?q=July%205th%2C%202026%2C%208%3A00%20PM&default=2026-07-05T14%3A00%3A00-04%3A00 HTTP/1.1" 200 83
+[05/Jul/2026 14:53:30] "POST /dogs/4/visits/add/ HTTP/1.1" 302 0
+[05/Jul/2026 14:53:30] "GET /dogs/4/ HTTP/1.1" 200 9480
+[05/Jul/2026 14:53:34] "GET /visits/4/edit/ HTTP/1.1" 200 15153
+[05/Jul/2026 14:53:34] "GET /visits/parse-datetime/?q=July%2005%2C%202026%202%3A00%20PM HTTP/1.1" 200 83
+[05/Jul/2026 14:53:34] "GET /visits/parse-datetime/?q=July%2005%2C%202026%208%3A00%20PM HTTP/1.1" 200 83
+[05/Jul/2026 14:53:47] "GET /dogs/4/ HTTP/1.1" 200 9293
+[05/Jul/2026 14:53:48] "GET /dogs/4/ HTTP/1.1" 200 9293
+[05/Jul/2026 14:53:53] "GET /visits/4/edit/ HTTP/1.1" 200 15153
+[05/Jul/2026 14:53:53] "GET /visits/parse-datetime/?q=July%2005%2C%202026%202%3A00%20PM HTTP/1.1" 200 83
+[05/Jul/2026 14:53:53] "GET /visits/parse-datetime/?q=July%2005%2C%202026%208%3A00%20PM HTTP/1.1" 200 83
+[05/Jul/2026 14:54:20] "GET /dogs/4/ HTTP/1.1" 200 9293
+[05/Jul/2026 14:54:21] "GET /customers/2/ HTTP/1.1" 200 7093
+[05/Jul/2026 14:54:24] "GET / HTTP/1.1" 200 16634
+[05/Jul/2026 14:54:25] "GET /?year=2026&month=7&date=2026-07-27 HTTP/1.1" 200 16664
+[05/Jul/2026 14:54:27] "GET /?year=2026&month=7&date=2026-07-05 HTTP/1.1" 200 16634
+[05/Jul/2026 14:54:32] "GET /?year=2026&month=7&date=2026-07-05 HTTP/1.1" 200 16634
+[05/Jul/2026 14:54:32] "GET /?year=2026&month=7&date=2026-07-05 HTTP/1.1" 200 16634
+[05/Jul/2026 14:54:34] "GET /dogs/4/ HTTP/1.1" 200 9293
+[05/Jul/2026 14:54:36] "GET /visits/4/edit/ HTTP/1.1" 200 15153
+[05/Jul/2026 14:54:36] "GET /visits/parse-datetime/?q=July%2005%2C%202026%208%3A00%20PM HTTP/1.1" 200 83
+[05/Jul/2026 14:54:36] "GET /visits/parse-datetime/?q=July%2005%2C%202026%202%3A00%20PM HTTP/1.1" 200 83
+[05/Jul/2026 14:54:41] "GET /visits/4/edit/ HTTP/1.1" 200 15153
+[05/Jul/2026 14:54:41] "GET /visits/parse-datetime/?q=July%2005%2C%202026%208%3A00%20PM HTTP/1.1" 200 83
+[05/Jul/2026 14:54:41] "GET /visits/parse-datetime/?q=July%2005%2C%202026%202%3A00%20PM HTTP/1.1" 200 83
+Not Found: /favicon.ico
+[05/Jul/2026 14:54:41] "GET /favicon.ico HTTP/1.1" 404 12216
+[05/Jul/2026 14:55:15] "GET /clients/ HTTP/1.1" 200 7618
+[05/Jul/2026 14:59:07] "GET /dogs/4/ HTTP/1.1" 200 9293
+[05/Jul/2026 14:59:10] "GET /visits/4/edit/ HTTP/1.1" 200 15153
+[05/Jul/2026 14:59:10] "GET /visits/parse-datetime/?q=July%2005%2C%202026%202%3A00%20PM HTTP/1.1" 200 83
+[05/Jul/2026 14:59:10] "GET /visits/parse-datetime/?q=July%2005%2C%202026%208%3A00%20PM HTTP/1.1" 200 83
+[05/Jul/2026 14:59:17] "GET /visits/parse-datetime/?q=July%2005%2C%202026%202%3A00%20PM HTTP/1.1" 200 83
+[05/Jul/2026 14:59:22] "GET /visits/parse-datetime/?q=July%2005%2C%202026%202%3A00%20PM HTTP/1.1" 200 83
+C:\Users\David\Python project\Dad4dogs Internal Web App\operations\admin.py changed, reloading.
+Performing system checks...
+
+Watching for file changes with StatReloader
+System check identified no issues (0 silenced).
+July 05, 2026 - 15:00:20
+Django version 5.2.14, using settings 'config.settings'
+Starting development server at http://127.0.0.1:9000/
+Quit the server with CTRL-BREAK.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
+C:\Users\David\Python project\Dad4dogs Internal Web App\operations\forms.py changed, reloading.
+Performing system checks...
+
+Watching for file changes with StatReloader
+System check identified no issues (0 silenced).
+July 05, 2026 - 15:00:41
+Django version 5.2.14, using settings 'config.settings'
+Starting development server at http://127.0.0.1:9000/
+Quit the server with CTRL-BREAK.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
+C:\Users\David\Python project\Dad4dogs Internal Web App\operations\views.py changed, reloading.
+Performing system checks...
+
+Watching for file changes with StatReloader
+System check identified no issues (0 silenced).
+July 05, 2026 - 15:01:58
+Django version 5.2.14, using settings 'config.settings'
+Starting development server at http://127.0.0.1:9000/
+Quit the server with CTRL-BREAK.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
+[05/Jul/2026 15:03:07] "GET /dogs/4/visits/add/ HTTP/1.1" 200 17649
+[05/Jul/2026 15:03:11] "GET /visits/4/edit/ HTTP/1.1" 200 15821
+[05/Jul/2026 15:03:11] "GET /visits/parse-datetime/?q=July%2005%2C%202026%202%3A00%20PM HTTP/1.1" 200 83
+[05/Jul/2026 15:03:11] "GET /visits/parse-datetime/?q=July%2005%2C%202026%208%3A00%20PM HTTP/1.1" 200 83
+[05/Jul/2026 15:03:36] "GET /dogs/4/visits/add/ HTTP/1.1" 200 17649
+[05/Jul/2026 15:34:23] "GET /visits/parse-datetime/?q=July%206th%2C%202026%208%3A00%20AM HTTP/1.1" 200 83
+[05/Jul/2026 15:34:36] "GET /visits/parse-datetime/?q=July%206%2C%202026%208%20pm&default=2026-07-06T08%3A00%3A00-04%3A00 HTTP/1.1" 200 83
+[05/Jul/2026 15:34:43] "POST /dogs/4/visits/add/ HTTP/1.1" 302 0
+[05/Jul/2026 15:34:43] "GET /dogs/4/ HTTP/1.1" 200 14278
+[05/Jul/2026 15:34:58] "GET /visits/5/edit/ HTTP/1.1" 200 15807
+[05/Jul/2026 15:34:58] "GET /visits/parse-datetime/?q=July%2006%2C%202026%208%3A00%20AM HTTP/1.1" 200 83
+[05/Jul/2026 15:34:58] "GET /visits/parse-datetime/?q=July%2006%2C%202026%208%3A00%20PM HTTP/1.1" 200 83
+[05/Jul/2026 15:35:00] "GET /dogs/4/ HTTP/1.1" 200 14057
+[05/Jul/2026 15:35:02] "GET / HTTP/1.1" 200 16839
+[05/Jul/2026 15:35:07] "GET /?year=2026&month=7&date=2026-07-10 HTTP/1.1" 200 16856
+[05/Jul/2026 15:35:09] "GET /?year=2026&month=7&date=2026-07-09 HTTP/1.1" 200 16857
+[05/Jul/2026 15:35:11] "GET / HTTP/1.1" 200 16839
+[05/Jul/2026 15:35:12] "GET /checkin/ HTTP/1.1" 200 6106
+[05/Jul/2026 15:35:16] "POST /visits/4/check-in/ HTTP/1.1" 302 0
+[05/Jul/2026 15:35:16] "GET /checkin/ HTTP/1.1" 200 6315
+Internal Server Error: /visits/4/check-out/
+Traceback (most recent call last):
+  File "C:\Users\David\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+  File "C:\Users\David\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\django\core\handlers\base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+  File "C:\Users\David\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\django\contrib\auth\decorators.py", line 59, in _view_wrapper
+    return view_func(request, *args, **kwargs)
+  File "C:\Users\David\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\django\views\decorators\http.py", line 64, in inner
+    return func(request, *args, **kwargs)
+  File "C:\Users\David\Python project\Dad4dogs Internal Web App\operations\views.py", line 143, in visit_check_out
+    visit.check_out()
+    ~~~~~~~~~~~~~~~^^
+  File "C:\Users\David\Python project\Dad4dogs Internal Web App\operations\models.py", line 279, in check_out
+    self.save(update_fields=[
+    ~~~~~~~~~^^^^^^^^^^^^^^^^
+        'actual_departure', 'calculated_fee', 'fee_breakdown', 'status', 'updated_at',
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ])
+    ^^
+  File "C:\Users\David\Python project\Dad4dogs Internal Web App\operations\models.py", line 264, in save
+    self.full_clean()
+    ~~~~~~~~~~~~~~~^^
+  File "C:\Users\David\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\django\db\models\base.py", line 1679, in full_clean
+    raise ValidationError(errors)
+django.core.exceptions.ValidationError: {'fee_breakdown': ['Value must be valid JSON.']}
+[05/Jul/2026 15:35:20] "POST /visits/4/check-out/ HTTP/1.1" 500 92329
+[05/Jul/2026 15:35:35] "GET / HTTP/1.1" 200 16917
+C:\Users\David\Python project\Dad4dogs Internal Web App\operations\services\visit_repeat.py changed, reloading.
+Performing system checks...
+
+Watching for file changes with StatReloader
+System check identified no issues (0 silenced).
+July 05, 2026 - 15:50:31
+Django version 5.2.14, using settings 'config.settings'
+Starting development server at http://127.0.0.1:9000/
+Quit the server with CTRL-BREAK.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
+C:\Users\David\Python project\Dad4dogs Internal Web App\operations\services\visit_repeat.py changed, reloading.
+Performing system checks...
+
+Watching for file changes with StatReloader
+System check identified no issues (0 silenced).
+July 05, 2026 - 15:50:40
+Django version 5.2.14, using settings 'config.settings'
+Starting development server at http://127.0.0.1:9000/
+Quit the server with CTRL-BREAK.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
+C:\Users\David\Python project\Dad4dogs Internal Web App\operations\services\visit_repeat.py changed, reloading.
+Performing system checks...
+
+Watching for file changes with StatReloader
+System check identified no issues (0 silenced).
+July 05, 2026 - 15:50:50
+Django version 5.2.14, using settings 'config.settings'
+Starting development server at http://127.0.0.1:9000/
+Quit the server with CTRL-BREAK.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
+C:\Users\David\Python project\Dad4dogs Internal Web App\operations\pricing.py changed, reloading.
+Performing system checks...
+
+Watching for file changes with StatReloader
+System check identified no issues (0 silenced).
+July 05, 2026 - 15:55:59
+Django version 5.2.14, using settings 'config.settings'
+Starting development server at http://127.0.0.1:9000/
+Quit the server with CTRL-BREAK.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
+C:\Users\David\Python project\Dad4dogs Internal Web App\config\settings.py changed, reloading.
+Performing system checks...
+
+Watching for file changes with StatReloader
+System check identified no issues (0 silenced).
+July 05, 2026 - 16:01:43
+Django version 5.2.14, using settings 'config.settings'
+Starting development server at http://127.0.0.1:9000/
+Quit the server with CTRL-BREAK.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/

@@ -1,0 +1,8 @@
+Django>=5.0,<6.0
+icalendar>=6.0
+python-dateutil>=2.9
+werkzeug>=3.0
+google-auth-oauthlib>=1.2
+google-auth-httplib2>=0.2
+google-api-python-client>=2.100
+Pillow>=10.0

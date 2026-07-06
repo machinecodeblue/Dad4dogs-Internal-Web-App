@@ -1,0 +1,76 @@
+{% extends "operations/base.html" %}
+{% block title %}{{ customer_owner.owner_name }} — Dad4dogs{% endblock %}
+{% block content %}
+<div class="card">
+    <h2>{{ customer_owner.owner_name }}</h2>
+    <p class="muted">{{ customer_owner.owner_email }}{% if customer_owner.owner_phone %} · {{ customer_owner.owner_phone }}{% endif %}</p>
+    <div class="actions" style="margin-top:0.75rem">
+        <a href="{% url 'operations:customer_edit' customer_owner.pk %}" class="btn btn-primary btn-sm">Edit Customer</a>
+        <a href="{% url 'operations:customer_add_dog' customer_owner.pk %}" class="btn btn-outline btn-sm">Add Dog</a>
+    </div>
+</div>
+
+<div class="card">
+    <h2>Certificate of Insurance</h2>
+    <p class="muted">One COI for this customer's relationship with Dad4dogs.</p>
+    <p>
+        {% if customer_owner.coi_status == 'received' %}
+        <span class="badge badge-ok">COI RECEIVED</span>
+        {% if customer_owner.coi_confirmed_at %}<span class="muted"> · confirmed {{ customer_owner.coi_confirmed_at|date:"M j, Y" }}</span>{% endif %}
+        {% elif customer_owner.coi_status == 'sent' %}
+        <span class="badge badge-warn">COI SENT — AWAITING CONFIRMATION</span>
+        {% if customer_owner.coi_sent_at %}<span class="muted"> · sent {{ customer_owner.coi_sent_at|date:"M j, Y" }}</span>{% endif %}
+        {% else %}
+        <span class="badge badge-danger">COI NOT SENT</span>
+        {% endif %}
+    </p>
+    <div class="actions">
+        {% if customer_owner.coi_status == 'not_sent' %}
+        <form method="post" action="{% url 'operations:update_coi' customer_owner.pk %}">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="mark_sent">
+            <button type="submit" class="btn btn-outline btn-sm">Mark COI Sent</button>
+        </form>
+        {% endif %}
+        {% if customer_owner.coi_status != 'received' %}
+        <form method="post" action="{% url 'operations:update_coi' customer_owner.pk %}">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="mark_received">
+            <button type="submit" class="btn btn-success btn-sm">Confirm COI Received</button>
+        </form>
+        {% else %}
+        <form method="post" action="{% url 'operations:update_coi' customer_owner.pk %}">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="reset_received">
+            <button type="submit" class="btn btn-outline btn-sm">Clear Confirmation</button>
+        </form>
+        {% endif %}
+    </div>
+</div>
+
+<div class="card">
+    <h2>Dogs</h2>
+    {% if dogs %}
+    <p class="muted">Pipeline and vaccinations are managed per dog.</p>
+    {% for dog in dogs %}
+    <a href="{% url 'operations:dog_detail' dog.pk %}" style="text-decoration:none;color:inherit">
+        <div style="margin-bottom:0.75rem;padding:0.75rem;background:#f8f9fa;border-radius:8px;border-left:4px solid var(--brand-light)">
+            <span class="muted" style="font-size:0.8rem">DOG</span><br>
+            <strong>{{ dog.dog_name }}</strong>
+            <span class="badge badge-ok">{{ dog.get_pipeline_stage_display }}</span>
+            {% if dog.has_current_vaccination %}
+            <span class="badge badge-ok">VAX</span>
+            {% else %}
+            <span class="badge badge-warn">VAX</span>
+            {% endif %}
+        </div>
+    </a>
+    {% endfor %}
+    {% else %}
+    <p class="muted">No dogs on file yet. Add a dog when you're ready — pipeline starts at Inquiry for each dog.</p>
+    <a href="{% url 'operations:customer_add_dog' customer_owner.pk %}" class="btn btn-primary" style="margin-top:0.5rem">Add First Dog</a>
+    {% endif %}
+</div>
+
+<a href="{% url 'operations:client_list' %}" class="btn btn-outline">Back to Clients</a>
+{% endblock %}

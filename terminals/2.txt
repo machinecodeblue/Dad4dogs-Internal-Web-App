@@ -1,0 +1,18 @@
+---
+pid: 30908
+cwd: "C:\Users\David\Python project\Dad4dogs Internal Web App"
+command: "python manage.py runserver_https 9000"
+started_at: 2026-07-05T20:01:50.126Z
+running_for_ms: 63204998 
+---
+At line:1 char:66
++ ... "C:\\Users\\David\\Python project\\Dad4dogs Internal Web App" ; pytho ...
++                                                                  ~
+Missing closing ')' in expression.
+At line:1 char:106
++ ... \\Dad4dogs Internal Web App" ; python manage.py runserver_https 9000)
++                                                                         ~
+Unexpected token ')' in expression or statement.
+    + CategoryInfo          : ParserError: (:) [], ParentContainsErrorRecordException
+    + FullyQualifiedErrorId : MissingEndParenthesisInExpression
+ 

@@ -1,0 +1,51 @@
+{% extends "operations/base.html" %}
+{% block title %}{{ title }} — Dad4dogs{% endblock %}
+{% block content %}
+<div class="card">
+    <h2>{{ title }}</h2>
+    {% if subtitle %}
+    <p class="muted">{{ subtitle }}</p>
+    {% else %}
+    <p class="muted">Each dog is stored with the owner's email. The same owner can have multiple dogs.</p>
+    {% endif %}
+</div>
+
+<form method="post">
+    {% csrf_token %}
+    <div class="card">
+        {% if form.non_field_errors %}
+        <div class="message message-error">
+            {% for error in form.non_field_errors %}{{ error }}{% endfor %}
+        </div>
+        {% endif %}
+
+        <label for="{{ form.dog_name.id_for_label }}">Dog Name</label>
+        {{ form.dog_name }}
+        {% if form.dog_name.errors %}<p class="muted" style="color:var(--danger)">{{ form.dog_name.errors.0 }}</p>{% endif %}
+
+        <label for="{{ form.owner_name.id_for_label }}">Owner Name</label>
+        {{ form.owner_name }}
+        {% if form.owner_name.errors %}<p class="muted" style="color:var(--danger)">{{ form.owner_name.errors.0 }}</p>{% endif %}
+
+        <label for="{{ form.owner_email.id_for_label }}">Owner Email</label>
+        {{ form.owner_email }}
+        {% if form.owner_email.errors %}<p class="muted" style="color:var(--danger)">{{ form.owner_email.errors.0 }}</p>{% endif %}
+
+        <label for="{{ form.owner_phone.id_for_label }}">Phone (optional)</label>
+        {{ form.owner_phone }}
+
+        <label for="{{ form.pipeline_stage.id_for_label }}">Pipeline Stage</label>
+        {{ form.pipeline_stage }}
+
+        <label for="{{ form.notes.id_for_label }}">Notes (optional)</label>
+        {{ form.notes }}
+
+        <button type="submit" class="btn btn-primary">{% if 'Edit' in title %}Save Changes{% else %}Save Customer{% endif %}</button>
+        {% if cancel_pk %}
+        <a href="{% url cancel_url cancel_pk %}" class="btn btn-outline" style="margin-top:0.5rem">Cancel</a>
+        {% else %}
+        <a href="{% url cancel_url %}" class="btn btn-outline" style="margin-top:0.5rem">Cancel</a>
+        {% endif %}
+    </div>
+</form>
+{% endblock %}

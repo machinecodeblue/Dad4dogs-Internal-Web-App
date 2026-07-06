@@ -1,0 +1,263 @@
+{% extends "operations/base.html" %}
+{% block title %}Timeline — {{ dog.dog_name }} — Dad4dogs{% endblock %}
+{% block content %}
+<style>
+    .timeline-stream { display: flex; flex-direction: column; gap: 0.75rem; }
+    .timeline-event {
+        background: #f8f9fa;
+        border-radius: var(--radius);
+        overflow: hidden;
+        border-left: 4px solid var(--brand-light);
+    }
+    .timeline-event img { width: 100%; display: block; background: #e9ecef; }
+    .timeline-event video { width: 100%; display: block; }
+    .timeline-meta { padding: 0.75rem; font-size: 0.85rem; }
+    .timeline-meta time { font-weight: 600; color: var(--brand); }
+    .capture-actions { display: flex; flex-direction: column; gap: 0.5rem; }
+    .capture-actions label.btn {
+        display: block;
+        cursor: pointer;
+        margin: 0;
+    }
+    .capture-actions input[type="file"] {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        opacity: 0;
+        overflow: hidden;
+    }
+    .visit-checkboxes {
+        display: flex;
+        flex-direction: column;
+        gap: 0.35rem;
+        margin-bottom: 0.75rem;
+    }
+    .visit-checkboxes label {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-weight: 500;
+        margin: 0;
+    }
+    .visit-checkboxes input[type="checkbox"] {
+        width: 1.1rem;
+        height: 1.1rem;
+        margin: 0;
+    }
+    .forward-box {
+        margin-top: 0.75rem;
+        padding-top: 0.75rem;
+        border-top: 1px solid #dee2e6;
+    }
+    .gps-status { font-size: 0.8rem; color: var(--muted); margin-bottom: 0.5rem; }
+</style>
+
+<div class="card">
+    <p class="muted"><a href="{% url 'operations:mobile_checkin' %}" style="color:var(--brand)">← Check-In</a></p>
+    <span class="badge badge-warn">Checked In</span>
+    <h2>{{ dog.dog_name }} — Live Timeline</h2>
+    <p class="muted">{{ dog.owner_name }} · {{ visit.schedule_display }}</p>
+    {% if eligible_visits.count > 1 %}
+    <p class="muted">{{ eligible_visits.count }} dogs checked in — select all that apply when logging.</p>
+    {% endif %}
+</div>
+
+<div class="card">
+    <h2>Log Moment</h2>
+    <p class="muted">Camera, gallery photo, or gallery video. Location is recorded automatically.</p>
+    <p class="gps-status" id="gps-status">Waiting for GPS…</p>
+
+    <form method="post" enctype="multipart/form-data" id="timeline-form" class="capture-actions">
+        {% csrf_token %}
+        <input type="hidden" name="latitude" id="latitude-field" value="">
+        <input type="hidden" name="longitude" id="longitude-field" value="">
+
+        {% if eligible_visits.count > 1 %}
+        <h3 style="font-size:0.95rem;margin-bottom:0.35rem">Log for these dogs</h3>
+        <div class="visit-checkboxes">
+            {% for checkbox in form.visit_ids %}
+            <div>
+                {{ checkbox.tag }}
+                <label for="{{ checkbox.id_for_label }}">{{ checkbox.choice_label }}</label>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        {% for choice in form.visit_ids %}{{ choice }}{% endfor %}
+        {% endif %}
+
+        <label class="btn btn-primary">
+            Capture Moment (camera)
+            {{ form.photo_camera }}
+        </label>
+
+        <label class="btn btn-outline">
+            Choose Photo (gallery)
+            {{ form.photo_gallery }}
+        </label>
+
+        <label class="btn btn-outline">
+            Attach Video (gallery)
+            {{ form.video }}
+        </label>
+
+        <label for="{{ form.caption_notes.id_for_label }}">Notes (optional)</label>
+        {{ form.caption_notes }}
+
+        <button type="submit" class="btn btn-success" id="timeline-submit" disabled>Save Moment</button>
+    </form>
+</div>
+
+<div class="card">
+    <h2>Timeline</h2>
+    {% if events %}
+    <div class="timeline-stream">
+        {% for event in events %}
+        <article class="timeline-event">
+            {% if event.media_type == 'photo' and event.photo_thumbnail %}
+            <img src="{{ event.photo_thumbnail.url }}" alt="Timeline photo for {{ dog.dog_name }}">
+            {% elif event.media_type == 'video' and event.video_file %}
+            <video controls preload="metadata" src="{{ event.video_file.url }}"></video>
+            {% endif %}
+            <div class="timeline-meta">
+                <time datetime="{{ event.captured_at|date:'c' }}">Captured {{ event.captured_at|date:"M j, Y g:i A" }}</time>
+                {% if event.is_forward %}
+                <span class="badge badge-ok">Shared {{ event.shared_at|date:"g:i A" }}</span>
+                {% if event.source_event %}
+                <span class="muted">from {{ event.source_event.visit.client.dog_name }}</span>
+                {% endif %}
+                {% endif %}
+                {% if event.location_used_fallback %}
+                <span class="badge badge-warn">Site location</span>
+                {% else %}
+                <span class="badge badge-ok">GPS</span>
+                {% endif %}
+                <p class="muted" style="margin-top:0.35rem">
+                    {{ event.latitude }}, {{ event.longitude }}
+                    {% if event.location_fallback_label and event.location_used_fallback %}
+                    · {{ event.location_fallback_label }}
+                    {% endif %}
+                </p>
+                {% if event.caption_notes %}
+                <p style="margin-top:0.35rem">{{ event.caption_notes }}</p>
+                {% endif %}
+
+                {% for item in forward_forms %}
+                {% if item.event.pk == event.pk %}
+                <div class="forward-box">
+                    <strong>Share with other checked-in dogs</strong>
+                    <form method="post" action="{% url 'operations:visit_timeline_forward' visit.pk event.pk %}">
+                        {% csrf_token %}
+                        <div class="visit-checkboxes">
+                            {% for choice in item.form.visit_ids %}
+                            <div>
+                                {{ choice.tag }}
+                                <label for="{{ choice.id_for_label }}">{{ choice.choice_label }}</label>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        <button type="submit" class="btn btn-outline btn-sm">Forward Moment</button>
+                    </form>
+                </div>
+                {% endif %}
+                {% endfor %}
+            </div>
+        </article>
+        {% endfor %}
+    </div>
+    {% else %}
+    <p class="muted">No moments logged yet for this visit.</p>
+    {% endif %}
+</div>
+
+<script>
+(function () {
+    const form = document.getElementById('timeline-form');
+    const cameraInput = form.querySelector('.timeline-photo-camera-input');
+    const galleryInput = form.querySelector('.timeline-photo-gallery-input');
+    const videoInput = form.querySelector('.timeline-video-input');
+    const submitBtn = document.getElementById('timeline-submit');
+    const latField = document.getElementById('latitude-field');
+    const lngField = document.getElementById('longitude-field');
+    const gpsStatus = document.getElementById('gps-status');
+    let gpsReady = false;
+
+    function hasMedia() {
+        return [cameraInput, galleryInput, videoInput].some(
+            (input) => input.files && input.files.length
+        );
+    }
+
+    function updateSubmitState() {
+        submitBtn.disabled = !(hasMedia() && gpsReady);
+    }
+
+    function markGpsReady(message) {
+        gpsStatus.textContent = message;
+        gpsReady = true;
+        updateSubmitState();
+    }
+
+    function clearOtherMedia(activeInput) {
+        [cameraInput, galleryInput, videoInput].forEach((input) => {
+            if (input !== activeInput) {
+                input.value = '';
+            }
+        });
+        updateSubmitState();
+    }
+
+    if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+            function (pos) {
+                latField.value = pos.coords.latitude;
+                lngField.value = pos.coords.longitude;
+                markGpsReady('GPS locked — ready to log moments.');
+            },
+            function () {
+                latField.value = '';
+                lngField.value = '';
+                markGpsReady('GPS unavailable — site fallback will be used on save.');
+            },
+            { enableHighAccuracy: true, timeout: 12000, maximumAge: 60000 }
+        );
+    } else {
+        markGpsReady('GPS not supported — site fallback will be used on save.');
+    }
+
+    cameraInput.addEventListener('change', function () {
+        if (cameraInput.files.length) clearOtherMedia(cameraInput);
+    });
+    galleryInput.addEventListener('change', function () {
+        if (galleryInput.files.length) clearOtherMedia(galleryInput);
+    });
+    videoInput.addEventListener('change', function () {
+        if (videoInput.files.length) clearOtherMedia(videoInput);
+    });
+
+    form.addEventListener('submit', function (event) {
+        if (!gpsReady) {
+            event.preventDefault();
+            return;
+        }
+        if (!navigator.geolocation || (latField.value && lngField.value)) {
+            return;
+        }
+        event.preventDefault();
+        navigator.geolocation.getCurrentPosition(
+            function (pos) {
+                latField.value = pos.coords.latitude;
+                lngField.value = pos.coords.longitude;
+                form.submit();
+            },
+            function () {
+                latField.value = '';
+                lngField.value = '';
+                form.submit();
+            },
+            { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 }
+        );
+    });
+})();
+</script>
+{% endblock %}

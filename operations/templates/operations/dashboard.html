@@ -1,0 +1,187 @@
+{% extends "operations/base.html" %}
+{% block title %}Dashboard — Dad4dogs{% endblock %}
+{% block content %}
+<style>
+    .cal-nav {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 0.75rem;
+    }
+    .cal-nav h2 { margin: 0; font-size: 1rem; }
+    .cal-nav a {
+        color: var(--brand);
+        text-decoration: none;
+        font-weight: 600;
+        padding: 0.35rem 0.6rem;
+        border-radius: 8px;
+        border: 1px solid #dee2e6;
+        font-size: 0.85rem;
+    }
+    .cal-grid {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        gap: 4px;
+    }
+    .cal-dow {
+        text-align: center;
+        font-size: 0.65rem;
+        font-weight: 600;
+        color: var(--muted);
+        padding-bottom: 0.25rem;
+    }
+    .cal-day {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        min-height: 2.6rem;
+        border-radius: 8px;
+        text-decoration: none;
+        color: var(--text);
+        font-size: 0.85rem;
+        font-weight: 500;
+        background: #f8f9fa;
+    }
+    .cal-day:hover { background: #e9ecef; }
+    .cal-day.today { box-shadow: inset 0 0 0 2px var(--brand-light); }
+    .cal-day.selected { background: var(--brand); color: white; }
+    .cal-day.selected.today { box-shadow: inset 0 0 0 2px #fff; }
+    .cal-day .dot {
+        width: 5px;
+        height: 5px;
+        border-radius: 50%;
+        background: var(--brand-light);
+        margin-top: 2px;
+    }
+    .cal-day.selected .dot { background: #fff; }
+    .cal-day.empty { visibility: hidden; pointer-events: none; }
+    .agenda-visit {
+        border-left: 4px solid var(--brand-light);
+        padding: 0.75rem;
+        margin-top: 0.5rem;
+        background: #f8f9fa;
+        border-radius: 8px;
+    }
+    .agenda-visit.checked-in {
+        border-left-color: var(--warn);
+        background: #fffbeb;
+    }
+    .agenda-visit.completed {
+        border-left-color: #adb5bd;
+        background: #f1f3f5;
+        opacity: 0.9;
+    }
+    .agenda-visit a { color: inherit; text-decoration: none; }
+    .agenda-visit a:hover strong { color: var(--brand); }
+</style>
+
+<div class="card">
+    <div class="cal-nav">
+        <a href="?year={{ prev_year }}&month={{ prev_month }}&date={{ selected_date|date:'Y-m-d' }}">‹</a>
+        <h2>{{ cal_month_label }}</h2>
+        <a href="?year={{ next_year }}&month={{ next_month }}&date={{ selected_date|date:'Y-m-d' }}">›</a>
+    </div>
+    <div class="cal-grid">
+        <span class="cal-dow">M</span>
+        <span class="cal-dow">T</span>
+        <span class="cal-dow">W</span>
+        <span class="cal-dow">T</span>
+        <span class="cal-dow">F</span>
+        <span class="cal-dow">S</span>
+        <span class="cal-dow">S</span>
+        {% for week in calendar_weeks %}
+            {% for cell in week %}
+                {% if cell %}
+                <a href="?year={{ cal_year }}&month={{ cal_month }}&date={{ cell.date|date:'Y-m-d' }}"
+                   class="cal-day{% if cell.is_today %} today{% endif %}{% if cell.is_selected %} selected{% endif %}">
+                    {{ cell.day }}
+                    {% if cell.visit_count %}<span class="dot" title="{{ cell.visit_count }} visit{{ cell.visit_count|pluralize }}"></span>{% endif %}
+                </a>
+                {% else %}
+                <span class="cal-day empty"></span>
+                {% endif %}
+            {% endfor %}
+        {% endfor %}
+    </div>
+    {% if selected_date != today %}
+    <a href="{% url 'operations:dashboard' %}" class="btn btn-outline btn-sm" style="margin-top:0.75rem;width:auto">Jump to Today</a>
+    {% endif %}
+</div>
+
+<div class="card">
+    <h2>
+        {% if selected_date == today %}Today's Agenda{% else %}{{ selected_date|date:"l, F j, Y" }}{% endif %}
+    </h2>
+    <div class="stat-grid" style="margin-top:0.5rem;margin-bottom:0.75rem">
+        <div class="stat">
+            <div class="number">{{ agenda_visits|length }}</div>
+            <div class="label">Dogs</div>
+        </div>
+        <div class="stat">
+            <div class="number">{{ capacity.count }}</div>
+            <div class="label">Capacity</div>
+        </div>
+    </div>
+    <p>
+        <span class="badge badge-{% if capacity.status == 'ok' %}ok{% elif capacity.status == 'warning' %}warn{% else %}danger{% endif %}">
+            {{ capacity.status|upper }}
+        </span>
+        <span class="muted" style="margin-left:0.5rem">{{ capacity.message }}</span>
+    </p>
+
+    {% for visit in agenda_visits %}
+    <div class="agenda-visit{% if visit.status == 'checked_in' %} checked-in{% elif visit.status == 'completed' %} completed{% endif %}">
+        <a href="{% url 'operations:dog_detail' visit.client.pk %}">
+            <strong>{{ visit.client.dog_name }}</strong>
+            <span class="muted"> — {{ visit.client.owner_name }}</span>
+        </a>
+        <br>
+        <span class="muted">{{ visit.schedule_display }}</span>
+        <br>
+        {% if visit.status == 'checked_in' %}
+        <span class="badge badge-warn">CHECKED IN</span>
+        {% elif visit.status == 'completed' %}
+        <span class="badge badge-ok">COMPLETED</span>
+        {% else %}
+        <span class="badge badge-ok">{{ visit.get_status_display }}</span>
+        {% endif %}
+        {% if visit.actual_arrival %}
+        <span class="muted"> · arrived {{ visit.actual_arrival|time:"g:i A" }}</span>
+        {% endif %}
+    </div>
+    {% empty %}
+    <p class="muted" style="margin-top:0.5rem">No visits on this day.</p>
+    {% endfor %}
+
+    {% if selected_date == today %}
+    <a href="{% url 'operations:mobile_checkin' %}" class="btn btn-primary" style="margin-top:0.75rem">Open Check-In</a>
+    {% endif %}
+</div>
+
+<div class="stat-grid" style="margin-bottom:0.75rem">
+    <div class="card stat">
+        <div class="number">{{ approved_clients }}</div>
+        <div class="label">Approved Dogs</div>
+    </div>
+    <div class="card stat">
+        <div class="number">8</div>
+        <div class="label">Standard Max</div>
+    </div>
+</div>
+
+{% if pending_events %}
+<div class="card">
+    <h2>Pending Calendar Events</h2>
+    {% for event in pending_events %}
+    <p><strong>{{ event.summary }}</strong><br><span class="muted">{{ event.start_datetime }}</span></p>
+    {% endfor %}
+    <a href="{% url 'operations:pending_events' %}" class="btn btn-outline btn-sm">Review All</a>
+</div>
+{% endif %}
+
+<div class="card">
+    <h2>Quick Links</h2>
+    <a href="{% url 'operations:ical_feed' %}" class="btn btn-outline">iCal Feed (Google Calendar)</a>
+</div>
+{% endblock %}

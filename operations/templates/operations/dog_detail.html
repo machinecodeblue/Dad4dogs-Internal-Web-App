@@ -1,0 +1,63 @@
+{% extends "operations/base.html" %}
+{% block title %}{{ dog.dog_name }} — Dad4dogs{% endblock %}
+{% block content %}
+<div class="card">
+    <p class="muted"><a href="{% url 'operations:customer_detail' customer_owner.pk %}" style="color:var(--brand)">← {{ customer_owner.owner_name }}</a></p>
+    <span class="muted" style="font-size:0.8rem">DOG</span>
+    <h2>{{ dog.dog_name }}</h2>
+    <span class="badge badge-ok">{{ dog.get_pipeline_stage_display }}</span>
+    <p class="muted" style="margin-top:0.5rem">Pipeline applies to this dog.</p>
+    <div class="actions" style="margin-top:0.75rem">
+        <a href="{% url 'operations:dog_edit' dog.pk %}" class="btn btn-primary btn-sm">Edit Dog</a>
+        <a href="{% url 'operations:dog_vaccinations' dog.pk %}" class="btn btn-outline btn-sm">Vaccination Records</a>
+        <a href="{% url 'operations:client_vcard' dog.pk %}" class="btn btn-outline btn-sm">Export vCard</a>
+    </div>
+    <form method="post" action="{% url 'operations:dog_delete' dog.pk %}" style="margin-top:0.75rem" onsubmit="return confirm('Remove {{ dog.dog_name }} from the system?');">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-outline btn-sm" style="color:var(--danger);border-color:var(--danger)">Remove Dog</button>
+    </form>
+</div>
+
+{% if dog.pipeline_stage != 'approved' %}
+<div class="card">
+    <form method="post" action="{% url 'operations:advance_pipeline' dog.pk %}">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-primary">Advance Pipeline Stage</button>
+    </form>
+</div>
+{% endif %}
+
+<div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem">
+        <h2 style="margin:0">Visits</h2>
+        <a href="{% url 'operations:visit_create' dog.pk %}" class="btn btn-primary btn-sm">+ Add Visit (repeat OK)</a>
+    </div>
+    {% for visit in visits %}
+    <div style="margin-bottom:0.75rem;padding:0.75rem;background:#f8f9fa;border-radius:8px">
+        <strong>{{ visit.schedule_display }}</strong>
+        <br>
+        <span class="badge badge-{% if visit.status == 'completed' %}ok{% elif visit.status == 'scheduled' %}warn{% else %}warn{% endif %}">{{ visit.get_status_display }}</span>
+        {% if visit.series %}
+        <span class="badge badge-ok">Repeat {{ visit.series_position }}/{{ visit.series.total_occurrences }}</span>
+        {% endif %}
+        {% if visit.calculated_fee %}<span class="muted"> · ${{ visit.calculated_fee }} CAD</span>{% endif %}
+        {% if visit.confirmation_email_sent_at %}
+        <span class="badge badge-ok">Email sent</span>
+        {% endif %}
+        {% if visit.is_editable %}
+        <div class="actions" style="margin-top:0.5rem">
+            <a href="{% url 'operations:visit_edit' visit.pk %}" class="btn btn-outline btn-sm">Edit</a>
+            <form method="post" action="{% url 'operations:visit_delete' visit.pk %}" style="display:inline"
+                  onsubmit="return confirm('Remove this scheduled visit?');">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-outline btn-sm" style="color:var(--danger);border-color:var(--danger)">Delete</button>
+            </form>
+        </div>
+        {% endif %}
+    </div>
+    {% empty %}
+    <p class="muted">No visits yet.</p>
+    <a href="{% url 'operations:visit_create' dog.pk %}" class="btn btn-primary" style="margin-top:0.5rem">Schedule First Visit</a>
+    {% endfor %}
+</div>
+{% endblock %}

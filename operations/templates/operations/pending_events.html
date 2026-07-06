@@ -1,0 +1,32 @@
+{% extends "operations/base.html" %}
+{% block title %}Pending Calendar — Dad4dogs{% endblock %}
+{% block content %}
+<div class="card">
+    <h2>Pending Calendar Events</h2>
+    <p class="muted">Events imported from Google Calendar awaiting your review.</p>
+</div>
+
+{% for event in events %}
+<div class="card">
+    <h2>{{ event.summary }}</h2>
+    <p class="muted">{{ event.start_datetime }} – {{ event.end_datetime }}</p>
+    {% if event.matched_client %}
+    <p>Matched: <strong>{{ event.matched_client.dog_name }}</strong> ({{ event.matched_client.owner_email }})</p>
+    <div class="actions">
+        <form method="post" action="{% url 'operations:approve_pending_event' event.pk %}">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-success btn-sm">Approve</button>
+        </form>
+        <form method="post" action="{% url 'operations:reject_pending_event' event.pk %}">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-outline btn-sm">Reject</button>
+        </form>
+    </div>
+    {% else %}
+    <p class="muted">No client match found. Assign in admin panel.</p>
+    {% endif %}
+</div>
+{% empty %}
+<div class="card"><p class="muted">No pending events.</p></div>
+{% endfor %}
+{% endblock %}

@@ -1,0 +1,392 @@
+{% extends "operations/base.html" %}
+{% block title %}{{ title }} — Dad4dogs{% endblock %}
+{% block content %}
+<style>
+    .datetime-text-input {
+        font-size: 1.1rem;
+        padding: 0.85rem 1rem;
+    }
+    .datetime-preview {
+        display: none;
+        width: 100%;
+        text-align: left;
+        padding: 0.85rem 1rem;
+        font-size: 1.1rem;
+        border: 2px solid var(--brand-light);
+        border-radius: var(--radius);
+        background: #f0faf4;
+        color: var(--text);
+        cursor: pointer;
+        margin-top: 0.35rem;
+    }
+    .datetime-preview.visible { display: block; }
+    .datetime-preview .label { font-size: 0.75rem; color: var(--muted); display: block; }
+    .datetime-field.editing .datetime-preview { display: none; }
+    .datetime-field.confirmed .datetime-text-input { display: none; }
+    .datetime-field.confirmed .datetime-preview { display: block; }
+    .repeat-card {
+        background: #f0faf4;
+        border: 1px solid #b7e4c7;
+        border-radius: var(--radius);
+        padding: 1rem;
+        margin-top: 1rem;
+    }
+    .repeat-card select,
+    #id_repeat_frequency {
+        font-size: 1.1rem;
+        padding: 0.75rem;
+        font-weight: 600;
+    }
+    .email-confirm-card {
+        background: #eef6ff;
+        border: 1px solid #b6d4fe;
+        border-radius: var(--radius);
+        padding: 1rem;
+        margin-top: 1rem;
+    }
+    .email-confirm-card label {
+        display: flex;
+        align-items: flex-start;
+        gap: 0.75rem;
+        margin-bottom: 0;
+        cursor: pointer;
+    }
+    .email-confirm-card input[type="checkbox"] {
+        margin-top: 0.2rem;
+        flex-shrink: 0;
+    }
+    .email-confirm-card .hint {
+        font-size: 0.85rem;
+        color: var(--muted);
+        margin-top: 0.35rem;
+        margin-left: 2rem;
+    }
+</style>
+
+<div class="card">
+    <p class="muted"><a href="{% url 'operations:dog_detail' client.pk %}" style="color:var(--brand)">← {{ client.dog_name }}</a></p>
+    <h2>{{ title }}</h2>
+    <p class="muted">Type or dictate start and end — e.g. <em>April 11, 2026 5 pm</em>. Tap the formatted result to edit.</p>
+</div>
+
+<div class="card">
+    <h2>{% if visit %}Edit Visit{% else %}New Visit{% endif %}</h2>
+    {% if visit %}
+    <p class="muted" style="margin-bottom:0.75rem;padding:0.75rem;background:#fff3cd;border-radius:8px">
+        Editing one day only. To book <strong>multiple days</strong> (e.g. next 5 days), go back and tap
+        <strong>+ Add Visit</strong>, then set <strong>Repeat</strong> to Daily.
+    </p>
+    {% else %}
+    <p class="muted" style="margin-bottom:0.75rem">Book one visit or a repeating series — set <strong>Repeat</strong> below for multiple days.</p>
+    {% endif %}
+    <form method="post" id="visit-form">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="create">
+
+        {% if visit_form.non_field_errors %}
+        <div style="color:var(--danger);margin-bottom:0.75rem">
+            {% for error in visit_form.non_field_errors %}{{ error }}{% endfor %}
+        </div>
+        {% endif %}
+
+        {% if not visit %}
+        <div class="repeat-card" id="repeat-section">
+            <label for="{{ visit_form.repeat_frequency.id_for_label }}"><strong>Repeat</strong></label>
+            {{ visit_form.repeat_frequency }}
+
+            <div id="repeat-options" style="display:none;margin-top:0.75rem">
+                <div id="repeat-interval-row">
+                    <label for="{{ visit_form.repeat_interval.id_for_label }}">Every</label>
+                    <div style="display:flex;align-items:center;gap:0.5rem">
+                        {{ visit_form.repeat_interval }}
+                        <span id="repeat-interval-unit" class="muted">days</span>
+                    </div>
+                </div>
+                <p id="repeat-weekly-hint" class="muted" style="font-size:0.85rem;display:none;margin-top:0.35rem"></p>
+
+                <label for="{{ visit_form.repeat_ends.id_for_label }}" style="margin-top:0.75rem"><strong>Ends</strong></label>
+                {{ visit_form.repeat_ends }}
+                <p class="muted" style="font-size:0.85rem;margin-top:0.25rem">Type a number (e.g. <em>5</em>) or an end date (e.g. <em>April 15, 2026</em>).</p>
+                <p id="repeat-ends-hint" class="muted" style="font-size:0.85rem;margin-top:0.25rem;display:none"></p>
+                {% if visit_form.repeat_ends.errors %}
+                <p style="color:var(--danger);font-size:0.85rem">{{ visit_form.repeat_ends.errors.0 }}</p>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+
+        <div class="datetime-field editing" id="start-field" style="margin-top:1rem">
+            <label for="{{ visit_form.start_at.id_for_label }}">Start</label>
+            {{ visit_form.start_at }}
+            <button type="button" class="datetime-preview" id="start-preview" tabindex="0">
+                <span class="label">Start · tap to edit</span>
+                <span class="value"></span>
+            </button>
+            {% if visit_form.start_at.errors %}
+            <p style="color:var(--danger);font-size:0.85rem">{{ visit_form.start_at.errors.0 }}</p>
+            {% endif %}
+            <p class="parse-error muted" id="start-parse-error" style="color:var(--danger);font-size:0.85rem;display:none"></p>
+        </div>
+
+        <div class="datetime-field editing" id="end-field" style="margin-top:1rem">
+            <label for="{{ visit_form.end_at.id_for_label }}">End</label>
+            {{ visit_form.end_at }}
+            <button type="button" class="datetime-preview" id="end-preview" tabindex="0">
+                <span class="label">End · tap to edit</span>
+                <span class="value"></span>
+            </button>
+            {% if visit_form.end_at.errors %}
+            <p style="color:var(--danger);font-size:0.85rem">{{ visit_form.end_at.errors.0 }}</p>
+            {% endif %}
+            <p class="parse-error muted" id="end-parse-error" style="color:var(--danger);font-size:0.85rem;display:none"></p>
+        </div>
+
+        <label for="{{ visit_form.notes.id_for_label }}" style="margin-top:1rem;display:block">Notes (optional)</label>
+        {{ visit_form.notes }}
+
+        {% if visit_form.send_confirmation_email %}
+        <div class="email-confirm-card">
+            <label for="{{ visit_form.send_confirmation_email.id_for_label }}">
+                {{ visit_form.send_confirmation_email }}
+                <span><strong>{{ visit_form.send_confirmation_email.label }}</strong></span>
+            </label>
+            <p class="hint">Check this to email the customer after you schedule. Leave unchecked to book without notifying them.</p>
+        </div>
+        {% endif %}
+
+        <div class="actions" style="margin-top:0.75rem">
+            <button type="submit" class="btn btn-primary">{{ submit_label }}</button>
+            <a href="{% url 'operations:dog_detail' client.pk %}" class="btn btn-outline">Cancel</a>
+        </div>
+    </form>
+
+    {% if visit and visit.is_editable %}
+    <form method="post" action="{% url 'operations:visit_delete' visit.pk %}" style="margin-top:1rem"
+          onsubmit="return confirm('Remove this scheduled visit?');">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-outline btn-sm" style="color:var(--danger);border-color:var(--danger)">Delete Visit</button>
+    </form>
+    {% endif %}
+</div>
+
+{% if show_clone and visits %}
+<div class="card">
+    <h2>Clone Past Visit</h2>
+    <p class="muted">Copy a completed visit's duration and time-of-day to a new start date.</p>
+    <form method="post">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="clone">
+
+        <label for="visit_id">Select Past Visit</label>
+        <select name="visit_id" id="visit_id" required>
+            {% for past_visit in visits %}
+            <option value="{{ past_visit.pk }}">
+                {{ past_visit.schedule_display }} ({{ past_visit.duration_hours|floatformat:1 }}h)
+            </option>
+            {% endfor %}
+        </select>
+
+        <div class="datetime-field editing" id="clone-date-field" style="margin-top:0.5rem">
+            <label for="new_date_text">New Start Date</label>
+            <input type="text" name="new_date_text" id="new_date_text" class="datetime-text-input"
+                   placeholder="e.g. April 15, 2026" autocomplete="off" spellcheck="false">
+            <input type="hidden" name="new_date" id="new_date">
+            <button type="button" class="datetime-preview" id="clone-date-preview" tabindex="0">
+                <span class="label">New start date · tap to edit</span>
+                <span class="value"></span>
+            </button>
+        </div>
+
+        <button type="submit" class="btn btn-outline" style="margin-top:0.75rem">Clone Visit</button>
+    </form>
+</div>
+{% endif %}
+
+<script>
+(function () {
+    const parseUrl = '{% url "operations:parse_datetime" %}';
+
+    function wireDatetimeField(fieldEl, input, previewBtn, errorEl, getDefault) {
+        if (!fieldEl || !input || !previewBtn) return;
+        const valueSpan = previewBtn.querySelector('.value');
+
+        async function tryParse() {
+            const text = input.value.trim();
+            if (!text) {
+                fieldEl.classList.remove('confirmed');
+                fieldEl.classList.add('editing');
+                if (errorEl) { errorEl.style.display = 'none'; }
+                return false;
+            }
+            let url = parseUrl + '?q=' + encodeURIComponent(text);
+            const def = getDefault ? getDefault() : '';
+            if (def) url += '&default=' + encodeURIComponent(def);
+            try {
+                const resp = await fetch(url);
+                const data = await resp.json();
+                if (data.ok) {
+                    valueSpan.textContent = data.display;
+                    input.dataset.iso = data.iso;
+                    fieldEl.classList.remove('editing');
+                    fieldEl.classList.add('confirmed');
+                    if (errorEl) { errorEl.style.display = 'none'; }
+                    return true;
+                }
+                if (errorEl) {
+                    errorEl.textContent = data.error;
+                    errorEl.style.display = 'block';
+                }
+                fieldEl.classList.remove('confirmed');
+                fieldEl.classList.add('editing');
+                return false;
+            } catch (e) {
+                return false;
+            }
+        }
+
+        function openEditor() {
+            fieldEl.classList.remove('confirmed');
+            fieldEl.classList.add('editing');
+            input.focus();
+            input.select();
+        }
+
+        input.addEventListener('blur', function () {
+            setTimeout(function () { tryParse().then(function () { syncRepeatUi(); }); }, 150);
+        });
+        previewBtn.addEventListener('click', openEditor);
+        previewBtn.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openEditor(); }
+        });
+
+        if (input.value.trim()) tryParse();
+        return { tryParse, openEditor };
+    }
+
+    const freqSelect = document.getElementById('id_repeat_frequency');
+    const repeatOptions = document.getElementById('repeat-options');
+    const intervalRow = document.getElementById('repeat-interval-row');
+    const intervalUnit = document.getElementById('repeat-interval-unit');
+    const weeklyHint = document.getElementById('repeat-weekly-hint');
+    const startInput = document.getElementById('id_start_at');
+
+    function syncRepeatUi() {
+        if (!freqSelect || !repeatOptions) return;
+        const freq = freqSelect.value;
+        const show = freq && freq !== 'none';
+        repeatOptions.style.display = show ? 'block' : 'none';
+        if (intervalRow) {
+            intervalRow.style.display = (freq === 'weekdays') ? 'none' : 'block';
+        }
+        if (intervalUnit) {
+            const n = document.getElementById('id_repeat_interval');
+            const num = n ? parseInt(n.value, 10) || 1 : 1;
+            const units = {
+                daily: num === 1 ? 'day' : 'days',
+                weekly: num === 1 ? 'week' : 'weeks',
+                monthly: num === 1 ? 'month' : 'months',
+            };
+            intervalUnit.textContent = units[freq] || 'days';
+        }
+        if (weeklyHint) {
+            if (freq === 'weekly' && startInput && startInput.dataset.iso) {
+                const d = new Date(startInput.dataset.iso);
+                const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+                const wk = document.getElementById('id_repeat_interval');
+                weeklyHint.textContent = 'Repeats every ' + (wk ? wk.value || '1' : '1') + ' week(s) on ' + days[d.getDay()] + 's';
+                weeklyHint.style.display = 'block';
+            } else if (freq === 'weekdays') {
+                weeklyHint.textContent = 'Repeats Monday through Friday only.';
+                weeklyHint.style.display = 'block';
+            } else {
+                weeklyHint.style.display = 'none';
+            }
+        }
+    }
+
+    const endsInput = document.getElementById('id_repeat_ends');
+    const endsHint = document.getElementById('repeat-ends-hint');
+
+    async function syncEndsHint() {
+        if (!endsInput || !endsHint) return;
+        const text = endsInput.value.trim();
+        if (!text) { endsHint.style.display = 'none'; return; }
+        if (/^\d+\s*(?:times?|occurrences?|visits?)?$/i.test(text)) {
+            endsHint.textContent = '→ ' + parseInt(text, 10) + ' visits in the series';
+            endsHint.style.display = 'block';
+            return;
+        }
+        let url = parseUrl + '?q=' + encodeURIComponent(text);
+        if (startInput && startInput.dataset.iso) {
+            url += '&default=' + encodeURIComponent(startInput.dataset.iso);
+        }
+        try {
+            const resp = await fetch(url);
+            const data = await resp.json();
+            if (data.ok) {
+                endsHint.textContent = '→ ends on ' + data.display;
+                endsHint.style.display = 'block';
+            } else {
+                endsHint.style.display = 'none';
+            }
+        } catch (e) {
+            endsHint.style.display = 'none';
+        }
+    }
+
+    if (freqSelect) {
+        freqSelect.addEventListener('change', syncRepeatUi);
+        const intervalInput = document.getElementById('id_repeat_interval');
+        if (intervalInput) intervalInput.addEventListener('input', syncRepeatUi);
+        syncRepeatUi();
+    }
+    if (endsInput) {
+        endsInput.addEventListener('blur', syncEndsHint);
+        endsInput.addEventListener('input', syncEndsHint);
+    }
+
+    const endInput = document.getElementById('id_end_at');
+    wireDatetimeField(
+        document.getElementById('start-field'),
+        startInput,
+        document.getElementById('start-preview'),
+        document.getElementById('start-parse-error'),
+        null,
+    );
+    wireDatetimeField(
+        document.getElementById('end-field'),
+        endInput,
+        document.getElementById('end-preview'),
+        document.getElementById('end-parse-error'),
+        function () { return startInput && startInput.dataset.iso ? startInput.dataset.iso : ''; },
+    );
+
+    const cloneInput = document.getElementById('new_date_text');
+    const cloneHidden = document.getElementById('new_date');
+    const cloneField = document.getElementById('clone-date-field');
+    if (cloneInput && cloneHidden) {
+        wireDatetimeField(
+            cloneField,
+            cloneInput,
+            document.getElementById('clone-date-preview'),
+            null,
+            null,
+        );
+        const cloneForm = cloneField.closest('form');
+        if (cloneForm) {
+            cloneForm.addEventListener('submit', function (e) {
+                const iso = cloneInput.dataset.iso;
+                if (iso) {
+                    cloneHidden.value = iso.slice(0, 10);
+                } else if (cloneInput.value.trim()) {
+                    e.preventDefault();
+                    cloneField.classList.remove('confirmed');
+                    cloneField.classList.add('editing');
+                    cloneInput.focus();
+                }
+            });
+        }
+    }
+})();
+</script>
+{% endblock %}

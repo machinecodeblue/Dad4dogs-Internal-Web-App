@@ -1,0 +1,33 @@
+{% extends "operations/base.html" %}
+{% block title %}Contact Sync — Dad4dogs{% endblock %}
+{% block content %}
+<div class="card">
+    <h2>Google Contacts Sync</h2>
+    <p class="muted">Import Google CSV exports for review, or export a single client as a vCard for Google.</p>
+</div>
+
+<div class="card">
+    <h2>Import from Google (CSV)</h2>
+    <p class="muted">Upload your Google Contacts export. Nothing is saved to the database — you'll review duplicates first.</p>
+    <form method="post" action="{% url 'operations:contact_import_preview' %}" enctype="multipart/form-data">
+        {% csrf_token %}
+        <label for="csv_file">Google Contacts CSV</label>
+        <input type="file" name="csv_file" id="csv_file" accept=".csv" required>
+        <button type="submit" class="btn btn-primary">Upload &amp; Analyze</button>
+    </form>
+</div>
+
+<div class="card">
+    <h2>Export to Google (vCard)</h2>
+    <p class="muted">Open any client profile and tap <strong>Export vCard</strong>. Double-click the downloaded file to add it to Google Contacts.</p>
+    <a href="{% url 'operations:client_list' %}" class="btn btn-outline">Go to Clients</a>
+</div>
+
+{% if last_import %}
+<div class="card">
+    <h2>Last Import Summary</h2>
+    <p>{{ last_import.total_rows }} contacts analyzed</p>
+    <a href="{% url 'operations:contact_import_preview' %}" class="btn btn-outline btn-sm">View Full Report</a>
+</div>
+{% endif %}
+{% endblock %}

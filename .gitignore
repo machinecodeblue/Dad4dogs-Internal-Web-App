@@ -1,0 +1,14 @@
+certs/
+O-Auth Key/
+credentials.json
+token.json
+__pycache__/
+*.py[cod]
+*.sqlite3
+db.sqlite3
+media/
+staticfiles/
+.env
+.venv/
+venv/
+*.ics

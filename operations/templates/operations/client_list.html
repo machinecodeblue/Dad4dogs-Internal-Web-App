@@ -1,0 +1,53 @@
+{% extends "operations/base.html" %}
+{% block title %}Clients — Dad4dogs{% endblock %}
+{% block content %}
+<div class="card">
+    <h2>Client Pipeline</h2>
+    <a href="{% url 'operations:client_create' %}" class="btn btn-primary" style="margin-bottom:0.5rem">+ Add Customer</a>
+    <a href="{% url 'operations:contact_sync' %}" class="btn btn-outline" style="margin-bottom:0.75rem">Google Contact Sync</a>
+    <form method="get">
+        <select name="stage" onchange="this.form.submit()">
+            <option value="">All Stages</option>
+            {% for value, label in stages %}
+            <option value="{{ value }}" {% if current_stage == value %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+        </select>
+    </form>
+</div>
+
+{% for group in customers %}
+<div class="card visit-card">
+    <a href="{% url 'operations:customer_detail' group.owner.pk %}" style="text-decoration:none;color:inherit">
+        <span class="muted" style="font-size:0.8rem">CUSTOMER</span><br>
+        <strong>{{ group.owner.owner_name }}</strong>
+        <span class="muted"> · {{ group.owner.owner_email }}</span>
+        <br>
+        {% if group.owner.coi_status == 'received' %}
+        <span class="badge badge-ok">COI</span>
+        {% else %}
+        <span class="badge badge-warn">COI</span>
+        {% endif %}
+    </a>
+
+    {% for dog in group.dogs %}
+    <a href="{% url 'operations:dog_detail' dog.pk %}" style="text-decoration:none;color:inherit;display:block;margin-top:0.5rem;padding:0.5rem;background:#f8f9fa;border-radius:8px">
+        <span class="muted" style="font-size:0.8rem">DOG</span><br>
+        <strong>{{ dog.dog_name }}</strong>
+        <span class="badge badge-ok">{{ dog.get_pipeline_stage_display }}</span>
+        {% if dog.has_current_vaccination %}
+        <span class="badge badge-ok">VAX</span>
+        {% else %}
+        <span class="badge badge-warn">VAX</span>
+        {% endif %}
+    </a>
+    {% empty %}
+    <p class="muted" style="margin-top:0.5rem">No dogs yet — <a href="{% url 'operations:customer_add_dog' group.owner.pk %}">add a dog</a></p>
+    {% endfor %}
+</div>
+{% empty %}
+<div class="card">
+    <p class="muted">No clients yet.</p>
+    <a href="{% url 'operations:client_create' %}" class="btn btn-primary" style="margin-top:0.5rem">Add Your First Customer</a>
+</div>
+{% endfor %}
+{% endblock %}

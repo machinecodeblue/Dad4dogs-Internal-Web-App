@@ -1,0 +1,49 @@
+{% extends "operations/base.html" %}
+{% block title %}Check-In — Dad4dogs{% endblock %}
+{% block content %}
+<div class="card">
+    <h2>Live Check-In — {{ today }}</h2>
+    <p>
+        <span class="badge badge-{% if capacity.status == 'ok' %}ok{% elif capacity.status == 'warning' %}warn{% else %}danger{% endif %}">
+            {{ capacity.count }} dogs
+        </span>
+        <span class="muted" style="margin-left:0.5rem">{{ capacity.message }}</span>
+    </p>
+</div>
+
+{% for visit in visits %}
+<div class="visit-card card {% if visit.status == 'checked_in' %}checked-in{% endif %}">
+    <h2>{{ visit.client.dog_name }}</h2>
+    <p class="muted">{{ visit.client.owner_name }} · {{ visit.client.owner_email }}</p>
+    <p>Scheduled: {{ visit.scheduled_start|time:"g:i A" }} – {{ visit.scheduled_end|time:"g:i A" }}</p>
+
+    {% if visit.actual_arrival %}
+    <p class="muted">Arrived: {{ visit.actual_arrival|time:"g:i A" }}</p>
+    {% endif %}
+    {% if visit.actual_departure %}
+    <p class="muted">Departed: {{ visit.actual_departure|time:"g:i A" }} · ${{ visit.calculated_fee }} CAD</p>
+    {% endif %}
+
+    <div class="actions">
+        {% if visit.status == 'scheduled' %}
+        <form method="post" action="{% url 'operations:visit_check_in' visit.pk %}">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-success">Check In</button>
+        </form>
+        {% elif visit.status == 'checked_in' %}
+        <a href="{% url 'operations:visit_timeline' visit.pk %}" class="btn btn-primary">Log Moment</a>
+        <form method="post" action="{% url 'operations:visit_check_out' visit.pk %}">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-warn">Check Out</button>
+        </form>
+        {% else %}
+        <span class="badge badge-ok">{{ visit.get_status_display }}</span>
+        {% endif %}
+    </div>
+</div>
+{% empty %}
+<div class="card">
+    <p class="muted">No active visits for today.</p>
+</div>
+{% endfor %}
+{% endblock %}
