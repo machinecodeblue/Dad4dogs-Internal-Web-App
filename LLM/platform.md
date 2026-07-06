@@ -72,6 +72,21 @@ Messages appear in Gmail **Sent Mail** for audit trail.
 - Cards, large touch targets, green brand (`#2d6a4f`)
 - Max content width ~600px centred
 
+### Progressive Web App (PWA)
+Install to home screen for standalone mode (no browser address bar).
+
+| URL | Purpose |
+|-----|---------|
+| `/manifest.webmanifest` | Web app manifest (`display: standalone`) |
+| `/sw.js` | Service worker (network-only; enables install) |
+
+Icons: `operations/static/operations/pwa/`  
+Session: 30-day cookie (`SESSION_COOKIE_AGE`) so David stays signed in on his phone.
+
+**Install (iPhone/Safari):** Share → **Add to Home Screen**  
+**Install (Android/Chrome):** Menu → **Install app** / **Add to Home screen**  
+Requires **HTTPS** (use `runserver_https` + ngrok for mobile).
+
 ### Badge colours
 | Class | Meaning |
 |-------|---------|

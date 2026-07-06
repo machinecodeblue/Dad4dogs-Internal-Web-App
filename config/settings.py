@@ -138,6 +138,10 @@ MEDIA_ROOT = BASE_DIR / 'media'
 LOGIN_URL = '/admin/login/'
 LOGIN_REDIRECT_URL = '/'
 
+# Single-user admin app — stay signed in on David's phone between sessions.
+SESSION_COOKIE_AGE = 60 * 60 * 24 * 30
+SESSION_EXPIRE_AT_BROWSER_CLOSE = False
+
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 

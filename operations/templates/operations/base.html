@@ -1,8 +1,18 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#2d6a4f">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Dad4dogs">
+    <meta name="application-name" content="Dad4dogs">
+    <link rel="manifest" href="/manifest.webmanifest">
+    <link rel="icon" type="image/png" sizes="192x192" href="{% static 'operations/pwa/icon-192.png' %}">
+    <link rel="apple-touch-icon" href="{% static 'operations/pwa/apple-touch-icon.png' %}">
     <title>{% block title %}Dad4dogs{% endblock %}</title>
     <style>
         :root {
@@ -22,12 +32,13 @@
             background: var(--bg);
             color: var(--text);
             line-height: 1.5;
-            padding-bottom: 80px;
+            padding-bottom: calc(80px + env(safe-area-inset-bottom, 0px));
         }
         header {
             background: var(--brand);
             color: white;
             padding: 1rem;
+            padding-top: calc(1rem + env(safe-area-inset-top, 0px));
             position: sticky;
             top: 0;
             z-index: 100;
@@ -43,7 +54,7 @@
             border-top: 1px solid #dee2e6;
             display: flex;
             justify-content: space-around;
-            padding: 0.5rem 0;
+            padding: 0.5rem 0 calc(0.5rem + env(safe-area-inset-bottom, 0px));
             z-index: 100;
         }
         nav.bottom-nav a {
@@ -156,5 +167,13 @@
         <a href="{% url 'operations:statements' %}" class="{% if 'statement' in request.resolver_match.url_name %}active{% endif %}">Billing</a>
         <a href="{% url 'operations:business_settings' %}" class="{% if request.resolver_match.url_name == 'business_settings' %}active{% endif %}">Settings</a>
     </nav>
+
+    <script>
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', function () {
+            navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch(function () {});
+        });
+    }
+    </script>
 </body>
 </html>

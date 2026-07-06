@@ -19,11 +19,15 @@ from django.conf.urls.static import static
 from django.contrib import admin
 from django.urls import include, path
 
+from operations.views import pwa as pwa_views
+
 admin.site.site_header = 'Dad4dogs Admin'
 admin.site.site_title = 'Dad4dogs'
 admin.site.index_title = 'Operations Dashboard'
 
 urlpatterns = [
+    path('manifest.webmanifest', pwa_views.manifest, name='pwa_manifest'),
+    path('sw.js', pwa_views.service_worker, name='pwa_service_worker'),
     path('admin/', admin.site.urls),
     path('', include('operations.urls')),
 ]

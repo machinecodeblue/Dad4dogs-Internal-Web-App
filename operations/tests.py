@@ -903,6 +903,22 @@ def _test_image_file(name='moment.jpg'):
     return SimpleUploadedFile(name, buffer.read(), content_type='image/jpeg')
 
 
+class PwaTests(TestCase):
+    def test_manifest_served(self):
+        response = self.client.get('/manifest.webmanifest')
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('application/manifest+json', response['Content-Type'])
+        data = response.json()
+        self.assertEqual(data['display'], 'standalone')
+        self.assertEqual(data['short_name'], 'Dad4dogs')
+
+    def test_service_worker_served(self):
+        response = self.client.get('/sw.js')
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('javascript', response['Content-Type'])
+        self.assertIn(b'skipWaiting', response.content)
+
+
 class GeolocationTests(TestCase):
     def test_resolve_device_coordinates(self):
         lat, lng, used_fallback, label = resolve_timeline_coordinates('43.01', '-81.23')
