@@ -83,9 +83,11 @@ Install to home screen for standalone mode (no browser address bar).
 Icons: `operations/static/operations/pwa/`  
 Session: 30-day cookie (`SESSION_COOKIE_AGE`) so David stays signed in on his phone.
 
-**Install (iPhone/Safari):** Share → **Add to Home Screen**  
-**Install (Android/Chrome):** Menu → **Install app** / **Add to Home screen**  
-Requires **HTTPS** (use `runserver_https` + ngrok for mobile).
+**Install (iPhone/Safari):** Custom banner → **How to Install** → Share → **Add to Home Screen**  
+**Install (Android/Chrome):** Custom top banner intercepts `beforeinstallprompt` → **Install App**  
+**Dismiss:** "Not now" stores preference in `localStorage` (`dad4dogs-pwa-install-dismissed`)  
+Requires **HTTPS** (use `runserver_https` + ngrok for mobile).  
+JS: `operations/static/operations/pwa/install.js`
 
 ### Badge colours
 | Class | Meaning |

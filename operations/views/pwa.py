@@ -6,13 +6,18 @@ from django.views.decorators.http import require_GET
 @require_GET
 def manifest(request):
     """Web App Manifest for install-to-home-screen (standalone display)."""
-    icon_base = f'{settings.STATIC_URL}operations/pwa'
+    site_base = request.build_absolute_uri('/').rstrip('/')
+    static_root = settings.STATIC_URL
+    if not static_root.startswith('http'):
+        static_root = f'{site_base}{static_root}'
+    icon_base = f'{static_root}operations/pwa'
     payload = {
         'name': 'Dad4dogs',
         'short_name': 'Dad4dogs',
         'description': "David's Internal Operations",
-        'start_url': '/',
-        'scope': '/',
+        'start_url': f'{site_base}/',
+        'scope': f'{site_base}/',
+        'id': f'{site_base}/',
         'display': 'standalone',
         'orientation': 'portrait-primary',
         'background_color': '#2d6a4f',
@@ -49,7 +54,7 @@ def service_worker(request):
     """
     Minimal service worker — enables PWA install without caching authenticated pages.
     """
-    body = """const SW_VERSION = 'dad4dogs-v1';
+    body = """const SW_VERSION = 'dad4dogs-v2';
 
 self.addEventListener('install', (event) => {
   self.skipWaiting();

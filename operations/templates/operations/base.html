@@ -141,9 +141,183 @@
         .import-row-flagged { background: #fff9f9; border-color: #f5c6cb !important; }
         .import-row-disabled { opacity: 0.55; }
         input[type="checkbox"] { width: 1.25rem; height: 1.25rem; accent-color: var(--brand); }
+        .hidden { display: none !important; }
+        #custom-install-banner {
+            position: fixed;
+            top: calc(0.5rem + env(safe-area-inset-top, 0px));
+            left: 0.75rem;
+            right: 0.75rem;
+            z-index: 200;
+            background: #1b4332;
+            color: white;
+            border: 1px solid #40916c;
+            border-radius: 14px;
+            box-shadow: 0 10px 28px rgba(0, 0, 0, 0.22);
+            padding: 0.9rem 1rem;
+            animation: install-banner-enter 0.5s ease-out, install-banner-bounce 2s ease-in-out 0.55s 2;
+        }
+        @keyframes install-banner-enter {
+            from { opacity: 0; transform: translateY(-1rem); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes install-banner-bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-4px); }
+        }
+        .install-banner-body {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.75rem;
+        }
+        .install-banner-leading {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            min-width: 0;
+            flex: 1;
+        }
+        .install-banner-icon {
+            flex-shrink: 0;
+            width: 2rem;
+            height: 2rem;
+            color: #95d5b2;
+        }
+        .install-banner-text h2 {
+            font-size: 0.9rem;
+            font-weight: 700;
+            margin-bottom: 0.15rem;
+        }
+        .install-banner-text p {
+            font-size: 0.72rem;
+            color: #d8f3dc;
+            line-height: 1.35;
+        }
+        .install-cta-btn {
+            flex-shrink: 0;
+            background: #ffffff;
+            color: #1b4332;
+            border: none;
+            border-radius: 10px;
+            padding: 0.55rem 1rem;
+            font-size: 0.72rem;
+            font-weight: 800;
+            letter-spacing: 0.04em;
+            cursor: pointer;
+            transition: background 0.15s ease, transform 0.15s ease;
+        }
+        .install-cta-btn:hover,
+        .install-cta-btn:active {
+            background: #d8f3dc;
+            transform: scale(1.02);
+        }
+        .install-banner-dismiss {
+            position: absolute;
+            top: 0.35rem;
+            right: 0.45rem;
+            background: transparent;
+            border: none;
+            color: #b7e4c7;
+            font-size: 1.1rem;
+            line-height: 1;
+            cursor: pointer;
+            padding: 0.15rem 0.35rem;
+            opacity: 0.85;
+        }
+        #custom-install-banner[data-mode="ios"] #custom-install-btn { display: none; }
+        #custom-install-banner[data-mode="ios"] #guide-install-btn { display: inline-block !important; }
+        #custom-install-banner[data-mode="android"] #custom-install-btn { display: inline-block !important; }
+        #custom-install-banner[data-mode="android"] #guide-install-btn { display: none; }
+        #custom-install-banner[data-mode="desktop"] #guide-install-btn { display: none; }
+        .install-guide-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 300;
+            background: rgba(0, 0, 0, 0.55);
+            display: flex;
+            align-items: flex-end;
+            padding: 1rem;
+            padding-bottom: calc(1.5rem + env(safe-area-inset-bottom, 0px));
+        }
+        .ios-install-card {
+            background: white;
+            color: var(--text);
+            border-radius: var(--radius);
+            padding: 1.25rem;
+            width: 100%;
+            max-width: 600px;
+            margin: 0 auto;
+            box-shadow: 0 12px 32px rgba(0, 0, 0, 0.25);
+        }
+        .ios-install-card h2 {
+            font-size: 1rem;
+            margin-bottom: 0.5rem;
+            color: var(--brand);
+        }
+        .ios-install-steps {
+            font-size: 0.9rem;
+            margin: 0.75rem 0;
+            padding-left: 1.1rem;
+        }
+        .ios-install-steps li { margin-bottom: 0.35rem; }
+        .ios-install-arrow {
+            text-align: center;
+            font-size: 2rem;
+            color: var(--brand);
+            margin-top: 0.5rem;
+            animation: ios-point-down 1.2s ease-in-out infinite;
+        }
+        @keyframes ios-point-down {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(6px); }
+        }
     </style>
 </head>
 <body>
+    <div id="custom-install-banner" class="hidden" data-mode="android" role="region" aria-label="Install Dad4dogs app">
+        <button type="button" id="custom-install-dismiss" class="install-banner-dismiss" aria-label="Dismiss install prompt">×</button>
+        <div class="install-banner-body">
+            <div class="install-banner-leading">
+                <svg class="install-banner-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+                </svg>
+                <div class="install-banner-text">
+                    <h2>Install Dad4dogs App</h2>
+                    <p id="install-banner-subtitle">Open check-in and operations from your home screen — no browser bar.</p>
+                </div>
+            </div>
+            <button type="button" id="custom-install-btn" class="install-cta-btn hidden">INSTALL</button>
+            <button type="button" id="guide-install-btn" class="install-cta-btn hidden">INSTALL</button>
+        </div>
+    </div>
+
+    <div id="android-install-overlay" class="hidden install-guide-overlay" role="dialog" aria-modal="true" aria-labelledby="android-install-title">
+        <div class="ios-install-card">
+            <h2 id="android-install-title">Install on Android</h2>
+            <p class="muted">If the one-tap prompt did not appear, use Chrome's menu:</p>
+            <ol class="ios-install-steps">
+                <li>Tap the <strong>⋮</strong> menu (top-right in Chrome).</li>
+                <li>Tap <strong>Install app</strong> or <strong>Add to Home screen</strong>.</li>
+                <li>Confirm — Dad4dogs opens full-screen from your home screen.</li>
+            </ol>
+            <button type="button" id="android-install-overlay-dismiss" class="btn btn-primary" style="margin-top:0.75rem">Got it</button>
+        </div>
+    </div>
+
+    <div id="ios-install-overlay" class="hidden install-guide-overlay" role="dialog" aria-modal="true" aria-labelledby="ios-install-title">
+        <div class="ios-install-card">
+            <h2 id="ios-install-title">Install on iPhone</h2>
+            <p class="muted">Safari does not allow one-tap install — use Apple's Add to Home Screen flow:</p>
+            <ol class="ios-install-steps">
+                <li>Tap the <strong>Share</strong> icon (box with arrow pointing up) at the bottom of Safari.</li>
+                <li>Scroll down and tap <strong>Add to Home Screen</strong>.</li>
+                <li>Tap <strong>Add</strong> — Dad4dogs opens full-screen like a native app.</li>
+            </ol>
+            <div class="ios-install-arrow" aria-hidden="true">↓</div>
+            <button type="button" id="ios-install-overlay-dismiss" class="btn btn-primary" style="margin-top:0.75rem">Got it</button>
+        </div>
+    </div>
+
     <header>
         <h1>Dad4dogs</h1>
         <p>David's Internal Operations</p>
@@ -175,5 +349,6 @@
         });
     }
     </script>
+    <script src="{% static 'operations/pwa/install.js' %}" defer></script>
 </body>
 </html>
