@@ -28,6 +28,7 @@ A **Django 5 monolith** for David's single-user dog boarding operation (~25 repe
 | **Scheduling** | Visits, repeat series, dashboard, check-in/out, pricing, calendar |
 | **Billing** | Weekly statements, checkout fees (pricing engine lives in scheduling) |
 | **Admin** | Business baseline — identity, address, hours, phone numbers, documents (planned) |
+| **Feed** | Staff timeline capture + customer photo feed (secret link, no password) |
 
 ---
 
@@ -39,7 +40,8 @@ A **Django 5 monolith** for David's single-user dog boarding operation (~25 repe
    - `scheduling.md` — visits, agenda, check-in, pricing, email confirmations
    - `billing.md` — statements
    - `admin.md` — business settings, baseline contact info, documents (planned)
-3. **`platform.md`** — dev server, HTTPS, ngrok, Gmail OAuth, UI conventions, testing
+   - `feed.md` — timeline capture, customer photo feed, speakable URLs
+3. **`platform.md`** — dev server, HTTPS, ngrok, Gmail OAuth, PWA, UI conventions, testing
 
 Do **not** change pricing tiers, capacity ceilings, or pipeline stages unless David explicitly asks.
 
@@ -54,21 +56,26 @@ operations/
 ├── models/
 │   ├── __init__.py       # re-exports all models
 │   ├── customers.py      # CustomerOwner, ClientProfile, VaccinationRecord
-│   ├── scheduling.py     # VisitSeries, Visit, PendingCalendarEvent
+│   ├── scheduling.py     # VisitSeries, Visit, TimelineMediaAsset, VisitTimelineEvent, PendingCalendarEvent
 │   ├── billing.py        # AccountStatement
 │   └── business.py       # BusinessProfile (singleton)
 ├── forms/
 │   ├── __init__.py
 │   ├── customers.py      # CustomerOwnerForm, DogProfileForm, VaccinationRecordForm
-│   ├── scheduling.py     # VisitForm
+│   ├── scheduling.py     # VisitForm, TimelineMomentForm, TimelineForwardForm
 │   └── business.py       # BusinessProfileForm
 ├── views/
 │   ├── __init__.py       # urls.py imports from here
-│   ├── customers.py      # clients, dogs, COI, vax, contacts
-│   ├── scheduling.py     # dashboard, check-in, visits, calendar, iCal
+│   ├── customers.py      # clients, dogs, COI, vax, contacts, feed link regenerate
+│   ├── scheduling.py     # dashboard, check-in, visits, timeline, calendar, iCal
+│   ├── customer_feed.py  # public customer photo feed
 │   ├── billing.py        # statements
-│   └── business.py       # business_settings
+│   ├── business.py       # business_settings
+│   └── pwa.py            # manifest.webmanifest, sw.js
 ├── services/             # business logic — prefer adding here over bloating views
+│   ├── timeline_media.py, timeline_visits.py, geolocation.py
+│   ├── feed_slugs.py, feed_access.py
+│   └── visit_email.py, gmail_send.py, …
 ├── pricing.py            # tiered fee engine (scheduling domain)
 ├── capacity.py           # daily dog count guards (scheduling domain)
 └── templates/operations/
@@ -135,11 +142,17 @@ Overnight is evaluated **before** hour tiers. Multi-day: each full 24h = Overnig
 | iCal outbound `/ical/` | Done |
 | HTTPS dev server + ngrok | Done |
 | Business settings (`/settings/`) | Done — identity, address, hours, phones |
+| Booking iCal LOCATION + ORGANIZER from settings | Done — `BusinessProfile` → `visit_email.py` |
+| Contemporaneous timeline (staff capture) | Done — photo/video, GPS, multi-dog, forward |
+| Customer photo feed (secret link) | Done — `/feed/<secret>/<dog>/`, full history |
+| Feed access stats (visitor cookie) | Done — views + distinct browsers on dog detail |
+| PWA install (David's phone) | Done — manifest, service worker, install banner |
 | Business document uploads (COI, etc.) | Not started |
 | Calendar inbound `.ics` import command | Partial — file-based, not live Gmail |
 | Weekly statement **email send** | Partial — generates + formats; send not wired |
+| Feed reactions, comments, UUID photo share | Done — see `feed.md` |
+| Feed push notifications | Planned |
 | GoDaddy inquiry parsing | Not started |
-| Per-dog day notes (replaces WhatsApp) | Planned |
 | e-Transfer automation | Not started |
 
 ---
@@ -155,6 +168,11 @@ ngrok http https://127.0.0.1:9000              # mobile tunnel
 python oauth_setup.py                          # first-time Gmail token
 python manage.py gmail_auth --test you@email.com
 python manage.py test operations
+```
+
+Set feed links in booking emails (ngrok or production):
+```bash
+$env:PUBLIC_SITE_URL = "https://your-subdomain.ngrok.app"
 ```
 
 ---
@@ -180,4 +198,5 @@ python manage.py test operations
 | [`scheduling.md`](scheduling.md) | Visits, repeat, dashboard, check-in, pricing, calendar, booking email |
 | [`billing.md`](billing.md) | Weekly statements, checkout totals |
 | [`admin.md`](admin.md) | Business settings, baseline contact info, documents |
-| [`platform.md`](platform.md) | Dev environment, HTTPS, ngrok, Gmail, UI, testing |
+| [`feed.md`](feed.md) | Staff timeline, customer feed, speakable URLs, access logging |
+| [`platform.md`](platform.md) | Dev environment, HTTPS, ngrok, PWA, Gmail, UI, testing |

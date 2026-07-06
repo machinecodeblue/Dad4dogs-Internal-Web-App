@@ -1,0 +1,326 @@
+{% extends "operations/customer_base.html" %}
+{% block title %}{{ dog.dog_name }} — Dad4dogs Feed{% endblock %}
+{% block header_title %}{{ dog.dog_name }}{% endblock %}
+{% block header_subtitle %}Photo &amp; video feed from Dad4dogs{% endblock %}
+{% block extra_head %}
+<style>
+    .timeline-stream { display: flex; flex-direction: column; gap: 0.75rem; }
+    .timeline-event {
+        background: #f8f9fa;
+        border-radius: var(--radius);
+        overflow: hidden;
+        border-left: 4px solid var(--brand-light);
+    }
+    .timeline-event img,
+    .timeline-event video {
+        width: 100%;
+        display: block;
+        background: #e9ecef;
+    }
+    .timeline-meta { padding: 0.75rem; font-size: 0.9rem; }
+    .moment-meta-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.5rem;
+    }
+    .moment-meta-header time { font-weight: 600; color: var(--brand); }
+    .share-icon-btn {
+        flex-shrink: 0;
+        border: none;
+        background: transparent;
+        color: var(--muted);
+        padding: 0.25rem;
+        cursor: pointer;
+        line-height: 0;
+        border-radius: 8px;
+    }
+    .share-icon-btn:hover,
+    .share-icon-btn:focus {
+        color: var(--brand);
+        background: #e9ecef;
+    }
+    .share-icon-btn svg {
+        width: 1.35rem;
+        height: 1.35rem;
+    }
+    .reaction-bar {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.35rem;
+        margin-top: 0.5rem;
+    }
+    .reaction-bar button {
+        border: 1px solid #ced4da;
+        background: white;
+        border-radius: 999px;
+        padding: 0.35rem 0.65rem;
+        font-size: 1rem;
+        cursor: pointer;
+        line-height: 1;
+    }
+    .reaction-bar button.active {
+        border-color: var(--brand);
+        background: #d8f3dc;
+    }
+    .reaction-counts {
+        font-size: 0.8rem;
+        color: var(--muted);
+        margin-top: 0.35rem;
+    }
+    .comment-thread {
+        margin-top: 0.75rem;
+        padding-top: 0.75rem;
+        border-top: 1px solid #dee2e6;
+    }
+    .comment-item {
+        margin-bottom: 0.5rem;
+        font-size: 0.85rem;
+    }
+    .comment-item strong { color: var(--brand); }
+    .comment-form input,
+    .comment-form textarea {
+        width: 100%;
+        padding: 0.6rem;
+        border: 1px solid #ced4da;
+        border-radius: var(--radius);
+        font-size: 0.9rem;
+        margin-bottom: 0.5rem;
+        font-family: inherit;
+    }
+    .comment-form button {
+        background: var(--brand);
+        color: white;
+        border: none;
+        border-radius: var(--radius);
+        padding: 0.55rem 1rem;
+        font-weight: 600;
+        cursor: pointer;
+        font-size: 0.85rem;
+    }
+    .share-sheet-overlay {
+        position: fixed;
+        inset: 0;
+        z-index: 400;
+        background: rgba(0, 0, 0, 0.45);
+        display: none;
+        align-items: flex-end;
+        padding: 0.75rem;
+        padding-bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px));
+    }
+    .share-sheet-overlay.open { display: flex; }
+    .share-sheet {
+        background: white;
+        border-radius: 16px 16px 12px 12px;
+        width: 100%;
+        max-width: 600px;
+        margin: 0 auto;
+        padding: 1rem;
+        box-shadow: 0 12px 32px rgba(0, 0, 0, 0.2);
+    }
+    .share-sheet h3 {
+        font-size: 0.95rem;
+        margin-bottom: 0.75rem;
+        color: var(--brand);
+    }
+    .share-sheet-actions {
+        display: flex;
+        flex-direction: column;
+        gap: 0.35rem;
+    }
+    .share-sheet-actions button,
+    .share-sheet-actions a {
+        display: block;
+        width: 100%;
+        text-align: left;
+        padding: 0.75rem 0.85rem;
+        border: none;
+        background: #f8f9fa;
+        border-radius: 10px;
+        font-size: 0.95rem;
+        color: var(--text);
+        text-decoration: none;
+        cursor: pointer;
+        font-family: inherit;
+    }
+    .share-sheet-actions button:hover,
+    .share-sheet-actions a:hover {
+        background: #e9ecef;
+    }
+    .share-sheet-cancel {
+        margin-top: 0.5rem;
+        text-align: center;
+        color: var(--muted);
+        font-size: 0.9rem;
+        background: transparent !important;
+    }
+</style>
+{% endblock %}
+{% block content %}
+<div class="card">
+    <h2>{{ dog.dog_name }}'s moments</h2>
+    <p class="muted">React, comment, or tap <span aria-hidden="true">⎋</span> share on any moment.</p>
+</div>
+
+<div class="card">
+    {% if event_rows %}
+    <div class="timeline-stream">
+        {% for row in event_rows %}
+        {% with event=row.event %}
+        <article class="timeline-event" id="moment-{{ event.media_asset_id }}">
+            {% if event.media_type == 'photo' and event.photo_thumbnail %}
+            <a href="{{ event.photo_high_res.url }}" target="_blank" rel="noopener">
+                <img src="{{ event.photo_thumbnail.url }}" alt="Photo of {{ dog.dog_name }}">
+            </a>
+            {% elif event.media_type == 'video' and event.video_file %}
+            <video controls preload="metadata" src="{{ event.video_file.url }}"></video>
+            {% endif %}
+            <div class="timeline-meta">
+                <div class="moment-meta-header">
+                    <time datetime="{{ event.captured_at|date:'c' }}">{{ event.captured_at|date:"M j, Y g:i A" }}</time>
+                    <button
+                        type="button"
+                        class="share-icon-btn"
+                        aria-label="Share this moment"
+                        data-share-url="{{ row.share_url }}"
+                        data-share-title="{{ dog.dog_name }} at Dad4dogs"
+                    >
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                            <circle cx="18" cy="5" r="3"/>
+                            <circle cx="6" cy="12" r="3"/>
+                            <circle cx="18" cy="19" r="3"/>
+                            <path d="M8.59 13.51l6.83 3.98M15.41 6.51l-6.82 3.98"/>
+                        </svg>
+                    </button>
+                </div>
+                {% if event.is_forward %}
+                <span class="badge badge-ok">Group moment</span>
+                {% endif %}
+                {% if event.caption_notes %}
+                <p style="margin-top:0.35rem">{{ event.caption_notes }}</p>
+                {% endif %}
+
+                <div class="reaction-bar">
+                    {% for value, label in reaction_choices %}
+                    <form method="post" action="{% url 'operations:customer_feed_react' dog.feed_secret dog.feed_dog_slug event.media_asset_id %}" style="display:inline">
+                        {% csrf_token %}
+                        <input type="hidden" name="emoji" value="{{ value }}">
+                        <button type="submit" class="{% if row.my_reaction == value %}active{% endif %}" title="{{ label }}">{{ label }}</button>
+                    </form>
+                    {% endfor %}
+                    {% if row.my_reaction %}
+                    <form method="post" action="{% url 'operations:customer_feed_react' dog.feed_secret dog.feed_dog_slug event.media_asset_id %}" style="display:inline">
+                        {% csrf_token %}
+                        <input type="hidden" name="emoji" value="">
+                        <button type="submit" style="font-size:0.75rem;padding:0.35rem 0.5rem">Clear</button>
+                    </form>
+                    {% endif %}
+                </div>
+                {% if row.reaction_summary %}
+                <div class="reaction-counts">{{ row.reaction_summary }}</div>
+                {% endif %}
+
+                <div class="comment-thread">
+                    {% for comment in row.comments %}
+                    <div class="comment-item">
+                        <strong>{{ comment.display_name }}</strong>
+                        <span class="muted"> · {{ comment.created_at|date:"M j, g:i A" }}</span>
+                        <div>{{ comment.text }}</div>
+                    </div>
+                    {% endfor %}
+                    <form method="post" action="{% url 'operations:customer_feed_comment' dog.feed_secret dog.feed_dog_slug event.media_asset_id %}" class="comment-form">
+                        {% csrf_token %}
+                        <input type="text" name="display_name" placeholder="Your name (optional)" value="{{ display_name }}" maxlength="80">
+                        <textarea name="text" rows="2" placeholder="Write a comment…" maxlength="500" required></textarea>
+                        <button type="submit">Post comment</button>
+                    </form>
+                </div>
+            </div>
+        </article>
+        {% endwith %}
+        {% endfor %}
+    </div>
+    {% else %}
+    <p class="muted">No photos yet — check back after your next visit.</p>
+    {% endif %}
+</div>
+
+<div class="share-sheet-overlay" id="share-sheet" role="dialog" aria-modal="true" aria-labelledby="share-sheet-title" hidden>
+    <div class="share-sheet">
+        <h3 id="share-sheet-title">Share moment</h3>
+        <div class="share-sheet-actions">
+            <button type="button" id="share-copy-link">Copy link</button>
+            <a href="#" id="share-gmail" target="_blank" rel="noopener">Share with Gmail</a>
+            <a href="#" id="share-whatsapp" target="_blank" rel="noopener">Share with WhatsApp</a>
+            <a href="#" id="share-facebook" target="_blank" rel="noopener">Share on Facebook</a>
+            <button type="button" id="share-native" hidden>Share…</button>
+            <button type="button" class="share-sheet-cancel" id="share-sheet-close">Cancel</button>
+        </div>
+    </div>
+</div>
+
+<script>
+(function () {
+    const sheet = document.getElementById('share-sheet');
+    const copyBtn = document.getElementById('share-copy-link');
+    const gmailLink = document.getElementById('share-gmail');
+    const whatsappLink = document.getElementById('share-whatsapp');
+    const facebookLink = document.getElementById('share-facebook');
+    const nativeBtn = document.getElementById('share-native');
+    const closeBtn = document.getElementById('share-sheet-close');
+    let activeUrl = '';
+    let activeTitle = '';
+
+    if (navigator.share) {
+        nativeBtn.hidden = false;
+    }
+
+    function openSheet(url, title) {
+        activeUrl = url;
+        activeTitle = title;
+        const body = encodeURIComponent(title + '\\n\\n' + url);
+        const urlEnc = encodeURIComponent(url);
+        gmailLink.href = 'https://mail.google.com/mail/?view=cm&fs=1&su=' + encodeURIComponent(title) + '&body=' + body;
+        whatsappLink.href = 'https://wa.me/?text=' + body;
+        facebookLink.href = 'https://www.facebook.com/sharer/sharer.php?u=' + urlEnc;
+        sheet.hidden = false;
+        sheet.classList.add('open');
+    }
+
+    function closeSheet() {
+        sheet.classList.remove('open');
+        sheet.hidden = true;
+    }
+
+    document.querySelectorAll('.share-icon-btn').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            openSheet(btn.getAttribute('data-share-url'), btn.getAttribute('data-share-title'));
+        });
+    });
+
+    closeBtn.addEventListener('click', closeSheet);
+    sheet.addEventListener('click', function (event) {
+        if (event.target === sheet) closeSheet();
+    });
+
+    copyBtn.addEventListener('click', async function () {
+        try {
+            await navigator.clipboard.writeText(activeUrl);
+            copyBtn.textContent = 'Copied!';
+            window.setTimeout(function () { copyBtn.textContent = 'Copy link'; }, 2000);
+        } catch (err) {
+            window.prompt('Copy this link:', activeUrl);
+        }
+    });
+
+    nativeBtn.addEventListener('click', async function () {
+        try {
+            await navigator.share({ title: activeTitle, url: activeUrl });
+            closeSheet();
+        } catch (err) {
+            /* user cancelled */
+        }
+    });
+})();
+</script>
+{% endblock %}

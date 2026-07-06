@@ -1,0 +1,67 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#2d6a4f">
+    <meta name="robots" content="noindex, nofollow">
+    <link rel="icon" type="image/png" sizes="192x192" href="{% static 'operations/pwa/icon-192.png' %}">
+    <title>{% block title %}Dad4dogs{% endblock %}</title>
+    <style>
+        :root {
+            --brand: #2d6a4f;
+            --brand-light: #40916c;
+            --bg: #f8f9fa;
+            --card: #ffffff;
+            --text: #212529;
+            --muted: #6c757d;
+            --radius: 12px;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.5;
+            padding-bottom: calc(1rem + env(safe-area-inset-bottom, 0px));
+        }
+        header {
+            background: var(--brand);
+            color: white;
+            padding: 1rem;
+            padding-top: calc(1rem + env(safe-area-inset-top, 0px));
+        }
+        header h1 { font-size: 1.25rem; font-weight: 600; }
+        header p { font-size: 0.85rem; opacity: 0.85; }
+        main { padding: 1rem; max-width: 600px; margin: 0 auto; }
+        .card {
+            background: var(--card);
+            border-radius: var(--radius);
+            padding: 1rem;
+            margin-bottom: 0.75rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+        }
+        .card h2 { font-size: 1rem; margin-bottom: 0.5rem; }
+        .badge {
+            display: inline-block;
+            padding: 0.2rem 0.6rem;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+        .badge-ok { background: #d8f3dc; color: var(--brand); }
+        .muted { color: var(--muted); font-size: 0.85rem; }
+    </style>
+    {% block extra_head %}{% endblock %}
+</head>
+<body>
+    <header>
+        <h1>{% block header_title %}Dad4dogs{% endblock %}</h1>
+        <p>{% block header_subtitle %}Photo feed{% endblock %}</p>
+    </header>
+    <main>
+        {% block content %}{% endblock %}
+    </main>
+</body>
+</html>

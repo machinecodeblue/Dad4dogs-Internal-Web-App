@@ -1,5 +1,8 @@
 from django.db import models
+from django.urls import reverse
 from django.utils import timezone
+
+from operations.services.feed_slugs import dog_slug_from_name, generate_unique_feed_secret
 
 
 class CustomerOwner(models.Model):
@@ -75,6 +78,18 @@ class ClientProfile(models.Model):
         default=PipelineStage.INQUIRY,
     )
     approved_at = models.DateTimeField(null=True, blank=True)
+    feed_secret = models.CharField(
+        max_length=40,
+        unique=True,
+        null=True,
+        blank=True,
+        help_text='Speakable secret for customer feed URL (e.g. squeakytiki).',
+    )
+    feed_dog_slug = models.CharField(
+        max_length=80,
+        blank=True,
+        help_text='URL segment from dog name (e.g. lulu).',
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -127,6 +142,79 @@ class ClientProfile(models.Model):
             if self.pipeline_stage == self.PipelineStage.APPROVED:
                 self.approved_at = timezone.now()
             self.save()
+
+    def ensure_feed_credentials(self, *, save: bool = True) -> 'ClientProfile':
+        update_fields = []
+        if not self.feed_dog_slug:
+            self.feed_dog_slug = dog_slug_from_name(self.dog_name)
+            update_fields.append('feed_dog_slug')
+        if not self.feed_secret:
+            self.feed_secret = generate_unique_feed_secret()
+            update_fields.append('feed_secret')
+        if update_fields and save:
+            update_fields.append('updated_at')
+            self.save(update_fields=update_fields)
+        return self
+
+    def sync_feed_dog_slug(self, *, save: bool = True) -> None:
+        """Keep the dog slug aligned with the current dog name."""
+        slug = dog_slug_from_name(self.dog_name)
+        if self.feed_dog_slug != slug:
+            self.feed_dog_slug = slug
+            if save:
+                self.save(update_fields=['feed_dog_slug', 'updated_at'])
+
+    def regenerate_feed_secret(self, *, save: bool = True) -> str:
+        """Issue a new secret — old feed links stop working."""
+        self.feed_secret = generate_unique_feed_secret()
+        if not self.feed_dog_slug:
+            self.feed_dog_slug = dog_slug_from_name(self.dog_name)
+        if save:
+            self.save(update_fields=['feed_secret', 'feed_dog_slug', 'updated_at'])
+        return self.feed_secret
+
+    def feed_url_path(self) -> str:
+        self.ensure_feed_credentials()
+        return reverse(
+            'operations:customer_feed',
+            kwargs={
+                'feed_secret': self.feed_secret,
+                'feed_dog_slug': self.feed_dog_slug,
+            },
+        )
+
+    def feed_url(self, *, request=None) -> str:
+        path = self.feed_url_path()
+        if request is not None:
+            return request.build_absolute_uri(path)
+        from django.conf import settings
+
+        base = getattr(settings, 'PUBLIC_SITE_URL', '').rstrip('/')
+        if base:
+            return f'{base}{path}'
+        return path
+
+
+class FeedAccessLog(models.Model):
+    """Anonymous per-browser access log for customer feeds (local visitor ID cookie)."""
+    client = models.ForeignKey(
+        ClientProfile,
+        on_delete=models.CASCADE,
+        related_name='feed_access_logs',
+    )
+    visitor_id = models.CharField(max_length=36)
+    user_agent = models.CharField(max_length=500, blank=True)
+    accessed_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-accessed_at']
+        indexes = [
+            models.Index(fields=['client', 'accessed_at']),
+            models.Index(fields=['client', 'visitor_id']),
+        ]
+
+    def __str__(self):
+        return f'{self.client.dog_name} — {self.visitor_id[:8]}… @ {self.accessed_at:%Y-%m-%d %H:%M}'
 
 
 class VaccinationRecord(models.Model):

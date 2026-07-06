@@ -82,6 +82,15 @@ def format_booking_confirmation(client: ClientProfile, visits: list[Visit]) -> t
     if notes:
         body_lines.extend(['', f'Notes: {notes}'])
 
+    client.ensure_feed_credentials()
+    feed_url = client.feed_url()
+    if feed_url.startswith('http'):
+        body_lines.extend([
+            '',
+            f"Watch {client.dog_name}'s photo feed anytime (bookmark for later):",
+            f'  {feed_url}',
+        ])
+
     body_lines.extend([
         '',
         'If anything needs to change, just reply to this email.',

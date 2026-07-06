@@ -18,6 +18,25 @@
     </form>
 </div>
 
+<div class="card">
+    <h2>Customer Photo Feed</h2>
+    <p class="muted">Share this link when they book — no password, full history, easy to forward to family.</p>
+    <p style="margin:0.75rem 0;font-weight:600;word-break:break-all">{{ feed_url }}</p>
+    <div class="actions">
+        <a href="{{ feed_url }}" class="btn btn-outline btn-sm" target="_blank" rel="noopener">Open Feed</a>
+        <button type="button" class="btn btn-primary btn-sm" id="copy-feed-url" data-feed-url="{{ feed_url }}">Copy Link</button>
+    </div>
+    <p class="muted" style="margin-top:0.75rem">
+        Last 30 days: {{ feed_stats.views }} view{{ feed_stats.views|pluralize }},
+        ~{{ feed_stats.devices }} browser{{ feed_stats.devices|pluralize }} (local ID cookie).
+    </p>
+    <form method="post" action="{% url 'operations:dog_feed_regenerate' dog.pk %}" style="margin-top:0.75rem"
+          onsubmit="return confirm('Create a new feed link? Old links shared with others will stop working.');">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-outline btn-sm">Regenerate Link (unshare old devices)</button>
+    </form>
+</div>
+
 {% if dog.pipeline_stage != 'approved' %}
 <div class="card">
     <form method="post" action="{% url 'operations:advance_pipeline' dog.pk %}">
@@ -60,4 +79,21 @@
     <a href="{% url 'operations:visit_create' dog.pk %}" class="btn btn-primary" style="margin-top:0.5rem">Schedule First Visit</a>
     {% endfor %}
 </div>
+
+<script>
+(function () {
+    const btn = document.getElementById('copy-feed-url');
+    if (!btn) return;
+    btn.addEventListener('click', async function () {
+        const url = btn.getAttribute('data-feed-url');
+        try {
+            await navigator.clipboard.writeText(url);
+            btn.textContent = 'Copied!';
+            window.setTimeout(function () { btn.textContent = 'Copy Link'; }, 2000);
+        } catch (err) {
+            window.prompt('Copy this feed link:', url);
+        }
+    });
+})();
+</script>
 {% endblock %}

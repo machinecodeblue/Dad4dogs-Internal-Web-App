@@ -157,6 +157,8 @@ ICAL_UID_DOMAIN = os.environ.get('ICAL_UID_DOMAIN', 'dad4dogs.local')
 # iCal ORGANIZER name/email and LOCATION come from Business Settings (/settings/).
 # Optional client-facing link embedded in calendar DESCRIPTION (empty = omit).
 BOOKING_CLIENT_NOTES_URL = os.environ.get('BOOKING_CLIENT_NOTES_URL', 'https://dad4dogs.ca/dash/').strip()
+# Public base URL for customer feed links in emails (e.g. https://your-subdomain.ngrok.app).
+PUBLIC_SITE_URL = os.environ.get('PUBLIC_SITE_URL', '').strip()
 
 # GPS fallback for timeline events when device geolocation is unavailable.
 BUSINESS_FALLBACK_LATITUDE = float(os.environ.get('BUSINESS_FALLBACK_LATITUDE', '43.002700'))

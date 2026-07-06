@@ -5,6 +5,14 @@ urls.py imports from here: from . import views
 """
 from operations.views.billing import statement_detail, statements_list
 from operations.views.business import business_settings
+from operations.views.customer_feed import (
+    customer_feed,
+    customer_feed_comment,
+    customer_feed_react,
+    customer_feed_redirect,
+    public_feed_share,
+    public_shared_media_legacy,
+)
 from operations.views.customers import (
     add_vaccination,
     advance_pipeline,
@@ -23,12 +31,14 @@ from operations.views.customers import (
     dog_delete,
     dog_detail,
     dog_edit,
+    dog_feed_regenerate,
     dog_vaccinations,
     update_coi,
     validate_vaccination,
 )
 from operations.views.scheduling import (
     approve_pending_event,
+    checkin_feed_activity,
     dashboard,
     duplicate_visit,
     ical_feed,
@@ -50,6 +60,7 @@ __all__ = [
     'add_vaccination',
     'advance_pipeline',
     'approve_pending_event',
+    'checkin_feed_activity',
     'client_add_dog',
     'client_create',
     'client_detail',
@@ -59,6 +70,12 @@ __all__ = [
     'contact_import_preview',
     'contact_import_selected',
     'contact_sync',
+    'customer_feed',
+    'customer_feed_comment',
+    'customer_feed_react',
+    'customer_feed_redirect',
+    'public_feed_share',
+    'public_shared_media_legacy',
     'customer_add_dog',
     'customer_detail',
     'customer_edit',
@@ -66,6 +83,7 @@ __all__ = [
     'dog_delete',
     'dog_detail',
     'dog_edit',
+    'dog_feed_regenerate',
     'dog_vaccinations',
     'duplicate_visit',
     'ical_feed',

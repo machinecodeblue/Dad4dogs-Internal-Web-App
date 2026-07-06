@@ -4,9 +4,10 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ValidationError
 from django.http import JsonResponse
+from django.utils.dateparse import parse_datetime
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
-from django.views.decorators.http import require_POST
+from django.views.decorators.http import require_GET, require_POST
 
 from operations.capacity import assess_capacity
 from operations.forms import TimelineForwardForm, TimelineMomentForm, VisitForm
@@ -27,6 +28,7 @@ from operations.services.agenda import (
 )
 from operations.services.datetime_parse import format_datetime_display, parse_datetime_text
 from operations.services.ical_feed import generate_ical_feed
+from operations.services.feed_interactions import build_checkin_feed_activity
 from operations.services.visit_email import VisitEmailError, send_booking_confirmation
 from operations.services.visit_repeat import FREQUENCY_NONE, repeat_summary
 
@@ -112,6 +114,26 @@ def mobile_checkin(request):
         'capacity': capacity,
         'today': today,
     })
+
+
+@login_required
+@require_GET
+def checkin_feed_activity(request):
+    """Lightweight JSON poll — owner reactions/comments on checked-in dogs."""
+    today = timezone.localdate()
+    client_ids = list(
+        Visit.objects.filter(
+            scheduled_start__date__lte=today,
+            scheduled_end__date__gte=today,
+            status=Visit.Status.CHECKED_IN,
+        ).values_list('client_id', flat=True)
+    )
+    since = None
+    since_param = (request.GET.get('since') or '').strip()
+    if since_param:
+        since = parse_datetime(since_param)
+    payload = build_checkin_feed_activity(client_ids, since=since)
+    return JsonResponse(payload)
 
 
 @login_required

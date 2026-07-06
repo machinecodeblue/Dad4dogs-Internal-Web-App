@@ -75,18 +75,22 @@ Django admin also exposes **Business profile** for the same singleton record (`o
 
 ---
 
-## 6. Integration Points (planned)
+## 6. Integration Points
 
-When implementing client-facing content, pull from `BusinessProfile.load()`:
+Pull from `BusinessProfile.load()` — never hardcode David's business details.
 
-| Consumer | Fields to use |
-|----------|---------------|
-| Booking confirmation email (`visit_email.py`) | `address` → iCal `LOCATION`; `business_email` + `business_name` → `ORGANIZER` |
-| Statement emails (`billing.md`) | `business_name`, `business_email`, e-Transfer instructions (future) |
-| iCal feed / calendar invites | `business_name`, `address` (location field) |
-| Client-facing PDFs or COI sends | Uploaded business documents (see §7) |
+| Consumer | Fields | Status |
+|----------|--------|--------|
+| Booking iCal (`visit_email.py` → `generate_booking_ics`) | `address` → `LOCATION`; `business_email` + `business_name` → `ORGANIZER` | **Done** |
+| Booking confirmation email (plain text) | Schedule, notes; feed URL when `PUBLIC_SITE_URL` set | **Done** (feed link) |
+| Statement emails (`billing.md`) | `business_name`, `business_email`, phones, hours | Not wired |
+| iCal outbound `/ical/` | `business_name`, `address` | Partial |
+| Client-facing PDFs or COI sends | Uploaded business documents (see §7) | Not started |
 
-**Status:** Settings UI and model are done; booking iCal `LOCATION`, `ORGANIZER`, and organizer `ATTENDEE` all read from `BusinessProfile`. Plain-text email body and statement send are **not yet fully wired**.
+### BusinessProfile helper properties
+- `calendar_organizer_email`, `calendar_organizer_name`, `calendar_location` — used by booking invites
+
+`business_email` is **required** before sending a booking calendar invite.
 
 ---
 
@@ -97,7 +101,7 @@ When implementing client-facing content, pull from `BusinessProfile.load()`:
 | Document uploads | David's Certificate of Insurance and other stable business files |
 | Document list/replace UI | On Settings screen or sub-page |
 | `MEDIA_ROOT` / file storage config | Required before uploads |
-| Use profile in booking/statement emails | Read phones, hours, address from singleton |
+| Use profile in statement emails | Read phones, hours, address from singleton in email body |
 | Business logo or letterhead asset | Optional future field |
 
 ### Document upload guidance (when built)

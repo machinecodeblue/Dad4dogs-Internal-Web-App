@@ -72,22 +72,39 @@ Messages appear in Gmail **Sent Mail** for audit trail.
 - Cards, large touch targets, green brand (`#2d6a4f`)
 - Max content width ~600px centred
 
-### Progressive Web App (PWA)
-Install to home screen for standalone mode (no browser address bar).
+### Progressive Web App (PWA) — David's admin app only
+Install to home screen for standalone mode (no browser address bar). Customer feed is a normal web page — they can bookmark or add to home screen manually.
 
 | URL | Purpose |
 |-----|---------|
-| `/manifest.webmanifest` | Web app manifest (`display: standalone`) |
-| `/sw.js` | Service worker (network-only; enables install) |
+| `/manifest.webmanifest` | Web app manifest (`display: standalone`; absolute icon/start URLs) |
+| `/sw.js` | Service worker (`dad4dogs-v2`; network-only; enables install) |
 
 Icons: `operations/static/operations/pwa/`  
+Implementation: `operations/views/pwa.py`  
 Session: 30-day cookie (`SESSION_COOKIE_AGE`) so David stays signed in on his phone.
 
-**Install (iPhone/Safari):** Custom banner → **How to Install** → Share → **Add to Home Screen**  
-**Install (Android/Chrome):** Custom top banner intercepts `beforeinstallprompt` → **Install App**  
-**Dismiss:** "Not now" stores preference in `localStorage` (`dad4dogs-pwa-install-dismissed`)  
-Requires **HTTPS** (use `runserver_https` + ngrok for mobile).  
-JS: `operations/static/operations/pwa/install.js`
+**Install banner** (`base.html` + `install.js`):
+| Platform | Behaviour |
+|----------|-----------|
+| **iOS Safari** | Banner immediately → **INSTALL** opens Share → Add to Home Screen guide |
+| **Android Chrome** | `beforeinstallprompt` when available; **2s fallback** banner if not |
+| **Desktop Chrome** | `beforeinstallprompt` or 2s fallback |
+| **Android manual** | INSTALL without native prompt → Chrome ⋮ menu overlay |
+
+**Dismiss:** × stores `dad4dogs-pwa-install-dismissed` in `localStorage`  
+**Installed:** `appinstalled` or standalone mode hides banner permanently  
+
+Requires **HTTPS** (`runserver_https` + ngrok). ngrok interstitial on first visit can delay PWA detection on mobile.
+
+### Public URLs (no login)
+| Path | Purpose |
+|------|---------|
+| `/ical/` | David's read-only calendar feed |
+| `/feed/<secret>/<dog-slug>/` | Customer photo feed — see `feed.md` |
+| `/feed/share/<token>/` | Single-moment public share (no feed URL exposed) |
+
+Set `PUBLIC_SITE_URL` env var so booking emails and copied feed links use the full tunnel/production URL.
 
 ### Badge colours
 | Class | Meaning |
@@ -119,7 +136,9 @@ Get-ChildItem -Recurse -Directory -Filter "__pycache__" | Remove-Item -Recurse -
 ## 6. Authentication & Security
 
 - `LOGIN_URL` = `/admin/login/`
-- No public views except `/ical/` feed
+- `@login_required` on all staff views (dashboard, clients, timeline capture, settings, etc.)
+- **Public views:** `/ical/`, `/feed/<secret>/<dog-slug>/`, `/manifest.webmanifest`, `/sw.js`
+- Customer feed uses **secret link** auth — no passwords; regenerate revokes old links
 - `SECRET_KEY` in settings — change before production deploy
 - OAuth secrets and certs in `.gitignore`
 
@@ -131,8 +150,8 @@ Get-ChildItem -Recurse -Directory -Filter "__pycache__" | Remove-Item -Recurse -
 python manage.py test operations
 ```
 
-All tests in `operations/tests.py` (~55 tests). Update tests when changing:
-- Pricing, capacity, visit forms, agenda, contacts, compliance, Gmail helpers, business settings
+All tests in `operations/tests.py` (~70+ tests). Update tests when changing:
+- Pricing, capacity, visit forms, agenda, contacts, compliance, Gmail helpers, business settings, timeline, customer feed, PWA endpoints
 
 ---
 

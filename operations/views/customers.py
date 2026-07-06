@@ -6,6 +6,7 @@ from django.views.decorators.http import require_POST
 
 from operations.forms import CustomerOwnerForm, DogProfileForm, VaccinationRecordForm
 from operations.models import ClientProfile, CustomerOwner, VaccinationRecord
+from operations.services.feed_access import feed_access_stats
 from operations.services.contacts import (
     analysis_to_session,
     analyze_import,
@@ -85,6 +86,8 @@ def dog_edit(request, pk):
         form = DogProfileForm(request.POST, instance=dog, customer_owner=customer_owner)
         if form.is_valid():
             dog = form.save()
+            dog.ensure_feed_credentials()
+            dog.sync_feed_dog_slug()
             messages.success(request, f'Updated {dog.dog_name}.')
             return redirect('operations:dog_detail', pk=dog.pk)
     else:
@@ -161,12 +164,28 @@ def dog_detail(request, pk):
     """Individual dog — visits and pipeline. No vaccinations on this screen."""
     dog = get_object_or_404(ClientProfile, pk=pk)
     customer_owner = CustomerOwner.ensure_for_client(dog)
+    dog.ensure_feed_credentials()
     visits = dog.visits.select_related('series').all()[:20]
     return render(request, 'operations/dog_detail.html', {
         'dog': dog,
         'customer_owner': customer_owner,
         'visits': visits,
+        'feed_url': dog.feed_url(request=request),
+        'feed_stats': feed_access_stats(dog),
     })
+
+
+@login_required
+@require_POST
+def dog_feed_regenerate(request, pk):
+    """Issue a new speakable feed secret — old shared links stop working."""
+    dog = get_object_or_404(ClientProfile, pk=pk)
+    dog.regenerate_feed_secret()
+    messages.success(
+        request,
+        f'New feed link created for {dog.dog_name}. Anyone with the old link can no longer view the feed.',
+    )
+    return redirect('operations:dog_detail', pk=dog.pk)
 
 
 @login_required

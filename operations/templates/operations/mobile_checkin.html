@@ -12,7 +12,7 @@
 </div>
 
 {% for visit in visits %}
-<div class="visit-card card {% if visit.status == 'checked_in' %}checked-in{% endif %}">
+<div class="visit-card card {% if visit.status == 'checked_in' %}checked-in{% endif %}" data-client-id="{{ visit.client_id }}">
     <h2>{{ visit.client.dog_name }}</h2>
     <p class="muted">{{ visit.client.owner_name }} · {{ visit.client.owner_email }}</p>
     <p>Scheduled: {{ visit.scheduled_start|time:"g:i A" }} – {{ visit.scheduled_end|time:"g:i A" }}</p>
@@ -22,6 +22,13 @@
     {% endif %}
     {% if visit.actual_departure %}
     <p class="muted">Departed: {{ visit.actual_departure|time:"g:i A" }} · ${{ visit.calculated_fee }} CAD</p>
+    {% endif %}
+
+    {% if visit.status == 'checked_in' %}
+    <div class="feed-activity-panel" id="feed-activity-{{ visit.client_id }}" hidden>
+        <p style="font-size:0.8rem;font-weight:600;color:var(--brand);margin:0.5rem 0 0.25rem">Owner feed activity</p>
+        <ul class="feed-activity-list" style="list-style:none;font-size:0.82rem;margin:0;padding:0"></ul>
+    </div>
     {% endif %}
 
     <div class="actions">
@@ -46,4 +53,52 @@
     <p class="muted">No active visits for today.</p>
 </div>
 {% endfor %}
+
+<script>
+(function () {
+    const activityUrl = "{% url 'operations:checkin_feed_activity' %}";
+    const panels = document.querySelectorAll('.feed-activity-panel');
+    if (!panels.length) return;
+
+    function renderItem(item) {
+        if (item.type === 'comment') {
+            return '<li style="margin-bottom:0.35rem"><strong>' + escapeHtml(item.display_name) + '</strong>: '
+                + escapeHtml(item.text) + '</li>';
+        }
+        if (item.type === 'reaction') {
+            return '<li style="margin-bottom:0.35rem">' + escapeHtml(item.emoji_label) + ' reaction on a moment</li>';
+        }
+        return '';
+    }
+
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text || '';
+        return div.innerHTML;
+    }
+
+    function pollActivity() {
+        fetch(activityUrl, { credentials: 'same-origin', headers: { 'Accept': 'application/json' } })
+            .then(function (response) { return response.json(); })
+            .then(function (data) {
+                const dogs = data.dogs || {};
+                panels.forEach(function (panel) {
+                    const clientId = panel.id.replace('feed-activity-', '');
+                    const bucket = dogs[clientId];
+                    const list = panel.querySelector('.feed-activity-list');
+                    if (!bucket || !bucket.items || !bucket.items.length) {
+                        panel.hidden = true;
+                        return;
+                    }
+                    panel.hidden = false;
+                    list.innerHTML = bucket.items.map(renderItem).join('');
+                });
+            })
+            .catch(function () { /* ignore transient poll errors */ });
+    }
+
+    pollActivity();
+    window.setInterval(pollActivity, 15000);
+})();
+</script>
 {% endblock %}

@@ -4,7 +4,8 @@
 
 **Code packages:** `operations/models/scheduling.py`, `forms/scheduling.py`, `views/scheduling.py`  
 **Root modules:** `operations/pricing.py`, `operations/capacity.py`  
-**Services:** `agenda.py`, `datetime_parse.py`, `visit_repeat.py`, `visit_email.py`, `gmail_send.py`, `ical_feed.py`, `gmail_sync.py`
+**Services:** `agenda.py`, `datetime_parse.py`, `visit_repeat.py`, `visit_email.py`, `gmail_send.py`, `ical_feed.py`, `gmail_sync.py`, `timeline_media.py`, `timeline_visits.py`, `geolocation.py`  
+**Customer feed:** see [`feed.md`](feed.md) — public read-only view of timeline media
 
 ---
 
@@ -15,6 +16,8 @@
 | `VisitSeries` | Groups recurring visits created in one booking |
 | `Visit` | Single scheduled/checked-in/completed stay |
 | `PendingCalendarEvent` | Inbound calendar events awaiting David's review |
+| `TimelineMediaAsset` | Immutable photo/video capture (GPS, caption, timestamps) |
+| `VisitTimelineEvent` | Links media asset to a visit; supports forward to other checked-in dogs |
 
 ### Visit statuses
 `scheduled` → `checked_in` → `completed` (or `cancelled`)
@@ -31,6 +34,7 @@
 - `clone_to_date(new_date)` — same duration/time-of-day on new date
 - `schedule_display` — human-readable range property
 - `is_editable` — scheduled visits only
+- `accepts_timeline_events` — `True` only while `checked_in`
 
 ---
 
@@ -85,8 +89,11 @@ All organizer and location data comes from **Business Settings** (`/settings/`, 
 | `UID` | `visit_{id}@{ICAL_UID_DOMAIN}` — stable for future update/cancel support |
 | `STATUS` / `SEQUENCE` | `CONFIRMED` / `0` — foundation for METHOD:UPDATE/CANCEL |
 
-`business_email` is **required** before sending a booking invite. It should match the authenticated Gmail send-as address.  
-Optional env: `BOOKING_CLIENT_NOTES_URL` in `config/settings.py`.
+`business_email` is **required** before sending a booking invite. It should match the authenticated Gmail send-as address.
+
+Optional env vars (`config/settings.py`):
+- `BOOKING_CLIENT_NOTES_URL` — embedded in iCal `DESCRIPTION`
+- `PUBLIC_SITE_URL` — when set, plain-text confirmation email includes customer **photo feed** link (`/feed/<secret>/<dog>/`)
 
 Updates/cancellations (METHOD:UPDATE/CANCEL) — not yet built
 
@@ -104,8 +111,11 @@ Updates/cancellations (METHOD:UPDATE/CANCEL) — not yet built
 | `/visits/parse-datetime/` | JSON parse preview |
 | `/visits/<id>/check-in/` | POST |
 | `/visits/<id>/check-out/` | POST — calculates fee |
+| `/visits/<id>/timeline/` | Log moment (photo/video) while checked in |
+| `/visits/<id>/timeline/<event>/forward/` | POST — share moment to other checked-in dogs |
 | `/calendar/pending/` | Review imported calendar events |
-| `/ical/` | Public read-only iCal feed |
+| `/ical/` | Public read-only iCal feed (David's calendar) |
+| `/feed/<secret>/<dog>/` | Public customer photo feed — see `feed.md` |
 
 ---
 
@@ -136,6 +146,27 @@ Home screen (`/`) = David's daily operations view.
 - Check-in sets `actual_arrival = now`, status `checked_in`
 - Check-out sets `actual_departure = now`, runs `calculate_fee()`, status `completed`
 - Capacity re-checked at check-in
+- Checked-in cards show **Log Moment** → staff timeline (`visit_timeline`)
+- **Owner feed activity** panel — polls `/checkin/feed-activity/` every 15s for emoji/comments on the customer feed
+
+---
+
+## 5b. Contemporaneous Timeline (staff)
+
+David logs photos/videos during active check-in. Customers see the same media later on their **feed link** (read-only).
+
+### Rules
+- Capture only while visit is `checked_in`
+- Forward only to **other currently checked-in** visits (same day overlap)
+- One `TimelineMediaAsset` per capture; forwards create new `VisitTimelineEvent` rows sharing the asset
+- GPS from device; fallback coords from `BUSINESS_FALLBACK_LATITUDE/LONGITUDE`
+- Video max size: `TIMELINE_VIDEO_MAX_BYTES` (25 MB)
+
+### Forms
+`TimelineMomentForm`, `TimelineForwardForm` in `forms/scheduling.py`
+
+### Full detail
+See [`feed.md`](feed.md) for model fields, customer feed URLs, and security model.
 
 ---
 
@@ -180,18 +211,18 @@ Counts distinct `client_id` with visits overlapping the calendar day. Validated 
 | File | Contents |
 |------|----------|
 | `forms/scheduling.py` | `VisitForm`, `VisitScheduleForm` alias |
-| `views/scheduling.py` | `dashboard`, `mobile_checkin`, `visit_*`, `pending_events`, `parse_datetime_field`, `ical_feed` |
+| `views/scheduling.py` | `dashboard`, `mobile_checkin`, `visit_*`, `visit_timeline*`, `pending_events`, `parse_datetime_field`, `ical_feed` |
 
 ---
 
 ## 10. Tests
 
-`VisitFormTests`, `DatetimeParseTests`, `AgendaTests`, `PricingEngineTests`, `VisitCheckOutTests`, `VisitEmailTests` in `operations/tests.py`.
+`VisitFormTests`, `DatetimeParseTests`, `AgendaTests`, `PricingEngineTests`, `VisitCheckOutTests`, `VisitEmailTests`, `TimelineTests` in `operations/tests.py`.
 
 ---
 
 ## 11. Not Yet Built
 
-- Per-dog contemporaneous day notes during active visits
 - Live Gmail calendar read (inbound)
 - Edit/delete entire repeat series at once
+- Booking METHOD:UPDATE/CANCEL for calendar invite changes

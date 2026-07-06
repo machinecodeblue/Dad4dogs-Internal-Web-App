@@ -3,7 +3,8 @@
 **Covers:** owners, dogs, COI, vaccinations, Google Contacts import, pipeline per dog.
 
 **Code packages:** `operations/models/customers.py`, `forms/customers.py`, `views/customers.py`  
-**Services:** `operations/services/contacts.py`
+**Services:** `operations/services/contacts.py`, `feed_slugs.py`, `feed_access.py`  
+**Customer feed:** see [`feed.md`](feed.md)
 
 ---
 
@@ -12,8 +13,9 @@
 | Model | Key | Owns |
 |-------|-----|------|
 | `CustomerOwner` | `owner_email` (unique) | COI, owner name/phone |
-| `ClientProfile` | `owner_email` + `dog_name` (unique) | Pipeline, visits, notes |
+| `ClientProfile` | `owner_email` + `dog_name` (unique) | Pipeline, visits, notes, feed URL credentials |
 | `VaccinationRecord` | FK → `ClientProfile` | Vet papers, expiry, validation |
+| `FeedAccessLog` | FK → `ClientProfile` | Anonymous feed page views (visitor cookie) |
 
 ### Rules
 1. A customer may have **zero dogs** until David explicitly adds one.
@@ -29,6 +31,12 @@
 ### ClientProfile pipeline
 `INQUIRY` → `MEET_GREET` → `EVALUATION` → `APPROVED`  
 Method: `advance_pipeline()` on dog screen.
+
+### ClientProfile customer feed fields
+- `feed_secret` — speakable unique slug (CV syllables, e.g. `movakitu`)
+- `feed_dog_slug` — from dog name (e.g. `lulu`)
+- Methods: `ensure_feed_credentials()`, `feed_url()`, `regenerate_feed_secret()`, `sync_feed_dog_slug()`
+- Auto-created on first access; included in booking email when `PUBLIC_SITE_URL` is set
 
 ### VaccinationRecord
 - `expires_at` is **required**
@@ -46,8 +54,9 @@ Method: `advance_pipeline()` on dog screen.
 | Customer | `/customers/<id>/` | COI, dog list, Add Dog — **no vaccinations** |
 | Edit customer | `/customers/<id>/edit/` | |
 | Add dog | `/customers/<id>/add-dog/` | Pipeline starts at Inquiry |
-| Dog | `/dogs/<id>/` | Pipeline, visits — **no COI, no vax form** |
-| Edit dog | `/dogs/<id>/edit/` | |
+| Dog | `/dogs/<id>/` | Pipeline, visits, **customer feed link** (copy/regenerate/stats) |
+| Edit dog | `/dogs/<id>/edit/` | Syncs `feed_dog_slug` when dog name changes |
+| Regenerate feed | `POST /dogs/<id>/feed/regenerate/` | New `feed_secret` — old links stop working |
 | Vaccinations | `/dogs/<id>/vaccinations/` | List, add, validate — dog only |
 | vCard export | `/clients/<id>/vcard/` | Per-dog `.vcf` for Google |
 | Contact sync | `/contacts/sync/` | CSV upload hub |
@@ -105,13 +114,15 @@ Method: `advance_pipeline()` on dog screen.
 
 ## 5. Views (customers.py)
 
-`client_list`, `client_create`, `customer_edit`, `customer_detail`, `customer_add_dog`, `dog_edit`, `dog_detail`, `dog_delete`, `dog_vaccinations`, `update_coi`, `add_vaccination`, `validate_vaccination`, `advance_pipeline`, `contact_sync`, `contact_import_preview`, `contact_import_selected`, `client_vcard`, plus legacy redirects.
+`client_list`, `client_create`, `customer_edit`, `customer_detail`, `customer_add_dog`, `dog_edit`, `dog_detail`, `dog_delete`, `dog_feed_regenerate`, `dog_vaccinations`, `update_coi`, `add_vaccination`, `validate_vaccination`, `advance_pipeline`, `contact_sync`, `contact_import_preview`, `contact_import_selected`, `client_vcard`, plus legacy redirects.
+
+Public feed view lives in `views/customer_feed.py` — not in this package.
 
 ---
 
 ## 6. Tests
 
-`CustomerOwnerFormTests`, `DogProfileFormTests`, `ContactSyncTests`, `ComplianceTests` in `operations/tests.py`.
+`CustomerOwnerFormTests`, `DogProfileFormTests`, `ContactSyncTests`, `ComplianceTests`, `FeedSlugTests`, `CustomerFeedTests` in `operations/tests.py`.
 
 ---
 
