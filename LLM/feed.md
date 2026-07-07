@@ -9,8 +9,9 @@
 - `operations/views/customer_feed.py` — `customer_feed` (public)
 - `operations/views/customers.py` — `dog_feed_regenerate` (staff)
 
-**Services:** `timeline_media.py`, `timeline_visits.py`, `geolocation.py`, `feed_slugs.py`, `feed_access.py`  
-**Templates:** `visit_timeline.html` (staff), `customer_feed.html`, `customer_base.html` (public)
+**Services:** `timeline_media.py`, `timeline_visits.py`, `geolocation.py`, `feed_slugs.py`, `feed_access.py`, `feed_interactions.py`, `feed_emojis.py`, `share_preview.py`  
+**Templates:** `visit_timeline.html` (staff), `customer_feed.html`, `public_photo_share.html`, `customer_base.html` (public)  
+**Includes:** `includes/moment_interactions.html`, `moment_social_styles.html`, `share_sheet.html`, `share_sheet_script.html`, `comment_panel_script.html`
 
 ---
 
@@ -19,7 +20,8 @@
 | Audience | URL | Auth | Can do |
 |----------|-----|------|--------|
 | **David (staff)** | `/visits/<id>/timeline/` | `@login_required` | Capture photo/video, GPS, caption, forward to other checked-in dogs |
-| **Customer / family** | `/feed/<secret>/<dog-slug>/` | Secret link only | View full history — photos, videos, captions, timestamps |
+| **Customer / family** | `/feed/<secret>/<dog-slug>/` | Secret link only | View full history; react, comment, share individual moments |
+| **Friend / public** | `/feed/share/<token>/` | Unguessable share token | View one moment; react, comment, re-share, download photo |
 
 Admin tools (dashboard, clients, billing) stay behind Django login. Customers never get accounts or passwords.
 
@@ -147,25 +149,49 @@ Customers have no accounts. Use `visitor_id` cookie (`dad4dogs_feed_vid`), not `
 |-------|---------|
 | `MediaReaction` | One emoji per visitor per `TimelineMediaAsset` |
 | `MediaComment` | Text + `display_name` per visitor |
-| `SharedMediaLink` | UUID pk → single moment public landing page |
+| `SharedMediaLink` | UUID pk + `share_token` (16-char URL key) → public single-moment page |
 
 Service: `operations/services/feed_interactions.py`
 
-### Public single-moment share
-| Path | Purpose |
-|------|---------|
-| `/feed/share/<token>/` | Anonymous — one image/video + dog name + “Powered by Dad4dogs” (e.g. `eXIvE692WTJul1JvM`) |
+### Social UX (private feed + public share)
 
-Does not reveal `/feed/<secret>/<dog>/`. Clean URL `/feed/share/<token>/` only.
+Both surfaces use the same low-friction interaction pattern via `moment_interactions.html`:
 
-**Social previews:** `share_preview.py` sets Open Graph + Twitter tags with the **moment photo** as `og:image` (not the Dad4dogs app icon). Facebook/WhatsApp crawlers fetch the dog image.
+| Element | Behaviour |
+|---------|-----------|
+| **Reaction bar** | Always visible — dog emojis (🐾 🐕 🐶 🦴 🥺) submit on tap; **no comment required** |
+| **Reaction counts** | Standard emojis (👍 ❤️ …) in summary text — `feed_emojis.py` |
+| **💬 Comment balloon** | Compact icon + count badge; thread/form **hidden until tapped** |
+| **Share icon** | Compact icon → bottom sheet (Copy, Gmail, WhatsApp, Facebook, native `navigator.share`) |
+| **Download icon** | Public share page only — saves high-res file as `dad4dogs_<uuid>.jpg` |
 
-### Interaction POST routes (CSRF-protected forms)
+Share URLs are stripped of `?` and `#` before copying/sharing.
+
+### Private feed POST routes (CSRF-protected forms)
 | Path | Action |
 |------|--------|
-| `.../moment/<asset_id>/react/` | Set or clear emoji |
-| `.../moment/<asset_id>/comment/` | Post comment (30/day per visitor rate limit) |
-| Share icon (per moment) | Bottom sheet: Copy link, Gmail, WhatsApp, Facebook, native Share |
+| `/feed/<secret>/<dog>/moment/<asset_id>/react/` | Set or clear emoji |
+| `/feed/<secret>/<dog>/moment/<asset_id>/comment/` | Post comment (30/day per visitor rate limit) |
+
+Share icon opens bottom sheet — no POST; uses existing `SharedMediaLink.share_token`.
+
+### Public single-moment share
+
+| Path | Purpose |
+|------|---------|
+| `/feed/share/<token>/` | One image/video + full social UX (react, comment balloon, re-share, download) |
+| `/feed/share/<token>/react/` | POST — set or clear emoji |
+| `/feed/share/<token>/comment/` | POST — post comment |
+| `/feed/share/<token>/download/` | GET — `FileResponse` with `Content-Disposition: attachment; filename="dad4dogs_<uuid>.jpg"` |
+| `/share/photo/<uuid>/` | Legacy redirect → `/feed/share/<token>/` |
+
+- **URL token:** `share_token` — 16-char alphanumeric (e.g. `eXIvE692WTJul1JvM`), not the UUID in the path
+- **Download filename:** `dad4dogs_{SharedMediaLink.id}.jpg` (or `.mp4` for video) — served via download endpoint so browsers do not use internal `master_…` storage names
+- Does **not** reveal `/feed/<secret>/<dog>/`
+- **View counting:** `view_count` increments on GET only; POST redirects use `?posted=1` to skip re-counting
+- **Robots:** `index, follow` on share page (OG crawlers); private feed stays `noindex, nofollow`
+
+**Social previews:** `share_preview.py` sets Open Graph + Twitter tags with the **moment photo** as `og:image` (not the Dad4dogs app icon). High-res image URL used for `og:image`, `twitter:image`, and page favicon.
 
 ### Response headers
 - `X-Robots-Tag: noindex, nofollow`
@@ -191,8 +217,8 @@ When `PUBLIC_SITE_URL` is set, `format_booking_confirmation()` appends the feed 
 | Sharing intentional | Customers forward link to family — by design |
 | Staff vs public | Never expose upload/forward on customer template |
 
-**Not yet built:** protected media proxy for production (dev serves `/media/` in DEBUG).  
-**Future:** hearts, comments, emojis, push notifications — visitor cookie is the hook for per-browser reactions without login.
+**Built:** reactions, comments, public share with re-share, download, check-in activity poll.  
+**Not yet built:** protected media proxy for production (dev serves `/media/` in DEBUG).
 
 ---
 
@@ -202,18 +228,25 @@ When `PUBLIC_SITE_URL` is set, `format_booking_confirmation()` appends the feed 
 |------|------|-------|
 | `/visits/<pk>/timeline/` | `visit_timeline` | Yes |
 | `/visits/<pk>/timeline/<event_pk>/forward/` | `visit_timeline_forward` | Yes |
+| `/checkin/feed-activity/` | `checkin_feed_activity` | Yes (JSON poll) |
 | `/feed/<secret>/<dog-slug>/` | `customer_feed` | No |
-| `/feed/.../moment/<asset_id>/react/` | `customer_feed_react` | No (POST) |
-| `/feed/.../moment/<asset_id>/comment/` | `customer_feed_comment` | No (POST) |
-| `/feed/.../moment/<asset_id>/share/` | `customer_feed_share` | No (POST) |
+| `/feed/<secret>/<dog-slug>/moment/<asset_id>/react/` | `customer_feed_react` | No (POST) |
+| `/feed/<secret>/<dog-slug>/moment/<asset_id>/comment/` | `customer_feed_comment` | No (POST) |
 | `/feed/share/<token>/` | `public_feed_share` | No |
+| `/feed/share/<token>/react/` | `public_feed_share_react` | No (POST) |
+| `/feed/share/<token>/comment/` | `public_feed_share_comment` | No (POST) |
+| `/feed/share/<token>/download/` | `public_feed_share_download` | No |
+| `/share/photo/<uuid>/` | `public_shared_media_legacy` | No (redirect) |
 | `/dogs/<pk>/feed/regenerate/` | `dog_feed_regenerate` | Yes (POST) |
 
 ---
 
 ## 8. Tests
 
-`TimelineTests`, `FeedSlugTests`, `CustomerFeedTests`, `FeedInteractionTests` in `operations/tests.py`.  
+`TimelineTests`, `FeedSlugTests`, `CustomerFeedTests`, `FeedInteractionTests` in `operations/tests.py`.
+
+`FeedInteractionTests` covers: feed react/comment, public share isolation from feed secret, compact share/comment icons, public share react without comment, public share download filename (`dad4dogs_<uuid>.jpg`), check-in feed activity poll.
+
 `VisitEmailTests.test_format_confirmation_includes_feed_url_when_public_site_set`
 
 ---
@@ -226,6 +259,8 @@ When `PUBLIC_SITE_URL` is set, `format_booking_confirmation()` appends the feed 
 | `0009_timeline_media_asset` | `TimelineMediaAsset` + data migration |
 | `0010_customer_feed` | `feed_secret`, `feed_dog_slug`, `FeedAccessLog` |
 | `0011_feed_interactions` | `MediaReaction`, `MediaComment`, `SharedMediaLink` |
+| `0012_shared_media_share_token` | `SharedMediaLink.share_token` for clean public URLs |
+| `0013_…` | Index rename on interaction models |
 
 ---
 
@@ -237,28 +272,43 @@ When `PUBLIC_SITE_URL` is set, `format_booking_confirmation()` appends the feed 
 | Comment moderation queue | David approves/hides comments — not needed at current scale |
 | `published` flag per moment | David approves before customer sees — not needed today |
 | Production media auth | Proxy or signed URLs so `/media/` is not wide open |
+| Feed template refactor | `customer_feed.html` could adopt shared includes (currently inline; share page uses includes) |
 
 ## 11. Architectural payoff — two circles, zero data bleed
 
 ### Interactive client circle (owner ↔ David)
 - Customers react and comment on **`/feed/<secret>/<dog>/`** using the anonymous **`dad4dogs_feed_vid`** cookie — not Django `sessionid`, not accounts.
+- Optional display name stored in cookie `dad4dogs_feed_name` for comment attribution.
 - David sees activity on **Check-In** (`/checkin/`) via a lightweight **15s JSON poll** (`/checkin/feed-activity/`, `@login_required`).
-- Poll uses David’s **session cookie** only on the staff side — comments stay between owner/family and David’s ops screen.
+- Poll uses David’s **session cookie** only on the staff side — reactions/comments appear on the check-in screen with standard emoji labels.
 
 ### Secure virality (friends ↔ marketing)
-- **Share with friends** creates `SharedMediaLink` (UUID).
-- Public view: `/share/photo/<uuid>/` → template `public_photo_share.html` — **only** the moment + dog’s first name + “Powered by Dad4dogs”.
-- No feed URL, no owner email, no billing, no account IDs — organic word-of-mouth without privacy compromise.
-- `view_count` increments per public page view (owner fun metric).
+- **Share with friends** lazily creates `SharedMediaLink` per `(client, media_asset)` with `share_token`.
+- Public landing: **`/feed/share/<token>/`** → `public_photo_share.html` — moment + dog name + **same social UX** (react without commenting, comment balloon, re-share, download).
+- Legacy `/share/photo/<uuid>/` redirects to token URL.
+- No feed secret, no owner email, no billing — organic word-of-mouth without privacy compromise.
+- `view_count` increments on share page GET (not on interaction POST redirects).
 
 ```python
-# public_shared_media view
-record_share_view(link)
-return render(request, 'operations/public_photo_share.html', {
-    'photo': link.media_asset,
-    'dog_name': link.client.dog_name,
-})
+# public_feed_share (simplified)
+link = _resolve_share_link(share_token)
+if request.GET.get('posted') != '1':
+    record_share_view(link)
+return render(request, 'operations/public_photo_share.html', _share_page_context(...))
+
+# public_feed_share_download
+filename = f'dad4dogs_{link.id}.jpg'  # SharedMediaLink UUID pk
+return FileResponse(field.open('rb'), as_attachment=True, filename=filename)
 ```
+
+### Key implementation files
+| Area | Path |
+|------|------|
+| Views | `operations/views/customer_feed.py` — feed, share, react, comment, download |
+| Interactions | `operations/services/feed_interactions.py` — reactions, comments, share links, view count |
+| OG + download | `operations/services/share_preview.py` — preview image, download filename/URL |
+| Emojis | `operations/services/feed_emojis.py` — dog UI emojis vs standard count labels |
+| Staff poll | `operations/views/scheduling.py` — `checkin_feed_activity` |
 
 ---
 

@@ -14,7 +14,8 @@
         flex-shrink: 0;
     }
     .comment-icon-btn,
-    .share-icon-btn {
+    .share-icon-btn,
+    .download-icon-btn {
         flex-shrink: 0;
         border: none;
         background: transparent;
@@ -24,16 +25,23 @@
         line-height: 0;
         border-radius: 8px;
         position: relative;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
     }
     .comment-icon-btn:hover,
     .comment-icon-btn:focus,
     .share-icon-btn:hover,
-    .share-icon-btn:focus {
+    .share-icon-btn:focus,
+    .download-icon-btn:hover,
+    .download-icon-btn:focus {
         color: var(--brand);
         background: #e9ecef;
     }
     .comment-icon-btn svg,
-    .share-icon-btn svg {
+    .share-icon-btn svg,
+    .download-icon-btn svg {
         width: 1.35rem;
         height: 1.35rem;
     }

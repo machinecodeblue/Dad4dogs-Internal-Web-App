@@ -4,7 +4,7 @@
 
 **Code packages:** `operations/models/customers.py`, `forms/customers.py`, `views/customers.py`  
 **Services:** `operations/services/contacts.py`, `feed_slugs.py`, `feed_access.py`  
-**Customer feed:** see [`feed.md`](feed.md)
+**Customer feed & social:** see [`feed.md`](feed.md) — private feed (react, comment, share) and public `/feed/share/<token>/` (re-share, download)
 
 ---
 

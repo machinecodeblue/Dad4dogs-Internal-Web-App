@@ -147,7 +147,7 @@ Home screen (`/`) = David's daily operations view.
 - Check-out sets `actual_departure = now`, runs `calculate_fee()`, status `completed`
 - Capacity re-checked at check-in
 - Checked-in cards show **Log Moment** → staff timeline (`visit_timeline`)
-- **Owner feed activity** panel — polls `/checkin/feed-activity/` every 15s for emoji/comments on the customer feed
+- **Owner feed activity** panel — polls `/checkin/feed-activity/` every 15s for owner/family reactions and comments on the customer feed (standard emoji labels in JSON)
 
 ---
 

@@ -101,8 +101,9 @@ Requires **HTTPS** (`runserver_https` + ngrok). ngrok interstitial on first visi
 | Path | Purpose |
 |------|---------|
 | `/ical/` | David's read-only calendar feed |
-| `/feed/<secret>/<dog-slug>/` | Customer photo feed — see `feed.md` |
-| `/feed/share/<token>/` | Single-moment public share (no feed URL exposed) |
+| `/feed/<secret>/<dog-slug>/` | Customer photo feed — react, comment, share — see `feed.md` |
+| `/feed/share/<token>/` | Single-moment public share — react, comment, re-share, download (`dad4dogs_<uuid>.jpg`) |
+| `/feed/share/<token>/download/` | Attachment download for shared moment |
 
 Set `PUBLIC_SITE_URL` env var so booking emails and copied feed links use the full tunnel/production URL.
 
@@ -137,7 +138,7 @@ Get-ChildItem -Recurse -Directory -Filter "__pycache__" | Remove-Item -Recurse -
 
 - `LOGIN_URL` = `/admin/login/`
 - `@login_required` on all staff views (dashboard, clients, timeline capture, settings, etc.)
-- **Public views:** `/ical/`, `/feed/<secret>/<dog-slug>/`, `/manifest.webmanifest`, `/sw.js`
+- **Public views:** `/ical/`, `/feed/<secret>/<dog-slug>/`, `/feed/share/<token>/` (+ react/comment/download), `/manifest.webmanifest`, `/sw.js`
 - Customer feed uses **secret link** auth — no passwords; regenerate revokes old links
 - `SECRET_KEY` in settings — change before production deploy
 - OAuth secrets and certs in `.gitignore`

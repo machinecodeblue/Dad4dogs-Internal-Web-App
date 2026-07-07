@@ -1,11 +1,16 @@
-from django.http import Http404
+from django.http import FileResponse, Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.views.decorators.http import require_GET, require_POST
 
 from operations.models import ClientProfile, SharedMediaLink, VisitTimelineEvent
 from operations.services.feed_slugs import generate_unique_share_token
-from operations.services.share_preview import build_share_preview_context
+from operations.services.share_preview import (
+    build_share_preview_context,
+    share_download_field,
+    share_download_filename,
+    share_download_page_url,
+)
 from operations.services.feed_access import get_or_set_visitor_id, log_feed_access
 from operations.services.feed_emojis import reaction_choices_for_feed, standard_emoji_label
 from operations.services.feed_interactions import (
@@ -86,6 +91,7 @@ def _share_page_context(request, link: SharedMediaLink, visitor_id: str) -> dict
     asset_id = link.media_asset_id
     counts = reaction_counts_for_assets([asset_id]).get(asset_id, {})
     comments = comments_for_assets([asset_id]).get(asset_id, [])
+    download_url, download_filename = share_download_page_url(request, link)
     context.update({
         'asset_id': asset_id,
         'reaction_summary': _reaction_summary(counts),
@@ -97,6 +103,8 @@ def _share_page_context(request, link: SharedMediaLink, visitor_id: str) -> dict
         'share_url': share_url_for_link(link, request=request),
         'share_title': f'{link.client.dog_name} at Dad4dogs',
         'comments_open': request.GET.get('comments') == '1' or request.GET.get('comments') == 'true',
+        'download_url': download_url,
+        'download_filename': download_filename,
     })
     return context
 
@@ -194,6 +202,17 @@ def customer_feed_redirect(request, feed_secret: str):
     client = get_object_or_404(ClientProfile, feed_secret=feed_secret)
     client.ensure_feed_credentials()
     return redirect('operations:customer_feed', feed_secret=client.feed_secret, feed_dog_slug=client.feed_dog_slug)
+
+
+@require_GET
+def public_feed_share_download(request, share_token: str):
+    """Serve high-res media with dad4dogs_<uuid> filename."""
+    link = _resolve_share_link(share_token)
+    field, _ = share_download_field(link.media_asset)
+    if not field or not getattr(field, 'name', ''):
+        raise Http404('No downloadable media for this moment.')
+    filename = share_download_filename(link, link.media_asset)
+    return FileResponse(field.open('rb'), as_attachment=True, filename=filename)
 
 
 @require_GET

@@ -57,12 +57,13 @@
     <div class="shared-moment-social" id="moment-{{ asset_id }}">
         {% url 'operations:public_feed_share_react' share_token=link.share_token as react_url %}
         {% url 'operations:public_feed_share_comment' share_token=link.share_token as comment_url %}
-        {% include "operations/includes/moment_interactions.html" with social_mode='full' show_meta_header=True asset_id=asset_id captured_at=photo.captured_at reaction_choices=reaction_choices my_reaction=my_reaction reaction_summary=reaction_summary comments=comments comment_count=comment_count display_name=display_name comments_open=comments_open react_url=react_url comment_url=comment_url share_url=share_url share_title=share_title %}
+        {% include "operations/includes/moment_interactions.html" with social_mode='compact' show_meta_header=True asset_id=asset_id captured_at=photo.captured_at reaction_choices=reaction_choices my_reaction=my_reaction reaction_summary=reaction_summary comments=comments comment_count=comment_count display_name=display_name comments_open=comments_open react_url=react_url comment_url=comment_url share_url=share_url share_title=share_title download_url=download_url download_filename=download_filename %}
     </div>
 </div>
 
 {% include "operations/includes/share_sheet.html" %}
 {% include "operations/includes/share_sheet_script.html" %}
+{% include "operations/includes/comment_panel_script.html" %}
 {% if comments_open %}
 <script>
 (function () {

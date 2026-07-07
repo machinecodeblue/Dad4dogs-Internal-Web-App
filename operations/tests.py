@@ -1330,10 +1330,39 @@ class FeedInteractionTests(TestCase):
         self.assertContains(response, 'twitter:image')
         self.assertNotIn(self.dog.feed_secret, response.content.decode())
         self.assertContains(response, 'share-icon-btn')
+        self.assertContains(response, 'comment-icon-btn')
+        self.assertContains(response, 'download-icon-btn')
+        self.assertContains(response, '/download/')
+        self.assertContains(response, f'dad4dogs_{link.id}.jpg')
         self.assertContains(response, 'reaction-bar')
-        self.assertContains(response, 'Post comment')
+        self.assertNotContains(response, 'comment-panel always-open')
         link.refresh_from_db()
         self.assertEqual(link.view_count, 1)
+
+    def test_public_share_download_filename(self):
+        link = get_or_create_share_link(client=self.dog, asset_id=self.asset_id)
+        download_url = reverse(
+            'operations:public_feed_share_download',
+            kwargs={'share_token': link.share_token},
+        )
+        response = self.client.get(download_url)
+        self.assertEqual(response.status_code, 200)
+        disposition = response.headers.get('Content-Disposition', '')
+        self.assertIn('attachment', disposition)
+        self.assertIn(f'dad4dogs_{link.id}.jpg', disposition)
+        self.assertNotIn('master_', disposition)
+
+    def test_public_share_react_without_comment(self):
+        link = get_or_create_share_link(client=self.dog, asset_id=self.asset_id)
+        react_url = reverse(
+            'operations:public_feed_share_react',
+            kwargs={'share_token': link.share_token},
+        )
+        self.client.post(react_url, {'emoji': MediaReaction.Emoji.LOVE})
+        share_url = reverse('operations:public_feed_share', kwargs={'share_token': link.share_token})
+        response = self.client.get(share_url)
+        self.assertContains(response, '❤️')
+        self.assertEqual(MediaComment.objects.count(), 0)
 
     def test_public_share_react_and_comment(self):
         link = get_or_create_share_link(client=self.dog, asset_id=self.asset_id)

@@ -150,7 +150,7 @@ Overnight is evaluated **before** hour tiers. Multi-day: each full 24h = Overnig
 | Business document uploads (COI, etc.) | Not started |
 | Calendar inbound `.ics` import command | Partial — file-based, not live Gmail |
 | Weekly statement **email send** | Partial — generates + formats; send not wired |
-| Feed reactions, comments, UUID photo share | Done — see `feed.md` |
+| Feed reactions, comments, public share (re-share, download) | Done — `/feed/share/<token>/`, `dad4dogs_<uuid>.jpg` — see `feed.md` |
 | Feed push notifications | Planned |
 | GoDaddy inquiry parsing | Not started |
 | e-Transfer automation | Not started |
