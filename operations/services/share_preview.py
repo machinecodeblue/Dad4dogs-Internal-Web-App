@@ -35,6 +35,7 @@ def build_share_preview_context(request: HttpRequest, link: SharedMediaLink) -> 
         description = asset.caption_notes.strip()[:200]
 
     return {
+        'link': link,
         'photo': asset,
         'dog_name': dog_name,
         'og_title': title,

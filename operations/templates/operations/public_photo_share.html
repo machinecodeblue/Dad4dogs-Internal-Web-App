@@ -19,6 +19,7 @@
 {% block header_title %}{{ dog_name }}{% endblock %}
 {% block header_subtitle %}A moment from Dad4dogs{% endblock %}
 {% block extra_head %}
+{% include "operations/includes/moment_social_styles.html" %}
 <style>
     .shared-media-wrap {
         border-radius: var(--radius);
@@ -30,6 +31,11 @@
     .shared-media-wrap video {
         width: 100%;
         display: block;
+    }
+    .shared-moment-social {
+        margin-top: 0.75rem;
+        padding-top: 0.75rem;
+        border-top: 1px solid #dee2e6;
     }
 </style>
 {% endblock %}
@@ -47,6 +53,25 @@
     {% if photo.caption_notes %}
     <p style="margin-top:0.75rem">{{ photo.caption_notes }}</p>
     {% endif %}
-    <p class="muted" style="margin-top:0.5rem">{{ photo.captured_at|date:"M j, Y g:i A" }}</p>
+
+    <div class="shared-moment-social" id="moment-{{ asset_id }}">
+        {% url 'operations:public_feed_share_react' share_token=link.share_token as react_url %}
+        {% url 'operations:public_feed_share_comment' share_token=link.share_token as comment_url %}
+        {% include "operations/includes/moment_interactions.html" with social_mode='full' show_meta_header=True asset_id=asset_id captured_at=photo.captured_at reaction_choices=reaction_choices my_reaction=my_reaction reaction_summary=reaction_summary comments=comments comment_count=comment_count display_name=display_name comments_open=comments_open react_url=react_url comment_url=comment_url share_url=share_url share_title=share_title %}
+    </div>
 </div>
+
+{% include "operations/includes/share_sheet.html" %}
+{% include "operations/includes/share_sheet_script.html" %}
+{% if comments_open %}
+<script>
+(function () {
+    const panel = document.getElementById('comment-panel-{{ asset_id }}');
+    if (panel) {
+        const field = panel.querySelector('textarea');
+        if (field) field.focus();
+    }
+})();
+</script>
+{% endif %}
 {% endblock %}

@@ -1,0 +1,33 @@
+<script>
+(function () {
+    document.querySelectorAll('.comment-icon-btn').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            const targetId = btn.getAttribute('data-comment-target');
+            const panel = document.getElementById(targetId);
+            if (!panel) return;
+            const isOpen = panel.classList.toggle('open');
+            btn.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+            document.querySelectorAll('.comment-panel.open').forEach(function (other) {
+                if (other !== panel) other.classList.remove('open');
+            });
+            document.querySelectorAll('.comment-icon-btn[aria-expanded="true"]').forEach(function (other) {
+                if (other !== btn) other.setAttribute('aria-expanded', 'false');
+            });
+            if (isOpen) {
+                const field = panel.querySelector('textarea');
+                if (field) field.focus();
+            }
+        });
+    });
+
+    if (window.location.hash && window.location.hash.indexOf('moment-') === 1) {
+        const assetId = window.location.hash.replace('#moment-', '');
+        const panel = document.getElementById('comment-panel-' + assetId);
+        const btn = document.querySelector('[data-comment-target="comment-panel-' + assetId + '"]');
+        if (panel) {
+            panel.classList.add('open');
+            if (btn) btn.setAttribute('aria-expanded', 'true');
+        }
+    }
+})();
+</script>

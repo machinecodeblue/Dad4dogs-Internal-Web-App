@@ -11,6 +11,8 @@ from operations.views.customer_feed import (
     customer_feed_react,
     customer_feed_redirect,
     public_feed_share,
+    public_feed_share_comment,
+    public_feed_share_react,
     public_shared_media_legacy,
 )
 from operations.views.customers import (
@@ -75,6 +77,8 @@ __all__ = [
     'customer_feed_react',
     'customer_feed_redirect',
     'public_feed_share',
+    'public_feed_share_comment',
+    'public_feed_share_react',
     'public_shared_media_legacy',
     'customer_add_dog',
     'customer_detail',

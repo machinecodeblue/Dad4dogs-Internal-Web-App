@@ -1,0 +1,150 @@
+<style>
+    .moment-meta-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.5rem;
+        margin-top: 0.75rem;
+    }
+    .moment-meta-header time { font-weight: 600; color: var(--brand); flex: 1; }
+    .moment-icon-actions {
+        display: flex;
+        align-items: center;
+        gap: 0.15rem;
+        flex-shrink: 0;
+    }
+    .comment-icon-btn,
+    .share-icon-btn {
+        flex-shrink: 0;
+        border: none;
+        background: transparent;
+        color: var(--muted);
+        padding: 0.25rem;
+        cursor: pointer;
+        line-height: 0;
+        border-radius: 8px;
+        position: relative;
+    }
+    .comment-icon-btn:hover,
+    .comment-icon-btn:focus,
+    .share-icon-btn:hover,
+    .share-icon-btn:focus {
+        color: var(--brand);
+        background: #e9ecef;
+    }
+    .comment-icon-btn svg,
+    .share-icon-btn svg {
+        width: 1.35rem;
+        height: 1.35rem;
+    }
+    .comment-count-badge {
+        position: absolute;
+        top: -2px;
+        right: -2px;
+        min-width: 1rem;
+        height: 1rem;
+        padding: 0 0.2rem;
+        border-radius: 999px;
+        background: var(--brand);
+        color: white;
+        font-size: 0.62rem;
+        font-weight: 700;
+        line-height: 1rem;
+        text-align: center;
+    }
+    .reaction-bar {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.35rem;
+        margin-top: 0.5rem;
+    }
+    .reaction-bar button {
+        border: 1px solid #ced4da;
+        background: white;
+        border-radius: 999px;
+        padding: 0.35rem 0.65rem;
+        font-size: 1rem;
+        cursor: pointer;
+        line-height: 1;
+    }
+    .reaction-bar button.active {
+        border-color: var(--brand);
+        background: #d8f3dc;
+    }
+    .reaction-counts {
+        font-size: 0.8rem;
+        color: var(--muted);
+        margin-top: 0.35rem;
+    }
+    .comment-panel { display: none; margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid #dee2e6; }
+    .comment-panel.open { display: block; }
+    .comment-panel.always-open { display: block; border-top: none; padding-top: 0.5rem; margin-top: 0.5rem; }
+    .comment-item { margin-bottom: 0.5rem; font-size: 0.85rem; }
+    .comment-item strong { color: var(--brand); }
+    .comment-form input,
+    .comment-form textarea {
+        width: 100%;
+        padding: 0.6rem;
+        border: 1px solid #ced4da;
+        border-radius: var(--radius);
+        font-size: 0.9rem;
+        margin-bottom: 0.5rem;
+        font-family: inherit;
+    }
+    .comment-form button {
+        background: var(--brand);
+        color: white;
+        border: none;
+        border-radius: var(--radius);
+        padding: 0.55rem 1rem;
+        font-weight: 600;
+        cursor: pointer;
+        font-size: 0.85rem;
+    }
+    .share-sheet-overlay {
+        position: fixed;
+        inset: 0;
+        z-index: 400;
+        background: rgba(0, 0, 0, 0.45);
+        display: none;
+        align-items: flex-end;
+        padding: 0.75rem;
+        padding-bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px));
+    }
+    .share-sheet-overlay.open { display: flex; }
+    .share-sheet {
+        background: white;
+        border-radius: 16px 16px 12px 12px;
+        width: 100%;
+        max-width: 600px;
+        margin: 0 auto;
+        padding: 1rem;
+        box-shadow: 0 12px 32px rgba(0, 0, 0, 0.2);
+    }
+    .share-sheet h3 { font-size: 0.95rem; margin-bottom: 0.75rem; color: var(--brand); }
+    .share-sheet-actions { display: flex; flex-direction: column; gap: 0.35rem; }
+    .share-sheet-actions button,
+    .share-sheet-actions a {
+        display: block;
+        width: 100%;
+        text-align: left;
+        padding: 0.75rem 0.85rem;
+        border: none;
+        background: #f8f9fa;
+        border-radius: 10px;
+        font-size: 0.95rem;
+        color: var(--text);
+        text-decoration: none;
+        cursor: pointer;
+        font-family: inherit;
+    }
+    .share-sheet-actions button:hover,
+    .share-sheet-actions a:hover { background: #e9ecef; }
+    .share-sheet-cancel {
+        margin-top: 0.5rem;
+        text-align: center;
+        color: var(--muted);
+        font-size: 0.9rem;
+        background: transparent !important;
+    }
+</style>

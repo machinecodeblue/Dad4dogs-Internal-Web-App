@@ -1,0 +1,68 @@
+<script>
+(function () {
+    const sheet = document.getElementById('share-sheet');
+    if (!sheet) return;
+    const copyBtn = document.getElementById('share-copy-link');
+    const gmailLink = document.getElementById('share-gmail');
+    const whatsappLink = document.getElementById('share-whatsapp');
+    const facebookLink = document.getElementById('share-facebook');
+    const nativeBtn = document.getElementById('share-native');
+    const closeBtn = document.getElementById('share-sheet-close');
+    let activeUrl = '';
+    let activeTitle = '';
+
+    if (navigator.share) {
+        nativeBtn.hidden = false;
+    }
+
+    function openSheet(url, title) {
+        activeUrl = url.split('#')[0].split('?')[0];
+        activeTitle = title;
+        const shareText = title + ' ' + activeUrl;
+        const body = encodeURIComponent(shareText);
+        const urlEnc = encodeURIComponent(activeUrl);
+        gmailLink.href = 'https://mail.google.com/mail/?view=cm&fs=1&su=' + encodeURIComponent(title) + '&body=' + body;
+        whatsappLink.href = 'https://wa.me/?text=' + body;
+        facebookLink.href = 'https://www.facebook.com/sharer/sharer.php?u=' + urlEnc;
+        sheet.hidden = false;
+        sheet.classList.add('open');
+    }
+
+    function closeSheet() {
+        sheet.classList.remove('open');
+        sheet.hidden = true;
+    }
+
+    window.openShareSheet = openSheet;
+
+    document.querySelectorAll('.share-icon-btn').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            openSheet(btn.getAttribute('data-share-url'), btn.getAttribute('data-share-title'));
+        });
+    });
+
+    closeBtn.addEventListener('click', closeSheet);
+    sheet.addEventListener('click', function (event) {
+        if (event.target === sheet) closeSheet();
+    });
+
+    copyBtn.addEventListener('click', async function () {
+        try {
+            await navigator.clipboard.writeText(activeUrl);
+            copyBtn.textContent = 'Copied!';
+            window.setTimeout(function () { copyBtn.textContent = 'Copy link'; }, 2000);
+        } catch (err) {
+            window.prompt('Copy this link:', activeUrl);
+        }
+    });
+
+    nativeBtn.addEventListener('click', async function () {
+        try {
+            await navigator.share({ title: activeTitle, url: activeUrl });
+            closeSheet();
+        } catch (err) {
+            /* user cancelled */
+        }
+    });
+})();
+</script>

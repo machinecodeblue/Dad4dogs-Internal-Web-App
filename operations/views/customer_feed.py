@@ -66,6 +66,41 @@ def _build_event_rows(client, events, visitor_id: str, request):
     return rows
 
 
+def _resolve_share_link(share_token: str) -> SharedMediaLink:
+    return get_object_or_404(
+        SharedMediaLink.objects.select_related('media_asset', 'client'),
+        share_token=share_token,
+    )
+
+
+def _redirect_share(share_token: str, *, open_comments: bool = False):
+    url = reverse('operations:public_feed_share', kwargs={'share_token': share_token})
+    params = ['posted=1']
+    if open_comments:
+        params.append('comments=1')
+    return redirect(f'{url}?{"&".join(params)}')
+
+
+def _share_page_context(request, link: SharedMediaLink, visitor_id: str) -> dict:
+    context = build_share_preview_context(request, link)
+    asset_id = link.media_asset_id
+    counts = reaction_counts_for_assets([asset_id]).get(asset_id, {})
+    comments = comments_for_assets([asset_id]).get(asset_id, [])
+    context.update({
+        'asset_id': asset_id,
+        'reaction_summary': _reaction_summary(counts),
+        'my_reaction': visitor_reactions_for_assets([asset_id], visitor_id).get(asset_id, ''),
+        'comments': comments,
+        'comment_count': len(comments),
+        'reaction_choices': reaction_choices_for_feed(),
+        'display_name': request.COOKIES.get(DISPLAY_NAME_COOKIE, ''),
+        'share_url': share_url_for_link(link, request=request),
+        'share_title': f'{link.client.dog_name} at Dad4dogs',
+        'comments_open': request.GET.get('comments') == '1' or request.GET.get('comments') == 'true',
+    })
+    return context
+
+
 def _redirect_feed(client: ClientProfile, *, asset_id: int | None = None):
     url = reverse(
         'operations:customer_feed',
@@ -163,17 +198,64 @@ def customer_feed_redirect(request, feed_secret: str):
 
 @require_GET
 def public_feed_share(request, share_token: str):
-    """Anonymous single-moment page — /feed/share/<token>/"""
-    link = get_object_or_404(
-        SharedMediaLink.objects.select_related('media_asset', 'client'),
-        share_token=share_token,
-    )
-    record_share_view(link)
+    """Public moment page — photo, reactions, comments, re-share."""
+    link = _resolve_share_link(share_token)
+    if request.GET.get('posted') != '1':
+        record_share_view(link)
+    visitor_id = get_or_set_visitor_id(request)
     response = render(
         request,
         'operations/public_photo_share.html',
-        build_share_preview_context(request, link),
+        _share_page_context(request, link, visitor_id),
     )
+    get_or_set_visitor_id(request, response)
+    return response
+
+
+@require_POST
+def public_feed_share_react(request, share_token: str):
+    link = _resolve_share_link(share_token)
+    visitor_id = get_or_set_visitor_id(request)
+    emoji = (request.POST.get('emoji') or '').strip()
+    try:
+        set_reaction(
+            client=link.client,
+            asset_id=link.media_asset_id,
+            visitor_id=visitor_id,
+            emoji=emoji,
+        )
+    except FeedInteractionError:
+        pass
+    return _redirect_share(share_token)
+
+
+@require_POST
+def public_feed_share_comment(request, share_token: str):
+    link = _resolve_share_link(share_token)
+    visitor_id = get_or_set_visitor_id(request)
+    display_name = (request.POST.get('display_name') or '').strip()
+    text = request.POST.get('text', '')
+    try:
+        add_comment(
+            client=link.client,
+            asset_id=link.media_asset_id,
+            visitor_id=visitor_id,
+            text=text,
+            display_name=display_name,
+        )
+    except FeedInteractionError:
+        return _redirect_share(share_token, open_comments=True)
+
+    response = _redirect_share(share_token, open_comments=True)
+    if display_name:
+        response.set_cookie(
+            DISPLAY_NAME_COOKIE,
+            display_name[:80],
+            max_age=DISPLAY_NAME_MAX_AGE,
+            httponly=False,
+            samesite='Lax',
+            secure=request.is_secure(),
+        )
     return response
 
 

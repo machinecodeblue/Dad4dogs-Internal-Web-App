@@ -1329,8 +1329,41 @@ class FeedInteractionTests(TestCase):
         self.assertContains(response, 'og:image')
         self.assertContains(response, 'twitter:image')
         self.assertNotIn(self.dog.feed_secret, response.content.decode())
+        self.assertContains(response, 'share-icon-btn')
+        self.assertContains(response, 'reaction-bar')
+        self.assertContains(response, 'Post comment')
         link.refresh_from_db()
         self.assertEqual(link.view_count, 1)
+
+    def test_public_share_react_and_comment(self):
+        link = get_or_create_share_link(client=self.dog, asset_id=self.asset_id)
+        react_url = reverse(
+            'operations:public_feed_share_react',
+            kwargs={'share_token': link.share_token},
+        )
+        self.client.post(react_url, {'emoji': MediaReaction.Emoji.LOVE})
+        self.assertEqual(MediaReaction.objects.count(), 1)
+
+        comment_url = reverse(
+            'operations:public_feed_share_comment',
+            kwargs={'share_token': link.share_token},
+        )
+        self.client.post(comment_url, {'display_name': 'Friend', 'text': 'Adorable!'})
+        self.assertEqual(MediaComment.objects.count(), 1)
+
+        link.refresh_from_db()
+        views_before = link.view_count
+        self.client.post(react_url, {'emoji': MediaReaction.Emoji.LIKE})
+        link.refresh_from_db()
+        self.assertEqual(link.view_count, views_before)
+
+        share_url = reverse('operations:public_feed_share', kwargs={'share_token': link.share_token})
+        response = self.client.get(share_url)
+        self.assertContains(response, 'Adorable!')
+        self.assertContains(response, '❤️')
+        self.assertContains(response, 'Friend')
+        link.refresh_from_db()
+        self.assertEqual(link.view_count, views_before + 1)
 
     def test_customer_feed_has_compact_share_icon(self):
         feed_url = reverse(
