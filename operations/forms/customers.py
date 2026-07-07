@@ -3,43 +3,105 @@ from django.core.exceptions import ValidationError
 
 from operations.models import ClientProfile, CustomerOwner, VaccinationRecord
 
+_PHONE_WIDGET = forms.TextInput(attrs={
+    'placeholder': 'Mobile number',
+    'autocomplete': 'tel',
+    'inputmode': 'tel',
+})
+
 
 class CustomerOwnerForm(forms.ModelForm):
     class Meta:
         model = CustomerOwner
-        fields = ['owner_name', 'owner_email', 'owner_phone']
+        fields = [
+            'owner_name',
+            'owner_salutation',
+            'owner_email',
+            'owner_phone',
+            'home_address',
+            'emergency_contact_name',
+            'emergency_contact_phone',
+            'emergency_contact_relationship',
+            'authorized_pickup_names',
+        ]
         widgets = {
             'owner_name': forms.TextInput(attrs={
                 'placeholder': 'Owner full name',
                 'autocomplete': 'name',
+            }),
+            'owner_salutation': forms.TextInput(attrs={
+                'placeholder': 'Optional — Ms., they/them, etc.',
             }),
             'owner_email': forms.EmailInput(attrs={
                 'placeholder': 'owner@email.com',
                 'autocomplete': 'email',
                 'inputmode': 'email',
             }),
-            'owner_phone': forms.TextInput(attrs={
-                'placeholder': 'Optional',
-                'autocomplete': 'tel',
-                'inputmode': 'tel',
+            'owner_phone': _PHONE_WIDGET,
+            'home_address': forms.Textarea(attrs={
+                'rows': 3,
+                'placeholder': 'Street, city, postal code',
+                'autocomplete': 'street-address',
+            }),
+            'emergency_contact_name': forms.TextInput(attrs={
+                'placeholder': 'Trusted friend, neighbor, or family member',
+            }),
+            'emergency_contact_phone': _PHONE_WIDGET,
+            'emergency_contact_relationship': forms.TextInput(attrs={
+                'placeholder': 'e.g. Neighbor with house key',
+            }),
+            'authorized_pickup_names': forms.Textarea(attrs={
+                'rows': 3,
+                'placeholder': 'One authorized pickup name per line',
             }),
         }
 
+    def clean_owner_phone(self):
+        phone = (self.cleaned_data.get('owner_phone') or '').strip()
+        if not phone:
+            raise ValidationError('Primary mobile phone is required.')
+        return phone
+
 
 class DogProfileForm(forms.ModelForm):
-    """Dog only — pipeline and notes. Owner comes from the customer record."""
+    """Dog only — pipeline, vet contacts, notes. Owner comes from the customer record."""
 
     class Meta:
         model = ClientProfile
-        fields = ['dog_name', 'pipeline_stage', 'notes']
+        fields = [
+            'dog_name',
+            'pipeline_stage',
+            'vet_clinic_name',
+            'vet_name',
+            'vet_clinic_phone',
+            'emergency_vet_clinic',
+            'emergency_vet_phone',
+            'vet_care_authorization',
+            'notes',
+        ]
         widgets = {
             'dog_name': forms.TextInput(attrs={
                 'placeholder': 'e.g. Kobe',
                 'autocomplete': 'off',
             }),
+            'vet_clinic_name': forms.TextInput(attrs={
+                'placeholder': 'e.g. Grey Street Animal Hospital',
+            }),
+            'vet_name': forms.TextInput(attrs={
+                'placeholder': 'Primary veterinarian',
+            }),
+            'vet_clinic_phone': _PHONE_WIDGET,
+            'emergency_vet_clinic': forms.TextInput(attrs={
+                'placeholder': 'Preferred 24-hour emergency hospital',
+            }),
+            'emergency_vet_phone': _PHONE_WIDGET,
+            'vet_care_authorization': forms.Textarea(attrs={
+                'rows': 2,
+                'placeholder': 'e.g. Approve up to $500 lifesaving triage before contacting me',
+            }),
             'notes': forms.Textarea(attrs={
                 'rows': 3,
-                'placeholder': 'Breed, temperament, special instructions…',
+                'placeholder': 'Breed, temperament, special handling instructions…',
             }),
         }
 

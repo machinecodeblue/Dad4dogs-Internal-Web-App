@@ -82,12 +82,21 @@ class CustomerOwnerFormTests(TestCase):
         form = CustomerOwnerForm(data={
             'owner_name': 'Jane Doe',
             'owner_email': 'jane@example.com',
-            'owner_phone': '',
+            'owner_phone': '416-555-0100',
         })
         self.assertTrue(form.is_valid(), form.errors)
         owner = form.save()
         self.assertEqual(owner.owner_name, 'Jane Doe')
         self.assertEqual(ClientProfile.objects.filter(owner_email='jane@example.com').count(), 0)
+
+    def test_primary_phone_required(self):
+        form = CustomerOwnerForm(data={
+            'owner_name': 'Jane Doe',
+            'owner_email': 'jane@example.com',
+            'owner_phone': '',
+        })
+        self.assertFalse(form.is_valid())
+        self.assertIn('owner_phone', form.errors)
 
 
 class DogProfileFormTests(TestCase):
@@ -110,6 +119,26 @@ class DogProfileFormTests(TestCase):
         dog = form.save()
         self.assertEqual(dog.dog_name, 'Kobe')
         self.assertEqual(dog.owner_email, 'jane@example.com')
+
+    def test_save_vet_contacts_on_dog(self):
+        form = DogProfileForm(
+            data={
+                'dog_name': 'Kobe',
+                'pipeline_stage': ClientProfile.PipelineStage.INQUIRY,
+                'vet_clinic_name': 'Grey Street Animal Hospital',
+                'vet_name': 'Dr. Smith',
+                'vet_clinic_phone': '519-555-0100',
+                'emergency_vet_clinic': 'Emergency Pet Clinic',
+                'emergency_vet_phone': '519-555-9999',
+                'vet_care_authorization': 'Approve up to $500 triage',
+                'notes': '',
+            },
+            customer_owner=self.owner,
+        )
+        self.assertTrue(form.is_valid(), form.errors)
+        dog = form.save()
+        self.assertEqual(dog.vet_clinic_name, 'Grey Street Animal Hospital')
+        self.assertEqual(dog.vet_care_authorization, 'Approve up to $500 triage')
 
     def test_rejects_owner_first_name_as_dog_name(self):
         form = DogProfileForm(
@@ -306,6 +335,41 @@ class NeedsDogNameTests(TestCase):
         )
         self.assertTrue(dog.needs_dog_name)
         self.assertFalse(is_valid_dog_name('Kathleen', 'Kathleen Kelly'))
+
+
+class ContactDataTests(TestCase):
+    def test_customer_emergency_and_pickup_fields(self):
+        owner = CustomerOwner.objects.create(
+            owner_name='Jane Doe',
+            owner_email='jane@example.com',
+            owner_phone='416-555-0100',
+            home_address='123 Main St\nToronto ON',
+            emergency_contact_name='Bob Neighbor',
+            emergency_contact_phone='416-555-0200',
+            emergency_contact_relationship='Neighbor with house key',
+            authorized_pickup_names='Bob Neighbor\nJane\'s Sister',
+        )
+        self.assertEqual(owner.authorized_pickup_list, ['Bob Neighbor', "Jane's Sister"])
+
+    def test_dog_detail_shows_vet_tap_to_call(self):
+        owner = CustomerOwner.objects.create(
+            owner_name='Jane Doe',
+            owner_email='jane@example.com',
+            owner_phone='416-555-0100',
+        )
+        dog = ClientProfile.objects.create(
+            owner_name=owner.owner_name,
+            owner_email=owner.owner_email,
+            owner_phone=owner.owner_phone,
+            dog_name='Lulu',
+            vet_clinic_phone='519-555-0100',
+            emergency_vet_phone='519-555-9999',
+        )
+        user = get_user_model().objects.create_user('david', 'd@example.com', 'pass')
+        self.client.force_login(user)
+        response = self.client.get(reverse('operations:dog_detail', kwargs={'pk': dog.pk}))
+        self.assertContains(response, 'tel:519-555-0100')
+        self.assertContains(response, 'tel:519-555-9999')
 
 
 class CustomerEditTests(TestCase):

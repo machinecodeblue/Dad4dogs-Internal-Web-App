@@ -4,17 +4,19 @@
 <div class="card">
     <h2>{{ title }}</h2>
     <p class="muted">Customer: <strong>{{ customer_owner.owner_name }}</strong> · {{ customer_owner.owner_email }}</p>
-    <p class="muted">Pipeline stage applies to this dog only.</p>
+    <p class="muted">Pipeline and veterinary contacts apply to this dog only.</p>
 </div>
 
 <form method="post">
     {% csrf_token %}
+    {% if form.non_field_errors %}
+    <div class="card message message-error">
+        {% for error in form.non_field_errors %}{{ error }}{% endfor %}
+    </div>
+    {% endif %}
+
     <div class="card">
-        {% if form.non_field_errors %}
-        <div class="message message-error">
-            {% for error in form.non_field_errors %}{{ error }}{% endfor %}
-        </div>
-        {% endif %}
+        <h2>Dog Profile</h2>
 
         <label for="{{ form.dog_name.id_for_label }}">Dog Name</label>
         {{ form.dog_name }}
@@ -23,9 +25,35 @@
         <label for="{{ form.pipeline_stage.id_for_label }}">Pipeline Stage</label>
         {{ form.pipeline_stage }}
 
-        <label for="{{ form.notes.id_for_label }}">Notes (optional)</label>
+        <label for="{{ form.notes.id_for_label }}">Handling Notes (optional)</label>
         {{ form.notes }}
+    </div>
 
+    <div class="card">
+        <h2>Medical &amp; Veterinary Contacts</h2>
+        <p class="muted">Stored per dog so you can act immediately in a medical emergency.</p>
+
+        <label for="{{ form.vet_clinic_name.id_for_label }}">Primary Veterinary Clinic</label>
+        {{ form.vet_clinic_name }}
+
+        <label for="{{ form.vet_name.id_for_label }}">Primary Veterinarian</label>
+        {{ form.vet_name }}
+
+        <label for="{{ form.vet_clinic_phone.id_for_label }}">Clinic Phone</label>
+        {{ form.vet_clinic_phone }}
+
+        <label for="{{ form.emergency_vet_clinic.id_for_label }}">Emergency Vet Clinic (after hours)</label>
+        {{ form.emergency_vet_clinic }}
+
+        <label for="{{ form.emergency_vet_phone.id_for_label }}">Emergency Vet Phone</label>
+        {{ form.emergency_vet_phone }}
+
+        <label for="{{ form.vet_care_authorization.id_for_label }}">Veterinary Care Authorization</label>
+        {{ form.vet_care_authorization }}
+        <p class="muted">Dollar cap or written directive before contacting the owner.</p>
+    </div>
+
+    <div class="card">
         <button type="submit" class="btn btn-primary">{% if 'Edit' in title %}Save Dog{% else %}Add Dog{% endif %}</button>
         {% if cancel_pk %}
         <a href="{% url cancel_url cancel_pk %}" class="btn btn-outline" style="margin-top:0.5rem">Cancel</a>

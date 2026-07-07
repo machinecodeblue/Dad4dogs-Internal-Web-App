@@ -19,6 +19,51 @@
 </div>
 
 <div class="card">
+    <h2>Owner &amp; Emergency Contacts</h2>
+    <p>
+        <strong>{{ customer_owner.owner_name }}</strong>
+        {% if customer_owner.owner_phone %}
+        · <a href="tel:{{ customer_owner.owner_phone }}">{{ customer_owner.owner_phone }}</a>
+        {% endif %}
+    </p>
+    {% if customer_owner.emergency_contact_name or customer_owner.emergency_contact_phone %}
+    <p class="muted" style="margin-top:0.5rem">
+        Emergency: <strong>{{ customer_owner.emergency_contact_name|default:"—" }}</strong>
+        {% if customer_owner.emergency_contact_relationship %} ({{ customer_owner.emergency_contact_relationship }}){% endif %}
+        {% if customer_owner.emergency_contact_phone %}
+        · <a href="tel:{{ customer_owner.emergency_contact_phone }}">{{ customer_owner.emergency_contact_phone }}</a>
+        {% endif %}
+    </p>
+    {% endif %}
+    <p class="muted" style="margin-top:0.35rem">
+        <a href="{% url 'operations:customer_detail' customer_owner.pk %}">Full customer contact record →</a>
+    </p>
+</div>
+
+<div class="card">
+    <h2>Veterinary Contacts</h2>
+    {% if dog.vet_clinic_name or dog.vet_clinic_phone or dog.emergency_vet_clinic %}
+    {% if dog.vet_clinic_name %}
+    <p><strong>{{ dog.vet_clinic_name }}</strong>{% if dog.vet_name %} · {{ dog.vet_name }}{% endif %}</p>
+    {% endif %}
+    {% if dog.vet_clinic_phone %}
+    <p><a href="tel:{{ dog.vet_clinic_phone }}" class="btn btn-primary btn-sm">Call Clinic — {{ dog.vet_clinic_phone }}</a></p>
+    {% endif %}
+    {% if dog.emergency_vet_clinic or dog.emergency_vet_phone %}
+    <p class="muted" style="margin-top:0.75rem">After hours: <strong>{{ dog.emergency_vet_clinic|default:"Emergency vet" }}</strong></p>
+    {% if dog.emergency_vet_phone %}
+    <p><a href="tel:{{ dog.emergency_vet_phone }}" class="btn btn-warn btn-sm">Call Emergency Vet — {{ dog.emergency_vet_phone }}</a></p>
+    {% endif %}
+    {% endif %}
+    {% if dog.vet_care_authorization %}
+    <p class="muted" style="margin-top:0.75rem;white-space:pre-line"><strong>Care authorization:</strong> {{ dog.vet_care_authorization }}</p>
+    {% endif %}
+    {% else %}
+    <p class="muted">No veterinary contacts on file. <a href="{% url 'operations:dog_edit' dog.pk %}">Add vet details</a></p>
+    {% endif %}
+</div>
+
+<div class="card">
     <h2>Customer Photo Feed</h2>
     <p class="muted">Share this link when they book — no password, full history, easy to forward to family.</p>
     <p style="margin:0.75rem 0;font-weight:600;word-break:break-all">{{ feed_url }}</p>

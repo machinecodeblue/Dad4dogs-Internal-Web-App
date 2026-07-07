@@ -14,7 +14,22 @@
 {% for visit in visits %}
 <div class="visit-card card {% if visit.status == 'checked_in' %}checked-in{% endif %}" data-client-id="{{ visit.client_id }}">
     <h2>{{ visit.client.dog_name }}</h2>
-    <p class="muted">{{ visit.client.owner_name }} · {{ visit.client.owner_email }}</p>
+    <p class="muted">
+        {{ visit.client.owner_name }}
+        {% if visit.client.owner_phone %}
+        · <a href="tel:{{ visit.client.owner_phone }}">{{ visit.client.owner_phone }}</a>
+        {% endif %}
+    </p>
+    {% if visit.client.vet_clinic_phone or visit.client.emergency_vet_phone %}
+    <p style="font-size:0.85rem;margin-top:0.35rem">
+        {% if visit.client.vet_clinic_phone %}
+        <a href="tel:{{ visit.client.vet_clinic_phone }}" class="btn btn-outline btn-sm">Vet</a>
+        {% endif %}
+        {% if visit.client.emergency_vet_phone %}
+        <a href="tel:{{ visit.client.emergency_vet_phone }}" class="btn btn-warn btn-sm">Emergency Vet</a>
+        {% endif %}
+    </p>
+    {% endif %}
     <p>Scheduled: {{ visit.scheduled_start|time:"g:i A" }} – {{ visit.scheduled_end|time:"g:i A" }}</p>
 
     {% if visit.actual_arrival %}

@@ -12,7 +12,31 @@ class CustomerOwner(models.Model):
     """
     owner_email = models.EmailField(unique=True)
     owner_name = models.CharField(max_length=200)
-    owner_phone = models.CharField(max_length=30, blank=True)
+    owner_salutation = models.CharField(
+        max_length=40,
+        blank=True,
+        help_text='Pronouns or salutation for statements and waivers (e.g. Ms., they/them).',
+    )
+    owner_phone = models.CharField(
+        max_length=30,
+        blank=True,
+        help_text='Primary mobile — required for real-time alerts.',
+    )
+    home_address = models.TextField(
+        blank=True,
+        help_text='Physical home address for records, insurance, and emergency drop-off.',
+    )
+    emergency_contact_name = models.CharField(max_length=200, blank=True)
+    emergency_contact_phone = models.CharField(max_length=30, blank=True)
+    emergency_contact_relationship = models.CharField(
+        max_length=120,
+        blank=True,
+        help_text='e.g. Neighbor with house key, Aunt across town.',
+    )
+    authorized_pickup_names = models.TextField(
+        blank=True,
+        help_text='One name per line — individuals allowed to take any dog home.',
+    )
     coi_sent_at = models.DateTimeField(null=True, blank=True)
     coi_confirmed_received = models.BooleanField(default=False)
     coi_confirmed_at = models.DateTimeField(null=True, blank=True)
@@ -26,6 +50,14 @@ class CustomerOwner(models.Model):
 
     def __str__(self):
         return f'{self.owner_name} ({self.owner_email})'
+
+    @property
+    def authorized_pickup_list(self) -> list[str]:
+        return [
+            line.strip()
+            for line in self.authorized_pickup_names.splitlines()
+            if line.strip()
+        ]
 
     @property
     def coi_status(self) -> str:
@@ -71,6 +103,19 @@ class ClientProfile(models.Model):
     owner_email = models.EmailField()
     owner_phone = models.CharField(max_length=30, blank=True)
     dog_name = models.CharField(max_length=100)
+    vet_clinic_name = models.CharField(max_length=200, blank=True)
+    vet_name = models.CharField(max_length=200, blank=True)
+    vet_clinic_phone = models.CharField(max_length=30, blank=True)
+    emergency_vet_clinic = models.CharField(
+        max_length=200,
+        blank=True,
+        help_text='Preferred 24-hour emergency hospital when regular clinic is closed.',
+    )
+    emergency_vet_phone = models.CharField(max_length=30, blank=True)
+    vet_care_authorization = models.TextField(
+        blank=True,
+        help_text='Dollar cap or directive for lifesaving triage before owner contact.',
+    )
     notes = models.TextField(blank=True)
     pipeline_stage = models.CharField(
         max_length=20,

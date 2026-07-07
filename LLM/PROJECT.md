@@ -145,6 +145,7 @@ Overnight is evaluated **before** hour tiers. Multi-day: each full 24h = Overnig
 | Booking iCal LOCATION + ORGANIZER from settings | Done — `BusinessProfile` → `visit_email.py` |
 | Contemporaneous timeline (staff capture) | Done — photo/video, GPS, multi-dog, forward |
 | Customer photo feed (secret link) | Done — `/feed/<secret>/<dog>/`, full history |
+| Owner emergency + per-dog vet contacts | Done — see `customers.md` §2 |
 | Feed access stats (visitor cookie) | Done — views + distinct browsers on dog detail |
 | PWA install (David's phone) | Done — manifest, service worker, install banner |
 | Business document uploads (COI, etc.) | Not started |

@@ -2,12 +2,45 @@
 {% block title %}{{ customer_owner.owner_name }} — Dad4dogs{% endblock %}
 {% block content %}
 <div class="card">
-    <h2>{{ customer_owner.owner_name }}</h2>
-    <p class="muted">{{ customer_owner.owner_email }}{% if customer_owner.owner_phone %} · {{ customer_owner.owner_phone }}{% endif %}</p>
+    <h2>{{ customer_owner.owner_name }}{% if customer_owner.owner_salutation %} <span class="muted" style="font-size:0.9rem">({{ customer_owner.owner_salutation }})</span>{% endif %}</h2>
+    <p class="muted">
+        <a href="mailto:{{ customer_owner.owner_email }}">{{ customer_owner.owner_email }}</a>
+        {% if customer_owner.owner_phone %}
+        · <a href="tel:{{ customer_owner.owner_phone }}">{{ customer_owner.owner_phone }}</a>
+        {% endif %}
+    </p>
+    {% if customer_owner.home_address %}
+    <p class="muted" style="margin-top:0.5rem;white-space:pre-line">{{ customer_owner.home_address }}</p>
+    {% endif %}
     <div class="actions" style="margin-top:0.75rem">
         <a href="{% url 'operations:customer_edit' customer_owner.pk %}" class="btn btn-primary btn-sm">Edit Customer</a>
         <a href="{% url 'operations:customer_add_dog' customer_owner.pk %}" class="btn btn-outline btn-sm">Add Dog</a>
     </div>
+</div>
+
+<div class="card">
+    <h2>Emergency &amp; Pickup Contacts</h2>
+    {% if customer_owner.emergency_contact_name or customer_owner.emergency_contact_phone %}
+    <p>
+        <strong>{{ customer_owner.emergency_contact_name|default:"Emergency contact" }}</strong>
+        {% if customer_owner.emergency_contact_relationship %}
+        <span class="muted"> · {{ customer_owner.emergency_contact_relationship }}</span>
+        {% endif %}
+        {% if customer_owner.emergency_contact_phone %}
+        <br><a href="tel:{{ customer_owner.emergency_contact_phone }}">{{ customer_owner.emergency_contact_phone }}</a>
+        {% endif %}
+    </p>
+    {% else %}
+    <p class="muted">No emergency contact on file.</p>
+    {% endif %}
+    {% if customer_owner.authorized_pickup_list %}
+    <p style="margin-top:0.75rem"><span class="muted">Authorized pickup:</span></p>
+    <ul style="margin:0.25rem 0 0 1.1rem">
+        {% for name in customer_owner.authorized_pickup_list %}
+        <li>{{ name }}</li>
+        {% endfor %}
+    </ul>
+    {% endif %}
 </div>
 
 <div class="card">
@@ -51,7 +84,7 @@
 <div class="card">
     <h2>Dogs</h2>
     {% if dogs %}
-    <p class="muted">Pipeline and vaccinations are managed per dog.</p>
+    <p class="muted">Pipeline, veterinary contacts, and vaccinations are managed per dog.</p>
     {% for dog in dogs %}
     <a href="{% url 'operations:dog_detail' dog.pk %}" style="text-decoration:none;color:inherit">
         <div style="margin-bottom:0.75rem;padding:0.75rem;background:#f8f9fa;border-radius:8px;border-left:4px solid var(--brand-light)">

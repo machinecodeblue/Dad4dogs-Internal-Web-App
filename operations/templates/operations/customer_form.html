@@ -3,29 +3,59 @@
 {% block content %}
 <div class="card">
     <h2>{{ title }}</h2>
-    <p class="muted">Customer only — add dogs separately after saving.</p>
+    <p class="muted">Owner account — emergency contacts apply to all dogs. Add dogs separately after saving.</p>
 </div>
 
 <form method="post">
     {% csrf_token %}
-    <div class="card">
-        {% if form.non_field_errors %}
-        <div class="message message-error">
-            {% for error in form.non_field_errors %}{{ error }}{% endfor %}
-        </div>
-        {% endif %}
+    {% if form.non_field_errors %}
+    <div class="card message message-error">
+        {% for error in form.non_field_errors %}{{ error }}{% endfor %}
+    </div>
+    {% endif %}
 
-        <label for="{{ form.owner_name.id_for_label }}">Owner Name</label>
+    <div class="card">
+        <h2>Primary Owner Contact</h2>
+        <p class="muted">Billing, statements, calendar invites, and legal waivers.</p>
+
+        <label for="{{ form.owner_name.id_for_label }}">Full Name</label>
         {{ form.owner_name }}
         {% if form.owner_name.errors %}<p class="muted" style="color:var(--danger)">{{ form.owner_name.errors.0 }}</p>{% endif %}
 
-        <label for="{{ form.owner_email.id_for_label }}">Owner Email</label>
+        <label for="{{ form.owner_salutation.id_for_label }}">Pronouns / Salutation (optional)</label>
+        {{ form.owner_salutation }}
+
+        <label for="{{ form.owner_email.id_for_label }}">Primary Email</label>
         {{ form.owner_email }}
         {% if form.owner_email.errors %}<p class="muted" style="color:var(--danger)">{{ form.owner_email.errors.0 }}</p>{% endif %}
 
-        <label for="{{ form.owner_phone.id_for_label }}">Phone (optional)</label>
+        <label for="{{ form.owner_phone.id_for_label }}">Primary Mobile</label>
         {{ form.owner_phone }}
+        {% if form.owner_phone.errors %}<p class="muted" style="color:var(--danger)">{{ form.owner_phone.errors.0 }}</p>{% endif %}
 
+        <label for="{{ form.home_address.id_for_label }}">Home Address</label>
+        {{ form.home_address }}
+    </div>
+
+    <div class="card">
+        <h2>Emergency &amp; Secondary Contacts</h2>
+        <p class="muted">Fallback if you cannot reach the primary owner during an incident or storm.</p>
+
+        <label for="{{ form.emergency_contact_name.id_for_label }}">Emergency Contact Name</label>
+        {{ form.emergency_contact_name }}
+
+        <label for="{{ form.emergency_contact_phone.id_for_label }}">Emergency Contact Phone</label>
+        {{ form.emergency_contact_phone }}
+
+        <label for="{{ form.emergency_contact_relationship.id_for_label }}">Relationship to Owner</label>
+        {{ form.emergency_contact_relationship }}
+
+        <label for="{{ form.authorized_pickup_names.id_for_label }}">Authorized Pickup List</label>
+        {{ form.authorized_pickup_names }}
+        <p class="muted">One name per line — only these people may take dogs home.</p>
+    </div>
+
+    <div class="card">
         <button type="submit" class="btn btn-primary">Save Customer</button>
         {% if cancel_pk %}
         <a href="{% url cancel_url cancel_pk %}" class="btn btn-outline" style="margin-top:0.5rem">Cancel</a>
