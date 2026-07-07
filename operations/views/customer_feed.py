@@ -3,9 +3,11 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.views.decorators.http import require_GET, require_POST
 
-from operations.models import ClientProfile, MediaReaction, SharedMediaLink, VisitTimelineEvent
+from operations.models import ClientProfile, SharedMediaLink, VisitTimelineEvent
 from operations.services.feed_slugs import generate_unique_share_token
+from operations.services.share_preview import build_share_preview_context
 from operations.services.feed_access import get_or_set_visitor_id, log_feed_access
+from operations.services.feed_emojis import reaction_choices_for_feed, standard_emoji_label
 from operations.services.feed_interactions import (
     DISPLAY_NAME_COOKIE,
     DISPLAY_NAME_MAX_AGE,
@@ -39,8 +41,7 @@ def _feed_private_headers(response):
 
 
 def _reaction_summary(counts: dict[str, int]) -> str:
-    labels = dict(MediaReaction.Emoji.choices)
-    parts = [f'{labels.get(key, key)} {count}' for key, count in counts.items()]
+    parts = [f'{standard_emoji_label(key)} {count}' for key, count in counts.items()]
     return ' · '.join(parts)
 
 
@@ -59,6 +60,7 @@ def _build_event_rows(client, events, visitor_id: str, request):
             'reaction_summary': _reaction_summary(counts),
             'my_reaction': visitor_reactions.get(event.media_asset_id, ''),
             'comments': comments_by_asset.get(event.media_asset_id, []),
+            'comment_count': len(comments_by_asset.get(event.media_asset_id, [])),
             'share_url': share_url_for_link(link, request=request),
         })
     return rows
@@ -92,7 +94,7 @@ def customer_feed(request, feed_secret: str, feed_dog_slug: str):
     response = render(request, 'operations/customer_feed.html', {
         'dog': client,
         'event_rows': _build_event_rows(client, events, visitor_id, request),
-        'reaction_choices': MediaReaction.Emoji.choices,
+        'reaction_choices': reaction_choices_for_feed(),
         'display_name': request.COOKIES.get(DISPLAY_NAME_COOKIE, ''),
     })
     _feed_private_headers(response)
@@ -167,11 +169,11 @@ def public_feed_share(request, share_token: str):
         share_token=share_token,
     )
     record_share_view(link)
-    response = render(request, 'operations/public_photo_share.html', {
-        'photo': link.media_asset,
-        'dog_name': link.client.dog_name,
-    })
-    response['X-Robots-Tag'] = 'noindex, nofollow'
+    response = render(
+        request,
+        'operations/public_photo_share.html',
+        build_share_preview_context(request, link),
+    )
     return response
 
 

@@ -12,6 +12,7 @@ from operations.models import (
     TimelineMediaAsset,
     VisitTimelineEvent,
 )
+from operations.services.feed_emojis import standard_emoji_label
 from operations.services.feed_slugs import generate_unique_share_token
 
 COMMENT_MAX_LENGTH = 500
@@ -174,7 +175,6 @@ def build_checkin_feed_activity(
     if since is None:
         since = timezone.now() - timezone.timedelta(hours=48)
 
-    emoji_labels = dict(MediaReaction.Emoji.choices)
     dogs: dict[str, dict] = {}
 
     for comment in (
@@ -224,7 +224,7 @@ def build_checkin_feed_activity(
             'type': 'reaction',
             'at': reaction.updated_at.isoformat(),
             'emoji': reaction.emoji,
-            'emoji_label': emoji_labels.get(reaction.emoji, reaction.emoji),
+            'emoji_label': standard_emoji_label(reaction.emoji),
             'asset_id': reaction.media_asset_id,
         })
 

@@ -1315,7 +1315,7 @@ class FeedInteractionTests(TestCase):
         )
         response = self.client.get(feed_url)
         self.assertContains(response, 'So cute!')
-        self.assertContains(response, '❤️')
+        self.assertContains(response, '❤️')  # standard emoji in reaction summary
 
     def test_public_share_link_isolated_from_feed(self):
         link = get_or_create_share_link(client=self.dog, asset_id=self.asset_id)
@@ -1325,7 +1325,9 @@ class FeedInteractionTests(TestCase):
         response = self.client.get(share_url)
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'Lulu')
-        self.assertContains(response, 'Powered by Dad4dogs')
+        self.assertNotIn('icon-192.png', response.content.decode())
+        self.assertContains(response, 'og:image')
+        self.assertContains(response, 'twitter:image')
         self.assertNotIn(self.dog.feed_secret, response.content.decode())
         link.refresh_from_db()
         self.assertEqual(link.view_count, 1)
@@ -1340,8 +1342,10 @@ class FeedInteractionTests(TestCase):
         )
         response = self.client.get(feed_url)
         self.assertContains(response, 'share-icon-btn')
+        self.assertContains(response, 'comment-icon-btn')
         self.assertContains(response, '/feed/share/')
         self.assertNotContains(response, 'Share this moment with friends')
+        self.assertContains(response, '🐾')
 
     def test_checkin_feed_activity_requires_login(self):
         url = reverse('operations:checkin_feed_activity')

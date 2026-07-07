@@ -5,9 +5,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
     <meta name="theme-color" content="#2d6a4f">
-    <meta name="robots" content="noindex, nofollow">
-    <link rel="icon" type="image/png" sizes="192x192" href="{% static 'operations/pwa/icon-192.png' %}">
+    <meta name="robots" content="{% block robots %}noindex, nofollow{% endblock %}">
+    {% block favicon %}<link rel="icon" type="image/png" sizes="192x192" href="{% static 'operations/pwa/icon-192.png' %}">{% endblock %}
     <title>{% block title %}Dad4dogs{% endblock %}</title>
+    {% block social_meta %}{% endblock %}
     <style>
         :root {
             --brand: #2d6a4f;

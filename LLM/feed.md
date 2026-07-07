@@ -131,9 +131,9 @@ Mobile check-in card → **Log Moment** → `/visits/<pk>/timeline/`
 - All timeline events for that dog, newest first (full history across visits)
 - Thumbnail photos (tap → full-res), videos with controls
 - Caption and capture time
-- **Emoji reactions** (👍 ❤️ 😂 😮 😢) — one per browser via `visitor_id` cookie
-- **Comments** — optional display name (stored in cookie), chronological thread
-- **Share this moment** — creates UUID link; does **not** expose feed URL
+- **Dog-themed reactions** in the bar (🐾 🐕 🐶 🦴 🥺) — stored by key; **standard emojis** (👍 ❤️ …) in counts/shared text (`feed_emojis.py`)
+- **Comments** — 💬 icon + count; thread/form hidden until tapped
+- **Share** — compact share icon → sheet (Copy, Gmail, WhatsApp, Facebook, native)
 - “Group moment” badge on forwarded events — **no** raw GPS, admin nav, or capture controls
 
 ### What customers do **not** see
@@ -156,7 +156,9 @@ Service: `operations/services/feed_interactions.py`
 |------|---------|
 | `/feed/share/<token>/` | Anonymous — one image/video + dog name + “Powered by Dad4dogs” (e.g. `eXIvE692WTJul1JvM`) |
 
-Does not reveal `/feed/<secret>/<dog>/`. UUID is unguessable (128-bit).
+Does not reveal `/feed/<secret>/<dog>/`. Clean URL `/feed/share/<token>/` only.
+
+**Social previews:** `share_preview.py` sets Open Graph + Twitter tags with the **moment photo** as `og:image` (not the Dad4dogs app icon). Facebook/WhatsApp crawlers fetch the dog image.
 
 ### Interaction POST routes (CSRF-protected forms)
 | Path | Action |

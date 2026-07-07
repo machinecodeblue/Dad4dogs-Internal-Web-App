@@ -24,7 +24,14 @@
         justify-content: space-between;
         gap: 0.5rem;
     }
-    .moment-meta-header time { font-weight: 600; color: var(--brand); }
+    .moment-meta-header time { font-weight: 600; color: var(--brand); flex: 1; }
+    .moment-icon-actions {
+        display: flex;
+        align-items: center;
+        gap: 0.15rem;
+        flex-shrink: 0;
+    }
+    .comment-icon-btn,
     .share-icon-btn {
         flex-shrink: 0;
         border: none;
@@ -34,16 +41,42 @@
         cursor: pointer;
         line-height: 0;
         border-radius: 8px;
+        position: relative;
     }
+    .comment-icon-btn:hover,
+    .comment-icon-btn:focus,
     .share-icon-btn:hover,
     .share-icon-btn:focus {
         color: var(--brand);
         background: #e9ecef;
     }
+    .comment-icon-btn svg,
     .share-icon-btn svg {
         width: 1.35rem;
         height: 1.35rem;
     }
+    .comment-count-badge {
+        position: absolute;
+        top: -2px;
+        right: -2px;
+        min-width: 1rem;
+        height: 1rem;
+        padding: 0 0.2rem;
+        border-radius: 999px;
+        background: var(--brand);
+        color: white;
+        font-size: 0.62rem;
+        font-weight: 700;
+        line-height: 1rem;
+        text-align: center;
+    }
+    .comment-panel {
+        display: none;
+        margin-top: 0.75rem;
+        padding-top: 0.75rem;
+        border-top: 1px solid #dee2e6;
+    }
+    .comment-panel.open { display: block; }
     .reaction-bar {
         display: flex;
         flex-wrap: wrap;
@@ -68,11 +101,7 @@
         color: var(--muted);
         margin-top: 0.35rem;
     }
-    .comment-thread {
-        margin-top: 0.75rem;
-        padding-top: 0.75rem;
-        border-top: 1px solid #dee2e6;
-    }
+
     .comment-item {
         margin-bottom: 0.5rem;
         font-size: 0.85rem;
@@ -159,7 +188,7 @@
 {% block content %}
 <div class="card">
     <h2>{{ dog.dog_name }}'s moments</h2>
-    <p class="muted">React, comment, or tap <span aria-hidden="true">⎋</span> share on any moment.</p>
+    <p class="muted">Dog reactions below · tap 💬 or share on any moment.</p>
 </div>
 
 <div class="card">
@@ -178,20 +207,36 @@
             <div class="timeline-meta">
                 <div class="moment-meta-header">
                     <time datetime="{{ event.captured_at|date:'c' }}">{{ event.captured_at|date:"M j, Y g:i A" }}</time>
-                    <button
-                        type="button"
-                        class="share-icon-btn"
-                        aria-label="Share this moment"
-                        data-share-url="{{ row.share_url }}"
-                        data-share-title="{{ dog.dog_name }} at Dad4dogs"
-                    >
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                            <circle cx="18" cy="5" r="3"/>
-                            <circle cx="6" cy="12" r="3"/>
-                            <circle cx="18" cy="19" r="3"/>
-                            <path d="M8.59 13.51l6.83 3.98M15.41 6.51l-6.82 3.98"/>
-                        </svg>
-                    </button>
+                    <div class="moment-icon-actions">
+                        <button
+                            type="button"
+                            class="comment-icon-btn"
+                            aria-label="{% if row.comment_count %}{{ row.comment_count }} comments{% else %}Add comment{% endif %}"
+                            data-comment-target="comment-panel-{{ event.media_asset_id }}"
+                            aria-expanded="false"
+                        >
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                                <path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z"/>
+                            </svg>
+                            {% if row.comment_count %}
+                            <span class="comment-count-badge">{{ row.comment_count }}</span>
+                            {% endif %}
+                        </button>
+                        <button
+                            type="button"
+                            class="share-icon-btn"
+                            aria-label="Share this moment"
+                            data-share-url="{{ row.share_url }}"
+                            data-share-title="{{ dog.dog_name }} at Dad4dogs"
+                        >
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                                <circle cx="18" cy="5" r="3"/>
+                                <circle cx="6" cy="12" r="3"/>
+                                <circle cx="18" cy="19" r="3"/>
+                                <path d="M8.59 13.51l6.83 3.98M15.41 6.51l-6.82 3.98"/>
+                            </svg>
+                        </button>
+                    </div>
                 </div>
                 {% if event.is_forward %}
                 <span class="badge badge-ok">Group moment</span>
@@ -201,11 +246,11 @@
                 {% endif %}
 
                 <div class="reaction-bar">
-                    {% for value, label in reaction_choices %}
+                    {% for value, dog_emoji, standard_emoji in reaction_choices %}
                     <form method="post" action="{% url 'operations:customer_feed_react' dog.feed_secret dog.feed_dog_slug event.media_asset_id %}" style="display:inline">
                         {% csrf_token %}
                         <input type="hidden" name="emoji" value="{{ value }}">
-                        <button type="submit" class="{% if row.my_reaction == value %}active{% endif %}" title="{{ label }}">{{ label }}</button>
+                        <button type="submit" class="{% if row.my_reaction == value %}active{% endif %}" title="{{ standard_emoji }}">{{ dog_emoji }}</button>
                     </form>
                     {% endfor %}
                     {% if row.my_reaction %}
@@ -220,13 +265,15 @@
                 <div class="reaction-counts">{{ row.reaction_summary }}</div>
                 {% endif %}
 
-                <div class="comment-thread">
+                <div class="comment-panel" id="comment-panel-{{ event.media_asset_id }}">
                     {% for comment in row.comments %}
                     <div class="comment-item">
                         <strong>{{ comment.display_name }}</strong>
                         <span class="muted"> · {{ comment.created_at|date:"M j, g:i A" }}</span>
                         <div>{{ comment.text }}</div>
                     </div>
+                    {% empty %}
+                    <p class="muted" style="margin-bottom:0.5rem;font-size:0.85rem">No comments yet.</p>
                     {% endfor %}
                     <form method="post" action="{% url 'operations:customer_feed_comment' dog.feed_secret dog.feed_dog_slug event.media_asset_id %}" class="comment-form">
                         {% csrf_token %}
@@ -276,10 +323,11 @@
     }
 
     function openSheet(url, title) {
-        activeUrl = url;
+        activeUrl = url.split('#')[0].split('?')[0];
         activeTitle = title;
-        const body = encodeURIComponent(title + '\\n\\n' + url);
-        const urlEnc = encodeURIComponent(url);
+        const shareText = title + ' ' + activeUrl;
+        const body = encodeURIComponent(shareText);
+        const urlEnc = encodeURIComponent(activeUrl);
         gmailLink.href = 'https://mail.google.com/mail/?view=cm&fs=1&su=' + encodeURIComponent(title) + '&body=' + body;
         whatsappLink.href = 'https://wa.me/?text=' + body;
         facebookLink.href = 'https://www.facebook.com/sharer/sharer.php?u=' + urlEnc;
@@ -292,11 +340,41 @@
         sheet.hidden = true;
     }
 
+    document.querySelectorAll('.comment-icon-btn').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            const targetId = btn.getAttribute('data-comment-target');
+            const panel = document.getElementById(targetId);
+            if (!panel) return;
+            const isOpen = panel.classList.toggle('open');
+            btn.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+            document.querySelectorAll('.comment-panel.open').forEach(function (other) {
+                if (other !== panel) other.classList.remove('open');
+            });
+            document.querySelectorAll('.comment-icon-btn[aria-expanded="true"]').forEach(function (other) {
+                if (other !== btn) other.setAttribute('aria-expanded', 'false');
+            });
+            if (isOpen) {
+                const field = panel.querySelector('textarea');
+                if (field) field.focus();
+            }
+        });
+    });
+
     document.querySelectorAll('.share-icon-btn').forEach(function (btn) {
         btn.addEventListener('click', function () {
             openSheet(btn.getAttribute('data-share-url'), btn.getAttribute('data-share-title'));
         });
     });
+
+    if (window.location.hash && window.location.hash.indexOf('moment-') === 1) {
+        const assetId = window.location.hash.replace('#moment-', '');
+        const panel = document.getElementById('comment-panel-' + assetId);
+        const btn = document.querySelector('[data-comment-target="comment-panel-' + assetId + '"]');
+        if (panel) {
+            panel.classList.add('open');
+            if (btn) btn.setAttribute('aria-expanded', 'true');
+        }
+    }
 
     closeBtn.addEventListener('click', closeSheet);
     sheet.addEventListener('click', function (event) {
