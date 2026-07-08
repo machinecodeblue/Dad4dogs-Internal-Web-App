@@ -50,6 +50,29 @@
         border-top: 1px solid #dee2e6;
     }
     .gps-status { font-size: 0.8rem; color: var(--muted); margin-bottom: 0.5rem; }
+    .media-preview-wrap {
+        margin: 0.75rem 0;
+        border-radius: var(--radius);
+        overflow: hidden;
+        background: #e9ecef;
+        border: 2px solid var(--brand-light);
+    }
+    .media-preview-wrap img,
+    .media-preview-wrap video {
+        width: 100%;
+        display: block;
+    }
+    .media-preview-label {
+        padding: 0.5rem 0.75rem 0;
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: var(--brand);
+        margin: 0;
+    }
+    #timeline-form.is-saving .capture-actions label.btn {
+        pointer-events: none;
+        opacity: 0.55;
+    }
 </style>
 
 <div class="card">
@@ -100,6 +123,12 @@
             Attach Video (gallery)
             {{ form.video }}
         </label>
+
+        <div id="media-preview" class="media-preview-wrap" hidden>
+            <p class="media-preview-label" id="media-preview-label">Preview</p>
+            <img id="media-preview-image" alt="Captured moment preview" hidden>
+            <video id="media-preview-video" controls playsinline preload="metadata" hidden></video>
+        </div>
 
         <label for="{{ form.caption_notes.id_for_label }}">Notes (optional)</label>
         {{ form.caption_notes }}
@@ -180,7 +209,14 @@
     const latField = document.getElementById('latitude-field');
     const lngField = document.getElementById('longitude-field');
     const gpsStatus = document.getElementById('gps-status');
+    const previewWrap = document.getElementById('media-preview');
+    const previewLabel = document.getElementById('media-preview-label');
+    const previewImage = document.getElementById('media-preview-image');
+    const previewVideo = document.getElementById('media-preview-video');
+    const submitDefaultLabel = submitBtn.textContent;
     let gpsReady = false;
+    let submitting = false;
+    let previewObjectUrl = null;
 
     function hasMedia() {
         return [cameraInput, galleryInput, videoInput].some(
@@ -189,7 +225,54 @@
     }
 
     function updateSubmitState() {
-        submitBtn.disabled = !(hasMedia() && gpsReady);
+        submitBtn.disabled = submitting || !(hasMedia() && gpsReady);
+    }
+
+    function revokePreviewUrl() {
+        if (previewObjectUrl) {
+            URL.revokeObjectURL(previewObjectUrl);
+            previewObjectUrl = null;
+        }
+    }
+
+    function clearPreview() {
+        revokePreviewUrl();
+        previewWrap.hidden = true;
+        previewImage.hidden = true;
+        previewImage.removeAttribute('src');
+        previewVideo.hidden = true;
+        previewVideo.pause();
+        previewVideo.removeAttribute('src');
+    }
+
+    function showPreview(file) {
+        clearPreview();
+        if (!file) {
+            return;
+        }
+        previewObjectUrl = URL.createObjectURL(file);
+        previewWrap.hidden = false;
+        if (file.type && file.type.startsWith('video/')) {
+            previewLabel.textContent = 'Video preview — tap Save Moment when ready';
+            previewVideo.src = previewObjectUrl;
+            previewVideo.hidden = false;
+        } else {
+            previewLabel.textContent = 'Photo preview — tap Save Moment when ready';
+            previewImage.src = previewObjectUrl;
+            previewImage.hidden = false;
+        }
+    }
+
+    function beginSaving() {
+        if (submitting) {
+            return false;
+        }
+        submitting = true;
+        form.classList.add('is-saving');
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Saving…';
+        submitBtn.setAttribute('aria-busy', 'true');
+        return true;
     }
 
     function markGpsReady(message) {
@@ -199,11 +282,20 @@
     }
 
     function clearOtherMedia(activeInput) {
-        [cameraInput, galleryInput, videoInput].forEach((input) => {
+        [cameraInput, galleryInput, videoInput].forEach(function (input) {
             if (input !== activeInput) {
                 input.value = '';
             }
         });
+    }
+
+    function onMediaSelected(activeInput) {
+        if (activeInput.files && activeInput.files.length) {
+            clearOtherMedia(activeInput);
+            showPreview(activeInput.files[0]);
+        } else {
+            clearPreview();
+        }
         updateSubmitState();
     }
 
@@ -226,17 +318,25 @@
     }
 
     cameraInput.addEventListener('change', function () {
-        if (cameraInput.files.length) clearOtherMedia(cameraInput);
+        onMediaSelected(cameraInput);
     });
     galleryInput.addEventListener('change', function () {
-        if (galleryInput.files.length) clearOtherMedia(galleryInput);
+        onMediaSelected(galleryInput);
     });
     videoInput.addEventListener('change', function () {
-        if (videoInput.files.length) clearOtherMedia(videoInput);
+        onMediaSelected(videoInput);
     });
 
     form.addEventListener('submit', function (event) {
-        if (!gpsReady) {
+        if (submitting) {
+            event.preventDefault();
+            return;
+        }
+        if (!gpsReady || !hasMedia()) {
+            event.preventDefault();
+            return;
+        }
+        if (!beginSaving()) {
             event.preventDefault();
             return;
         }
