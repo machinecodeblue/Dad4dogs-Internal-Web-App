@@ -41,8 +41,22 @@ One file set per moment — can be linked to multiple visits when forwarded.
 | `caption_notes` | Optional text |
 | `latitude`, `longitude` | GPS or business fallback |
 | `location_used_fallback`, `location_fallback_label` | When device GPS unavailable |
-| `captured_at` | Exact capture time — preserved on forward |
+| `captured_at` | Exact capture time — `default=timezone.now`, `editable=False`. Set explicitly in `create_photo_asset` / `create_video_asset`. Omit is OK (admin, scripts, tests). Do **not** use `auto_now_add` — that would ignore an explicit capture time. Preserved on forward. |
 | `original_visit` | First visit this moment was logged against |
+
+### File storage
+
+`upload_to` is `timeline_asset_upload_path` — **date folders**, not pk.
+
+Django calls `upload_to` **before** the insert, so `instance.pk` is always `None` on create. The old `timeline/assets/{pk or "new"}/` path put every new file in `media/timeline/assets/new/`.
+
+| Era | On-disk path | Notes |
+|-----|----------------|-------|
+| New captures | `timeline/assets/%Y/%m/%d/<unique filename>` | Uses `captured_at` (field default fills it at construction if omitted) |
+| Pre-fix assets | `timeline/assets/new/…` | Leave in place — FileField stores the relative path |
+| Pre-asset refactor | `timeline/<visit_id>/…` | Legacy `timeline_upload_path` from migration 0008 |
+
+Filenames are already unique (`master_<uuid>.jpg` via `timeline_media._unique_name`). Do not add another UUID directory. Do not rewrite historical paths. Forwarding shares the same `TimelineMediaAsset` files — no second write.
 
 ### `VisitTimelineEvent` (link row)
 Links one `TimelineMediaAsset` to one `Visit`. Forwarding creates new rows pointing at the **same** asset.
@@ -243,7 +257,7 @@ When `PUBLIC_SITE_URL` is set, `format_booking_confirmation()` appends the feed 
 
 ## 8. Tests
 
-`TimelineTests`, `FeedSlugTests`, `CustomerFeedTests`, `FeedInteractionTests` in `operations/tests.py`.
+`VisitTimelineTests`, `TimelineUploadPathTests`, `TimelineMediaAssetCapturedAtTests`, `FeedSlugTests`, `CustomerFeedTests`, `FeedInteractionTests` in `operations/tests.py`.
 
 `FeedInteractionTests` covers: feed react/comment, public share isolation from feed secret, compact share/comment icons, public share react without comment, public share download filename (`dad4dogs_<uuid>.jpg`), check-in feed activity poll.
 
@@ -256,7 +270,8 @@ When `PUBLIC_SITE_URL` is set, `format_booking_confirmation()` appends the feed 
 | Migration | Contents |
 |-----------|----------|
 | `0008_visit_timeline_event` | Initial timeline (later refactored) |
-| `0009_timeline_media_asset` | `TimelineMediaAsset` + data migration |
+| `0009_timeline_media_asset` | `TimelineMediaAsset` + data migration (`upload_to` callable; date folders are a runtime change, no new migration) |
+| `0015_timeline_media_asset_captured_at_default` | `captured_at` default=`timezone.now` |
 | `0010_customer_feed` | `feed_secret`, `feed_dog_slug`, `FeedAccessLog` |
 | `0011_feed_interactions` | `MediaReaction`, `MediaComment`, `SharedMediaLink` |
 | `0012_shared_media_share_token` | `SharedMediaLink.share_token` for clean public URLs |

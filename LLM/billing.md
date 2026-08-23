@@ -26,7 +26,7 @@ Unique constraint: one statement per dog per `week_start`.
 
 ## 2. How Fees Get Into Statements
 
-1. David checks out a visit → `Visit.check_out()` runs pricing engine
+1. David checks out a visit → `Visit.check_out()` runs pricing engine (only from `checked_in`; see `scheduling.md` §5)
 2. `calculated_fee` and `fee_breakdown` saved on `Visit`
 3. `generate_statements` management command compiles completed visits per dog per week
 4. Statement `line_items` snapshot visit dates, fees, and breakdown JSON

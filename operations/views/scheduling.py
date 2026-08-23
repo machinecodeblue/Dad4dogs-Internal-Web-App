@@ -144,10 +144,14 @@ def visit_check_in(request, pk):
     if capacity['status'] == 'blocked':
         messages.error(request, capacity['message'])
     else:
-        visit.check_in()
-        if capacity['status'] == 'warning':
-            messages.warning(request, capacity['message'])
-        messages.success(request, f'{visit.client.dog_name} checked in.')
+        try:
+            visit.check_in()
+        except ValidationError as e:
+            messages.error(request, '; '.join(e.messages))
+        else:
+            if capacity['status'] == 'warning':
+                messages.warning(request, capacity['message'])
+            messages.success(request, f'{visit.client.dog_name} checked in.')
     return redirect('operations:mobile_checkin')
 
 
@@ -155,11 +159,15 @@ def visit_check_in(request, pk):
 @require_POST
 def visit_check_out(request, pk):
     visit = get_object_or_404(Visit, pk=pk)
-    visit.check_out()
-    messages.success(
-        request,
-        f'{visit.client.dog_name} checked out. Fee: ${visit.calculated_fee} CAD',
-    )
+    try:
+        visit.check_out()
+    except ValidationError as e:
+        messages.error(request, '; '.join(e.messages))
+    else:
+        messages.success(
+            request,
+            f'{visit.client.dog_name} checked out. Fee: ${visit.calculated_fee} CAD',
+        )
     return redirect('operations:mobile_checkin')
 
 

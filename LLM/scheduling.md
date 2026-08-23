@@ -22,6 +22,8 @@
 ### Visit statuses
 `scheduled` → `checked_in` → `completed` (or `cancelled`)
 
+Forward only via `Visit.check_in()` / `Visit.check_out()`. Do not assign `status`, `actual_arrival`, `actual_departure`, or `calculated_fee` in views to “fix” a transition.
+
 ### Visit key fields
 - `scheduled_start`, `scheduled_end` — authoritative booking window
 - `actual_arrival`, `actual_departure` — set at check-in/out
@@ -29,9 +31,25 @@
 - `confirmation_email_sent_at` — when booking confirmation was emailed
 - `series`, `series_position` — link to repeat series
 
+### Visit indexes (`Visit.Meta.indexes`)
+Single-column indexes on the hot lookup fields used by capacity, agenda, check-in, and iCal:
+
+| Index name | Field | Why |
+|------------|-------|-----|
+| `visit_scheduled_start_idx` | `scheduled_start` | Day overlap (`scheduled_start__lt` / `__date__lte`), agenda order |
+| `visit_scheduled_end_idx` | `scheduled_end` | Day overlap (`scheduled_end__gt` / `__date__gte`) |
+| `visit_status_idx` | `status` | `status__in` on capacity, agenda, check-in, timeline eligibility |
+
+Do not drop these to “simplify” Meta. `client` already has an FK index. A composite `(status, scheduled_start, scheduled_end)` is **not** a substitute — overlap queries (`start < day_end AND end > day_start`) need both ends independently.
+
+Migration: `0016_visit_hot_lookup_indexes`.
+
 ### Visit methods
-- `check_in()`, `check_out()` — checkout runs pricing engine
-- `clone_to_date(new_date)` — same duration/time-of-day on new date
+- `check_in()` — only from `scheduled`; sets `actual_arrival`
+- `check_out()` — only from `checked_in` with no `calculated_fee`; sets `actual_departure` and runs pricing once
+- Illegal transitions raise `ValidationError` (mobile double-tap / stale POST must not overwrite times or fees)
+- `save()` — `full_clean()` (end-after-start + capacity) on booking writes; skipped for status-only `update_fields` (see §5 and §7)
+- `clone_to_date(new_date)` — same duration + **local** time-of-day on `new_date` (`datetime.combine`, not `datetime.replace`)
 - `schedule_display` — human-readable range property
 - `is_editable` — scheduled visits only
 - `accepts_timeline_events` — `True` only while `checked_in`
@@ -61,7 +79,14 @@ David books per **dog**. Two free-text fields only — **no multi-step date/time
 - `VisitForm.save_all()` creates series + visits in one transaction
 
 ### Clone past visit
-On visit create page: select completed visit + new start date → copies duration/time-of-day.
+On visit create page: select completed visit + new start date → copies duration and **local** time-of-day.
+
+`clone_to_date(new_date)` localizes `scheduled_start`, then `datetime.combine(new_date, start.time(), tzinfo=start.tzinfo)`, then adds the original duration. Do **not** use `datetime.replace(year=, month=, day=)`:
+
+- A visit on the 31st cloned onto Feb 28 / April 30 raises `ValueError` (day out of range) if you replace the month while the day is still 31.
+- `replace` on a UTC instant can shift the clock across DST; combine keeps 5 PM local as 5 PM local.
+
+Overnight stays keep the same length (end is start + duration, not a replaced end clock). Capacity still runs because create goes through `Visit.save()`.
 
 ### Booking confirmation email
 - Checkbox on create: **Send booking confirmation to {email}**
@@ -109,8 +134,8 @@ Updates/cancellations (METHOD:UPDATE/CANCEL) — not yet built
 | `/visits/<id>/edit/` | Edit scheduled visit only |
 | `/visits/<id>/delete/` | POST — scheduled only |
 | `/visits/parse-datetime/` | JSON parse preview |
-| `/visits/<id>/check-in/` | POST |
-| `/visits/<id>/check-out/` | POST — calculates fee |
+| `/visits/<id>/check-in/` | POST — `check_in()`; illegal status → error message, no write |
+| `/visits/<id>/check-out/` | POST — `check_out()` + fee; illegal status → error message, no write |
 | `/visits/<id>/timeline/` | Log moment (photo/video) while checked in |
 | `/visits/<id>/timeline/<event>/forward/` | POST — share moment to other checked-in dogs |
 | `/calendar/pending/` | Review imported calendar events |
@@ -148,6 +173,27 @@ Home screen (`/`) = David's daily operations view.
 - Capacity re-checked at check-in
 - Checked-in cards show **Log Moment** → staff timeline (`visit_timeline`)
 - **Owner feed activity** panel — polls `/checkin/feed-activity/` every 15s for owner/family reactions and comments on the customer feed (standard emoji labels in JSON)
+
+### Status guards (idempotent transitions)
+
+David’s phone can double-tap Check In / Check Out or replay a stale POST. A second call must **not** overwrite `actual_arrival`, re-run pricing with a later `actual_departure`, or complete a visit that was never checked in.
+
+| Method | Allowed from | On success | Otherwise |
+|--------|--------------|------------|-----------|
+| `check_in()` | `scheduled` only | `actual_arrival = now`, status `checked_in` | `ValidationError` — no field writes |
+| `check_out()` | `checked_in` **and** `calculated_fee` is null | `actual_departure = now`, `calculate_fee()`, status `completed` | `ValidationError` — no field writes |
+
+Cancelled and completed visits cannot enter either method.
+
+**Views** (`visit_check_in`, `visit_check_out`): catch `ValidationError`, flash the message, redirect back to `/checkin/`. Do not 500 on a double-tap.
+
+Do **not** turn the already-correct status into a silent no-op unless David asks — a refused transition is an error, not a second success. The template already hides the wrong button; the guard is for stale POSTs and any future caller.
+
+`check_out()` re-reads the row (`refresh_from_db`) before pricing. A stale in-memory instance that still says `checked_in` must not re-run `calculate_fee()` or overwrite `calculated_fee` / `fee_breakdown`. If `calculated_fee` is already set, raise and skip pricing — even when status was left `checked_in`.
+
+`check_in()` / `check_out()` save with `update_fields` so capacity is **not** re-run. A day that is already at or over the insurance ceiling must not trap a dog that is already on site.
+
+**Tests:** `VisitCheckOutTests` (model refusals leave arrival/fee/status unchanged; stale instance does not re-run `calculate_fee`), `VisitCheckInOutViewTests` (double POST keeps the first arrival / fee), and `VisitCapacitySaveTests` (checkout/check-in still work when the day is over ceiling). Keep those green if you touch check-in, check-out, or `Visit.save()`.
 
 ---
 
@@ -190,7 +236,20 @@ Tests: `PricingEngineTests`, `VisitCheckOutTests`
 | ≥ 9 dogs | Warning |
 | > 10 dogs | Block (insurance ceiling) |
 
-Counts distinct `client_id` with visits overlapping the calendar day. Validated on `Visit.save()` and at check-in.
+Counts distinct `client_id` with visits overlapping the calendar day (`scheduled`, `checked_in`, and `completed`). Filter uses `status`, `scheduled_start`, `scheduled_end` — keep the `Visit.Meta` indexes on those fields.
+
+Capacity is a **booking** rule, not a day-of-ops lock:
+
+| Write | Runs `full_clean()` / `check_visit_capacity()`? |
+|-------|--------------------------------------------------|
+| `Visit.save()` with no `update_fields` (create, edit times, clone) | Yes — block if any spanned day is over 10 |
+| `save(update_fields=…)` that includes `scheduled_start`, `scheduled_end`, or `client` | Yes |
+| `check_in()` / `check_out()` (status, timestamps, fee) | **No** — the visit is already on the books |
+| Check-in **view** (`visit_check_in`) | Still `assess_capacity` for a warning/block *message*; model save does not re-block |
+
+Do not call `full_clean()` from `check_in()` / `check_out()`. If you change scheduled times, `save()` without `update_fields` (or include those fields in `update_fields`) so capacity still runs.
+
+**Tests:** `VisitCapacitySaveTests` in `operations/tests.py`.
 
 ---
 
@@ -217,7 +276,7 @@ Counts distinct `client_id` with visits overlapping the calendar day. Validated 
 
 ## 10. Tests
 
-`VisitFormTests`, `DatetimeParseTests`, `AgendaTests`, `PricingEngineTests`, `VisitCheckOutTests`, `VisitEmailTests`, `TimelineTests` in `operations/tests.py`.
+`VisitFormTests`, `DatetimeParseTests`, `AgendaTests`, `PricingEngineTests`, `VisitCheckOutTests`, `VisitCheckInOutViewTests`, `VisitCapacitySaveTests`, `VisitIndexTests`, `VisitCloneToDateTests`, `VisitEmailTests`, `TimelineTests` in `operations/tests.py`.
 
 ---
 

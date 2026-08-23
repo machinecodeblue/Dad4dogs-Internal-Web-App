@@ -1,7 +1,7 @@
 # Dad4dogs Internal Web App — LLM Project Guide
 
 **Owner:** David — Dad4dogs  
-**Last updated:** July 2026  
+**Last updated:** August 2026  
 **Audience:** LLM assistants and future maintainers
 
 This is the **single entry point** for understanding this codebase. Domain-specific detail lives in separate files — read those when working in that area.
@@ -37,13 +37,13 @@ A **Django 5 monolith** for David's single-user dog boarding operation (~25 repe
 1. **This file** (`PROJECT.md`) — context and file map
 2. **Domain file** for the area you are changing:
    - `customers.md` — owners, dogs, COI, vax, contacts
-   - `scheduling.md` — visits, agenda, check-in, pricing, email confirmations
+   - `scheduling.md` — visits, agenda, check-in/out guards, pricing, email confirmations
    - `billing.md` — statements
    - `admin.md` — business settings, baseline contact info, documents (planned)
    - `feed.md` — timeline capture, customer photo feed, speakable URLs
 3. **`platform.md`** — dev server, HTTPS, ngrok, Gmail OAuth, PWA, UI conventions, testing
 
-Do **not** change pricing tiers, capacity ceilings, or pipeline stages unless David explicitly asks.
+Do **not** change pricing tiers, capacity ceilings, pipeline stages, or visit status guards unless David explicitly asks.
 
 ---
 
@@ -125,6 +125,16 @@ Overnight is evaluated **before** hour tiers. Multi-day: each full 24h = Overnig
 - A customer may have **zero dogs** until David adds one
 - Never invent a dog from the owner's first name on import
 
+### Visit status transitions (critical)
+`scheduled` → `checked_in` → `completed` (or `cancelled`).
+
+- `check_in()` only from `scheduled`; `check_out()` only from `checked_in` with no existing `calculated_fee`
+- Illegal calls raise `ValidationError` and must not overwrite `actual_arrival`, `actual_departure`, or `calculated_fee`
+- `check_out()` refreshes from the DB first so a stale instance cannot re-price a finalized visit
+- Views catch that error and redirect — no 500 on a mobile double-tap
+- Do not set those fields (or `status`) in views to bypass the methods
+- Capacity is enforced on **booking** saves, not on check-in/out `update_fields` — a full day must not block checkout
+
 ---
 
 ## 6. Implementation Status
@@ -136,7 +146,7 @@ Overnight is evaluated **before** hour tiers. Multi-day: each full 24h = Overnig
 | Visit booking (natural-language Start/End) | Done |
 | Repeat series (daily/weekly/weekdays/monthly) | Done |
 | Dashboard month calendar + daily agenda | Done |
-| Mobile check-in/out + auto pricing | Done |
+| Mobile check-in/out + auto pricing | Done — status guards on `check_in()` / `check_out()` |
 | Booking confirmation email (Gmail OAuth) | Done |
 | Google Contacts selective import + vCard | Done |
 | iCal outbound `/ical/` | Done |
@@ -187,7 +197,9 @@ $env:PUBLIC_SITE_URL = "https://your-subdomain.ngrok.app"
 5. No bulk Google contact import without preview + checkboxes.
 6. Extend `operations/services/` for new business logic.
 7. Add tests in `operations/tests.py` for pricing, capacity, forms, or imports you touch.
-8. Never commit `O-Auth Key/`, `certs/`, or live client PII.
+8. Do not bypass `Visit.check_in()` / `check_out()` status guards.
+9. Do not re-run `full_clean()` / capacity on check-in or check-out saves.
+10. Never commit `O-Auth Key/`, `certs/`, or live client PII.
 
 ---
 
@@ -196,7 +208,7 @@ $env:PUBLIC_SITE_URL = "https://your-subdomain.ngrok.app"
 | File | Contents |
 |------|----------|
 | [`customers.md`](customers.md) | Owners, dogs, COI, vaccinations, contacts import |
-| [`scheduling.md`](scheduling.md) | Visits, repeat, dashboard, check-in, pricing, calendar, booking email |
+| [`scheduling.md`](scheduling.md) | Visits, repeat, dashboard, check-in/out status guards, pricing, calendar, booking email |
 | [`billing.md`](billing.md) | Weekly statements, checkout totals |
 | [`admin.md`](admin.md) | Business settings, baseline contact info, documents |
 | [`feed.md`](feed.md) | Staff timeline, customer feed, speakable URLs, access logging |

@@ -1,4 +1,5 @@
 import uuid
+from datetime import datetime
 
 from django.core.exceptions import ValidationError
 from django.db import models
@@ -88,6 +89,11 @@ class Visit(models.Model):
 
     class Meta:
         ordering = ['-scheduled_start']
+        indexes = [
+            models.Index(fields=['scheduled_start'], name='visit_scheduled_start_idx'),
+            models.Index(fields=['scheduled_end'], name='visit_scheduled_end_idx'),
+            models.Index(fields=['status'], name='visit_status_idx'),
+        ]
 
     def __str__(self):
         return f'{self.client.dog_name} — {self.scheduled_start:%Y-%m-%d %H:%M}'
@@ -100,16 +106,29 @@ class Visit(models.Model):
         if capacity['status'] == 'blocked':
             raise ValidationError(capacity['message'])
 
+    # Booking fields — a partial save that includes these still runs full_clean/capacity.
+    _SCHEDULE_FIELDS = frozenset({'scheduled_start', 'scheduled_end', 'client', 'client_id'})
+
     def save(self, *args, **kwargs):
-        self.full_clean()
+        update_fields = kwargs.get('update_fields')
+        if update_fields is None or self._SCHEDULE_FIELDS.intersection(update_fields):
+            self.full_clean()
         super().save(*args, **kwargs)
 
     def check_in(self):
+        if self.status != self.Status.SCHEDULED:
+            raise ValidationError('Only scheduled visits can be checked in.')
         self.actual_arrival = timezone.now()
         self.status = self.Status.CHECKED_IN
         self.save(update_fields=['actual_arrival', 'status', 'updated_at'])
 
     def check_out(self):
+        if self.pk:
+            self.refresh_from_db()
+        if self.status == self.Status.COMPLETED or self.calculated_fee is not None:
+            raise ValidationError('This visit has already been checked out.')
+        if self.status != self.Status.CHECKED_IN:
+            raise ValidationError('Only checked-in visits can be checked out.')
         self.actual_departure = timezone.now()
         arrival = self.actual_arrival or self.scheduled_start
         fee, breakdown = calculate_fee(arrival, self.actual_departure)
@@ -121,11 +140,10 @@ class Visit(models.Model):
         ])
 
     def clone_to_date(self, new_date):
-        """Clone duration and time-of-day configuration to a new calendar date."""
-        start = self.scheduled_start
-        end = self.scheduled_end
-        duration = end - start
-        new_start = start.replace(year=new_date.year, month=new_date.month, day=new_date.day)
+        """Clone duration and local time-of-day onto a new calendar date."""
+        start = timezone.localtime(self.scheduled_start)
+        duration = self.scheduled_end - self.scheduled_start
+        new_start = datetime.combine(new_date, start.time(), tzinfo=start.tzinfo)
         new_end = new_start + duration
         return Visit.objects.create(
             client=self.client,
@@ -161,8 +179,14 @@ class Visit(models.Model):
         return self.status == self.Status.CHECKED_IN
 
 
-def timeline_asset_upload_path(instance: 'TimelineMediaAsset', filename: str) -> str:
-    return f'timeline/assets/{instance.pk or "new"}/{filename}'
+def timeline_asset_upload_path(instance: models.Model, filename: str) -> str:
+    """Store new media under timeline/assets/YYYY/MM/DD/.
+
+    FileField.upload_to runs before the row is inserted, so instance.pk is always
+    None on create — a pk-or-'new' path dumped every upload into one folder.
+    """
+    when = getattr(instance, 'captured_at', None) or timezone.now()
+    return when.strftime('timeline/assets/%Y/%m/%d/') + filename
 
 
 def timeline_upload_path(instance, filename: str) -> str:
@@ -201,6 +225,7 @@ class TimelineMediaAsset(models.Model):
     location_used_fallback = models.BooleanField(default=False)
     location_fallback_label = models.CharField(max_length=300, blank=True)
     captured_at = models.DateTimeField(
+        default=timezone.now,
         editable=False,
         help_text='Exact capture/upload time — preserved when forwarded.',
     )

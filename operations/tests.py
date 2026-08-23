@@ -4,6 +4,7 @@ from pathlib import Path
 from unittest.mock import patch
 from zoneinfo import ZoneInfo
 
+from django.core.exceptions import ValidationError
 from django.test import TestCase, override_settings
 from django.utils import timezone
 
@@ -23,11 +24,13 @@ from operations.models import (
     MediaComment,
     MediaReaction,
     SharedMediaLink,
+    TimelineMediaAsset,
     VaccinationRecord,
     Visit,
     VisitSeries,
     VisitTimelineEvent,
 )
+from operations.models.scheduling import timeline_asset_upload_path
 from operations.services.feed_interactions import set_reaction, add_comment, get_or_create_share_link
 from operations.services.geolocation import resolve_timeline_coordinates
 from operations.services.timeline_media import (
@@ -36,6 +39,7 @@ from operations.services.timeline_media import (
     forward_timeline_event,
     log_moment_for_visits,
 )
+from operations.capacity import INSURANCE_CEILING
 from operations.pricing import calculate_fee, is_overnight_segment
 from operations.services.agenda import build_month_calendar, visits_for_day, visit_counts_between
 from operations.services.visit_repeat import (
@@ -922,6 +926,350 @@ class VisitCheckOutTests(TestCase):
         self.assertEqual(visit.calculated_fee, Decimal('15.00'))
         self.assertEqual(visit.fee_breakdown, [{'tier': 'Short Visit', 'amount': '15.00'}])
 
+    def _make_visit(self, **kwargs):
+        start = datetime(2026, 3, 10, 9, 0, tzinfo=TZ)
+        end = datetime(2026, 3, 10, 12, 0, tzinfo=TZ)
+        defaults = {
+            'client': self.dog,
+            'scheduled_start': start,
+            'scheduled_end': end,
+        }
+        defaults.update(kwargs)
+        return Visit.objects.create(**defaults)
+
+    def test_check_in_from_scheduled(self):
+        visit = self._make_visit()
+        visit.check_in()
+        visit.refresh_from_db()
+        self.assertEqual(visit.status, Visit.Status.CHECKED_IN)
+        self.assertIsNotNone(visit.actual_arrival)
+
+    def test_check_in_rejected_when_already_checked_in(self):
+        arrival = datetime(2026, 3, 10, 9, 5, tzinfo=TZ)
+        visit = self._make_visit(
+            status=Visit.Status.CHECKED_IN,
+            actual_arrival=arrival,
+        )
+        with self.assertRaises(ValidationError) as ctx:
+            visit.check_in()
+        self.assertIn('scheduled', str(ctx.exception).lower())
+        visit.refresh_from_db()
+        self.assertEqual(visit.status, Visit.Status.CHECKED_IN)
+        self.assertEqual(visit.actual_arrival, arrival)
+
+    def test_check_in_rejected_when_completed(self):
+        visit = self._make_visit(
+            status=Visit.Status.COMPLETED,
+            actual_arrival=datetime(2026, 3, 10, 9, 5, tzinfo=TZ),
+            actual_departure=datetime(2026, 3, 10, 12, 0, tzinfo=TZ),
+            calculated_fee=Decimal('15.00'),
+        )
+        with self.assertRaises(ValidationError):
+            visit.check_in()
+        visit.refresh_from_db()
+        self.assertEqual(visit.status, Visit.Status.COMPLETED)
+
+    def test_check_in_rejected_when_cancelled(self):
+        visit = self._make_visit(status=Visit.Status.CANCELLED)
+        with self.assertRaises(ValidationError):
+            visit.check_in()
+        visit.refresh_from_db()
+        self.assertEqual(visit.status, Visit.Status.CANCELLED)
+        self.assertIsNone(visit.actual_arrival)
+
+    def test_check_out_rejected_when_scheduled(self):
+        visit = self._make_visit()
+        with self.assertRaises(ValidationError) as ctx:
+            visit.check_out()
+        self.assertIn('checked-in', str(ctx.exception).lower())
+        visit.refresh_from_db()
+        self.assertEqual(visit.status, Visit.Status.SCHEDULED)
+        self.assertIsNone(visit.actual_departure)
+        self.assertIsNone(visit.calculated_fee)
+
+    def test_check_out_rejected_when_already_completed(self):
+        arrival = datetime(2026, 3, 10, 9, 0, tzinfo=TZ)
+        departure = datetime(2026, 3, 10, 12, 0, tzinfo=TZ)
+        visit = self._make_visit(
+            status=Visit.Status.COMPLETED,
+            actual_arrival=arrival,
+            actual_departure=departure,
+            calculated_fee=Decimal('15.00'),
+            fee_breakdown=[{'tier': 'Short Visit', 'amount': '15.00'}],
+        )
+        with self.assertRaises(ValidationError):
+            visit.check_out()
+        visit.refresh_from_db()
+        self.assertEqual(visit.status, Visit.Status.COMPLETED)
+        self.assertEqual(visit.actual_departure, departure)
+        self.assertEqual(visit.calculated_fee, Decimal('15.00'))
+
+    def test_stale_instance_does_not_recompute_fee(self):
+        arrival = datetime(2026, 3, 10, 9, 0, tzinfo=TZ)
+        visit = self._make_visit(
+            status=Visit.Status.CHECKED_IN,
+            actual_arrival=arrival,
+        )
+        stale = Visit.objects.get(pk=visit.pk)
+        visit.check_out()
+        visit.refresh_from_db()
+        first_fee = visit.calculated_fee
+        first_departure = visit.actual_departure
+        first_breakdown = visit.fee_breakdown
+
+        with patch('operations.models.scheduling.calculate_fee') as mock_fee:
+            with self.assertRaises(ValidationError) as ctx:
+                stale.check_out()
+            mock_fee.assert_not_called()
+        self.assertIn('already', str(ctx.exception).lower())
+
+        stale.refresh_from_db()
+        self.assertEqual(stale.status, Visit.Status.COMPLETED)
+        self.assertEqual(stale.calculated_fee, first_fee)
+        self.assertEqual(stale.actual_departure, first_departure)
+        self.assertEqual(stale.fee_breakdown, first_breakdown)
+
+    def test_checked_in_with_existing_fee_does_not_overwrite(self):
+        arrival = datetime(2026, 3, 10, 9, 0, tzinfo=TZ)
+        visit = self._make_visit(
+            status=Visit.Status.CHECKED_IN,
+            actual_arrival=arrival,
+            calculated_fee=Decimal('15.00'),
+            fee_breakdown=[{'tier': 'Short Visit', 'amount': '15.00'}],
+        )
+        with patch('operations.models.scheduling.calculate_fee') as mock_fee:
+            with self.assertRaises(ValidationError):
+                visit.check_out()
+            mock_fee.assert_not_called()
+        visit.refresh_from_db()
+        self.assertEqual(visit.status, Visit.Status.CHECKED_IN)
+        self.assertEqual(visit.calculated_fee, Decimal('15.00'))
+        self.assertIsNone(visit.actual_departure)
+
+
+class VisitCapacitySaveTests(TestCase):
+    def setUp(self):
+        self.start = datetime(2026, 3, 10, 9, 0, tzinfo=TZ)
+        self.end = datetime(2026, 3, 10, 17, 0, tzinfo=TZ)
+        self.dog = ClientProfile.objects.create(
+            dog_name='Rex',
+            owner_name='Jane Doe',
+            owner_email='jane@example.com',
+        )
+
+    def _visit(self, dog=None, **kwargs):
+        defaults = {
+            'client': dog or self.dog,
+            'scheduled_start': self.start,
+            'scheduled_end': self.end,
+        }
+        defaults.update(kwargs)
+        return Visit.objects.create(**defaults)
+
+    def _fill_day_over_ceiling(self):
+        now = timezone.now()
+        extra = []
+        for i in range(INSURANCE_CEILING):
+            dog = ClientProfile.objects.create(
+                dog_name=f'Dog{i}',
+                owner_name=f'Owner{i}',
+                owner_email=f'owner{i}@example.com',
+            )
+            extra.append(Visit(
+                client=dog,
+                scheduled_start=self.start,
+                scheduled_end=self.end,
+                created_at=now,
+                updated_at=now,
+            ))
+        Visit.objects.bulk_create(extra)
+
+    def test_booking_over_ceiling_is_blocked(self):
+        for i in range(INSURANCE_CEILING):
+            dog = ClientProfile.objects.create(
+                dog_name=f'Booked{i}',
+                owner_name=f'Owner{i}',
+                owner_email=f'booked{i}@example.com',
+            )
+            Visit.objects.create(
+                client=dog,
+                scheduled_start=self.start,
+                scheduled_end=self.end,
+            )
+        with self.assertRaises(ValidationError):
+            self._visit()
+
+    def test_check_out_succeeds_when_day_is_over_capacity(self):
+        visit = self._visit(
+            status=Visit.Status.CHECKED_IN,
+            actual_arrival=self.start,
+        )
+        self._fill_day_over_ceiling()
+        visit.check_out()
+        visit.refresh_from_db()
+        self.assertEqual(visit.status, Visit.Status.COMPLETED)
+        self.assertIsNotNone(visit.actual_departure)
+        self.assertIsNotNone(visit.calculated_fee)
+
+    def test_check_in_succeeds_when_day_is_over_capacity(self):
+        visit = self._visit()
+        self._fill_day_over_ceiling()
+        visit.check_in()
+        visit.refresh_from_db()
+        self.assertEqual(visit.status, Visit.Status.CHECKED_IN)
+        self.assertIsNotNone(visit.actual_arrival)
+
+    def test_reschedule_still_checks_capacity(self):
+        visit = self._visit()
+        self._fill_day_over_ceiling()
+        visit.scheduled_end = datetime(2026, 3, 10, 18, 0, tzinfo=TZ)
+        with self.assertRaises(ValidationError):
+            visit.save()
+
+    def test_schedule_update_fields_still_checks_capacity(self):
+        visit = self._visit()
+        self._fill_day_over_ceiling()
+        visit.scheduled_end = datetime(2026, 3, 10, 18, 0, tzinfo=TZ)
+        with self.assertRaises(ValidationError):
+            visit.save(update_fields=['scheduled_end', 'updated_at'])
+
+
+class VisitIndexTests(TestCase):
+    def test_hot_lookup_fields_are_indexed(self):
+        indexed = {tuple(index.fields) for index in Visit._meta.indexes}
+        self.assertIn(('scheduled_start',), indexed)
+        self.assertIn(('scheduled_end',), indexed)
+        self.assertIn(('status',), indexed)
+
+
+class VisitCloneToDateTests(TestCase):
+    def setUp(self):
+        self.dog = ClientProfile.objects.create(
+            dog_name='Rex',
+            owner_name='Jane Doe',
+            owner_email='jane@example.com',
+        )
+
+    def _visit(self, start, end):
+        return Visit.objects.create(
+            client=self.dog,
+            scheduled_start=start,
+            scheduled_end=end,
+        )
+
+    def test_clone_preserves_local_time_of_day(self):
+        source = self._visit(
+            datetime(2026, 4, 11, 17, 0, tzinfo=TZ),
+            datetime(2026, 4, 11, 20, 0, tzinfo=TZ),
+        )
+        cloned = source.clone_to_date(date(2026, 4, 20))
+        local_start = timezone.localtime(cloned.scheduled_start)
+        local_end = timezone.localtime(cloned.scheduled_end)
+        self.assertEqual(local_start, datetime(2026, 4, 20, 17, 0, tzinfo=TZ))
+        self.assertEqual(local_end, datetime(2026, 4, 20, 20, 0, tzinfo=TZ))
+        self.assertEqual(cloned.cloned_from_id, source.pk)
+        self.assertEqual(cloned.client_id, source.client_id)
+
+    def test_clone_from_31st_onto_february(self):
+        source = self._visit(
+            datetime(2026, 1, 31, 17, 0, tzinfo=TZ),
+            datetime(2026, 1, 31, 20, 0, tzinfo=TZ),
+        )
+        cloned = source.clone_to_date(date(2026, 2, 28))
+        local_start = timezone.localtime(cloned.scheduled_start)
+        self.assertEqual(local_start, datetime(2026, 2, 28, 17, 0, tzinfo=TZ))
+        self.assertEqual(
+            cloned.scheduled_end - cloned.scheduled_start,
+            source.scheduled_end - source.scheduled_start,
+        )
+
+    def test_clone_from_31st_onto_30_day_month_keeps_overnight_duration(self):
+        source = self._visit(
+            datetime(2026, 1, 31, 17, 0, tzinfo=TZ),
+            datetime(2026, 2, 1, 9, 0, tzinfo=TZ),
+        )
+        cloned = source.clone_to_date(date(2026, 4, 30))
+        local_start = timezone.localtime(cloned.scheduled_start)
+        local_end = timezone.localtime(cloned.scheduled_end)
+        self.assertEqual(local_start, datetime(2026, 4, 30, 17, 0, tzinfo=TZ))
+        self.assertEqual(local_end, datetime(2026, 5, 1, 9, 0, tzinfo=TZ))
+
+    def test_clone_across_dst_keeps_local_clock_time(self):
+        source = self._visit(
+            datetime(2026, 3, 15, 17, 0, tzinfo=TZ),
+            datetime(2026, 3, 15, 20, 0, tzinfo=TZ),
+        )
+        cloned = source.clone_to_date(date(2026, 11, 15))
+        local_start = timezone.localtime(cloned.scheduled_start)
+        self.assertEqual(local_start.date(), date(2026, 11, 15))
+        self.assertEqual(local_start.hour, 17)
+        self.assertEqual(local_start.minute, 0)
+
+
+class VisitCheckInOutViewTests(TestCase):
+    def setUp(self):
+        self.user = get_user_model().objects.create_user(
+            username='david',
+            password='testpass123',
+        )
+        self.client = DjangoTestClient()
+        self.client.login(username='david', password='testpass123')
+        self.dog = ClientProfile.objects.create(
+            dog_name='Rex',
+            owner_name='Jane Doe',
+            owner_email='jane@example.com',
+        )
+
+    def _today_visit(self, **kwargs):
+        today = timezone.localdate()
+        start = datetime(today.year, today.month, today.day, 9, 0, tzinfo=TZ)
+        end = datetime(today.year, today.month, today.day, 17, 0, tzinfo=TZ)
+        defaults = {
+            'client': self.dog,
+            'scheduled_start': start,
+            'scheduled_end': end,
+        }
+        defaults.update(kwargs)
+        return Visit.objects.create(**defaults)
+
+    def test_double_check_in_does_not_overwrite_arrival(self):
+        visit = self._today_visit()
+        url = reverse('operations:visit_check_in', args=[visit.pk])
+        first = self.client.post(url)
+        self.assertEqual(first.status_code, 302)
+        visit.refresh_from_db()
+        first_arrival = visit.actual_arrival
+        self.assertEqual(visit.status, Visit.Status.CHECKED_IN)
+        self.assertIsNotNone(first_arrival)
+
+        second = self.client.post(url)
+        self.assertEqual(second.status_code, 302)
+        visit.refresh_from_db()
+        self.assertEqual(visit.status, Visit.Status.CHECKED_IN)
+        self.assertEqual(visit.actual_arrival, first_arrival)
+
+    def test_double_check_out_does_not_rerun_pricing(self):
+        arrival = timezone.now()
+        visit = self._today_visit(
+            status=Visit.Status.CHECKED_IN,
+            actual_arrival=arrival,
+        )
+        url = reverse('operations:visit_check_out', args=[visit.pk])
+        first = self.client.post(url)
+        self.assertEqual(first.status_code, 302)
+        visit.refresh_from_db()
+        first_departure = visit.actual_departure
+        first_fee = visit.calculated_fee
+        self.assertEqual(visit.status, Visit.Status.COMPLETED)
+        self.assertIsNotNone(first_departure)
+
+        second = self.client.post(url)
+        self.assertEqual(second.status_code, 302)
+        visit.refresh_from_db()
+        self.assertEqual(visit.status, Visit.Status.COMPLETED)
+        self.assertEqual(visit.actual_departure, first_departure)
+        self.assertEqual(visit.calculated_fee, first_fee)
+
 
 class BusinessProfileTests(TestCase):
     def test_load_returns_singleton(self):
@@ -1113,6 +1461,15 @@ class VisitTimelineTests(TestCase):
         self.assertEqual(asset.media_type, 'photo')
         self.assertTrue(asset.photo_high_res.name.endswith('.jpg'))
         self.assertTrue(asset.photo_thumbnail.name.endswith('.webp'))
+        self.assertRegex(
+            asset.photo_high_res.name,
+            r'^timeline/assets/\d{4}/\d{2}/\d{2}/master_.+\.jpg$',
+        )
+        self.assertNotIn('/new/', asset.photo_high_res.name)
+        self.assertRegex(
+            asset.photo_thumbnail.name,
+            r'^timeline/assets/\d{4}/\d{2}/\d{2}/thumb_.+\.webp$',
+        )
 
     def test_post_photo_moment_for_multiple_dogs(self):
         response = self.client.post(
@@ -1206,6 +1563,65 @@ class VisitTimelineTests(TestCase):
                 fallback_label='',
                 original_visit=self.visit,
             )
+
+
+class TimelineUploadPathTests(TestCase):
+    def test_uses_captured_at_date_not_pk_or_new(self):
+        class Dummy:
+            pk = None
+            captured_at = datetime(2026, 8, 23, 15, 0, tzinfo=TZ)
+
+        path = timeline_asset_upload_path(Dummy(), 'master_abc.jpg')
+        self.assertEqual(path, 'timeline/assets/2026/08/23/master_abc.jpg')
+
+    def test_falls_back_to_now_when_captured_at_missing(self):
+        class Dummy:
+            pk = None
+            captured_at = None
+
+        frozen = datetime(2026, 1, 2, 12, 0, tzinfo=TZ)
+        with patch('operations.models.scheduling.timezone.now', return_value=frozen):
+            path = timeline_asset_upload_path(Dummy(), 'thumb.webp')
+        self.assertEqual(path, 'timeline/assets/2026/01/02/thumb.webp')
+        self.assertNotIn('/new/', path)
+
+
+class TimelineMediaAssetCapturedAtTests(TestCase):
+    def setUp(self):
+        dog = ClientProfile.objects.create(
+            dog_name='Rex',
+            owner_name='Jane Doe',
+            owner_email='jane@example.com',
+        )
+        self.visit = Visit.objects.create(
+            client=dog,
+            scheduled_start=datetime(2026, 8, 23, 9, 0, tzinfo=TZ),
+            scheduled_end=datetime(2026, 8, 23, 17, 0, tzinfo=TZ),
+        )
+
+    def _create(self, **kwargs):
+        defaults = {
+            'media_type': TimelineMediaAsset.MediaType.PHOTO,
+            'latitude': Decimal('43.01'),
+            'longitude': Decimal('-81.23'),
+            'original_visit': self.visit,
+        }
+        defaults.update(kwargs)
+        return TimelineMediaAsset.objects.create(**defaults)
+
+    def test_captured_at_defaults_when_omitted(self):
+        before = timezone.now()
+        asset = self._create()
+        after = timezone.now()
+        self.assertIsNotNone(asset.captured_at)
+        self.assertGreaterEqual(asset.captured_at, before)
+        self.assertLessEqual(asset.captured_at, after)
+
+    def test_explicit_captured_at_is_kept(self):
+        when = datetime(2026, 4, 11, 9, 0, tzinfo=TZ)
+        asset = self._create(captured_at=when)
+        asset.refresh_from_db()
+        self.assertEqual(asset.captured_at, when)
 
 
 class FeedSlugTests(TestCase):

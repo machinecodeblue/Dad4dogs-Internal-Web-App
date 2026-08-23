@@ -152,7 +152,7 @@ python manage.py test operations
 ```
 
 All tests in `operations/tests.py` (~70+ tests). Update tests when changing:
-- Pricing, capacity, visit forms, agenda, contacts, compliance, Gmail helpers, business settings, timeline, customer feed, PWA endpoints
+- Pricing, capacity (booking vs check-in/out saves), visit forms, check-in/out status guards, agenda, contacts, compliance, Gmail helpers, business settings, timeline, customer feed, PWA endpoints
 
 ---
 
