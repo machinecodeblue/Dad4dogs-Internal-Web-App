@@ -81,7 +81,7 @@ Property: `authorized_pickup_list` — parsed non-empty stripped lines for templ
 ## 3. CustomerOwner COI fields
 
 - `coi_sent_at`, `coi_confirmed_received`, `coi_confirmed_at`
-- Methods: `mark_coi_sent()`, `mark_coi_received()`, `ensure_for_client()`
+- Methods: `mark_coi_sent()`, `mark_coi_received()`, `for_client()` (read-only lookup), `ensure_for_client()` (create on write paths / form save only)
 
 ---
 
@@ -94,7 +94,7 @@ Method: `advance_pipeline()` on dog screen.
 ### Customer feed fields
 - `feed_secret` — speakable unique slug (CV syllables, e.g. `movakitu`)
 - `feed_dog_slug` — from dog name (e.g. `lulu`)
-- Methods: `ensure_feed_credentials()`, `feed_url()`, `regenerate_feed_secret()`, `sync_feed_dog_slug()`
+- Methods: `ensure_feed_credentials()`, `feed_url(create=True)`, `regenerate_feed_secret()`, `sync_feed_dog_slug()`. GET screens call `feed_url(create=False)` so missing credentials stay missing.
 - Auto-created on first access; included in booking email when `PUBLIC_SITE_URL` is set
 
 ### VaccinationRecord
@@ -197,6 +197,12 @@ Method: `advance_pipeline()` on dog screen.
 
 ## 8. Views (customers.py)
 
+Every view declares allowed methods (`@require_GET`, `@require_POST`, or `@require_http_methods(['GET', 'POST'])`). Wrong verbs return **405**.
+
+GET paths do **not** call `ensure_for_client()` or `ensure_feed_credentials()`. Missing owner → 404. `customer_edit` captures `old_email` **before** `is_valid()` (Django mutates the instance during model validation), then wraps owner save + dog denormalized copy in `transaction.atomic()`.
+
+`?stage=` must be a `PipelineStage` value or it is ignored (same as invalid `?vax=`). vCard filenames keep only `A-Za-z0-9_-`. Import `selected_rows` skip non-integers instead of 500.
+
 `client_list`, `client_create`, `customer_edit`, `customer_detail`, `customer_add_dog`, `dog_edit`, `dog_detail`, `dog_delete`, `dog_feed_regenerate`, `dog_vaccinations`, `update_coi`, `add_vaccination`, `validate_vaccination`, `advance_pipeline`, `contact_sync`, `contact_import_preview`, `contact_import_selected`, `client_vcard`, plus legacy redirects.
 
 Public feed view lives in `views/customer_feed.py` — not in this package.
@@ -205,7 +211,7 @@ Public feed view lives in `views/customer_feed.py` — not in this package.
 
 ## 9. Tests
 
-`CustomerOwnerFormTests`, `AddressHandlingTests`, `DogProfileFormTests`, `IntakeWizardTests`, `ContactDataTests`, `CustomerEditTests`, `ContactSyncTests`, `ComplianceTests`, `VaccinationExpiryViewTests`, `FeedSlugTests`, `CustomerFeedTests` in `operations/tests.py`.
+`CustomerOwnerFormTests`, `AddressHandlingTests`, `DogProfileFormTests`, `IntakeWizardTests`, `ContactDataTests`, `CustomerEditTests`, `CustomerViewsHttpTests`, `ContactSyncTests`, `ComplianceTests`, `VaccinationExpiryViewTests`, `FeedSlugTests`, `CustomerFeedTests` in `operations/tests.py`.
 
 ---
 
@@ -216,6 +222,7 @@ Public feed view lives in `views/customer_feed.py` — not in this package.
 | `0003_owner_coi_and_vax_expiry` | `CustomerOwner` + COI migration |
 | `0014_owner_emergency_and_vet_contacts` | Owner emergency/pickup + per-dog vet fields |
 | `0017_structured_home_address` | `address_street` / `unit` / `city` / `province` / `postal_code`; copies legacy `home_address` via `parse_legacy_address()` |
+| `0018_backfill_owners_and_feed_credentials` | Create missing `CustomerOwner` rows and fill blank feed secret/slug |
 
 ---
 

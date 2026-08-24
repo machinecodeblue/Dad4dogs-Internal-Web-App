@@ -165,6 +165,14 @@ class CustomerOwner(models.Model):
         ])
 
     @classmethod
+    def for_client(cls, client: 'ClientProfile') -> 'CustomerOwner | None':
+        """Lookup only — never creates a row."""
+        email = (client.owner_email or '').strip()
+        if not email:
+            return None
+        return cls.objects.filter(owner_email__iexact=email).first()
+
+    @classmethod
     def ensure_for_client(cls, client: 'ClientProfile') -> 'CustomerOwner':
         owner, _ = cls.objects.get_or_create(
             owner_email=client.owner_email.lower().strip(),
@@ -401,8 +409,11 @@ class ClientProfile(models.Model):
             self.save(update_fields=['feed_secret', 'feed_dog_slug', 'updated_at'])
         return self.feed_secret
 
-    def feed_url_path(self) -> str:
-        self.ensure_feed_credentials()
+    def feed_url_path(self, *, create: bool = True) -> str:
+        if create:
+            self.ensure_feed_credentials()
+        if not self.feed_secret or not self.feed_dog_slug:
+            return ''
         return reverse(
             'operations:customer_feed',
             kwargs={
@@ -411,8 +422,10 @@ class ClientProfile(models.Model):
             },
         )
 
-    def feed_url(self, *, request=None) -> str:
-        path = self.feed_url_path()
+    def feed_url(self, *, request=None, create: bool = True) -> str:
+        path = self.feed_url_path(create=create)
+        if not path:
+            return ''
         if request is not None:
             return request.build_absolute_uri(path)
         from django.conf import settings

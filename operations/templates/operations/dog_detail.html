@@ -72,12 +72,16 @@
 
 <div class="card">
     <h2>Customer Photo Feed</h2>
+    {% if feed_url %}
     <p class="muted">Share this link when they book — no password, full history, easy to forward to family.</p>
     <p style="margin:0.75rem 0;font-weight:600;word-break:break-all">{{ feed_url }}</p>
     <div class="actions">
         <a href="{{ feed_url }}" class="btn btn-outline btn-sm" target="_blank" rel="noopener">Open Feed</a>
         <button type="button" class="btn btn-primary btn-sm" id="copy-feed-url" data-feed-url="{{ feed_url }}">Copy Link</button>
     </div>
+    {% else %}
+    <p class="muted">Feed link is created when the dog is saved.</p>
+    {% endif %}
     <p class="muted" style="margin-top:0.75rem">
         Last 30 days: {{ feed_stats.views }} view{{ feed_stats.views|pluralize }},
         ~{{ feed_stats.devices }} browser{{ feed_stats.devices|pluralize }} (local ID cookie).

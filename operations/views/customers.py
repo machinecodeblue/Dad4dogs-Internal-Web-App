@@ -1,12 +1,14 @@
+import re
 from collections import defaultdict
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ValidationError
-from django.http import HttpResponse
+from django.db import transaction
+from django.http import Http404, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
-from django.views.decorators.http import require_http_methods, require_POST
+from django.views.decorators.http import require_GET, require_http_methods, require_POST
 
 from operations.forms import CustomerOwnerForm, DogProfileForm, VaccinationRecordForm
 from operations.forms.intake import IntakeWizardForm
@@ -22,9 +24,19 @@ from operations.services.contacts import (
 )
 
 
+def _customer_owner_or_404(dog: ClientProfile) -> CustomerOwner:
+    owner = CustomerOwner.for_client(dog)
+    if owner is None:
+        raise Http404('No customer on file for this dog.')
+    return owner
+
+
 @login_required
+@require_GET
 def client_list(request):
     stage_filter = (request.GET.get('stage') or '').strip()
+    if stage_filter not in ClientProfile.PipelineStage.values:
+        stage_filter = ''
     vax_filter = (request.GET.get('vax') or '').strip()
     valid_vax = {value for value, _label in VAX_FILTER_CHOICES}
     if vax_filter not in valid_vax:
@@ -89,6 +101,7 @@ def client_intake(request):
 
 
 @login_required
+@require_http_methods(['GET', 'POST'])
 def client_create(request):
     """Add customer (owner) only — no dog until one is added explicitly."""
     if request.method == 'POST':
@@ -107,18 +120,20 @@ def client_create(request):
 
 
 @login_required
+@require_http_methods(['GET', 'POST'])
 def customer_edit(request, pk):
     owner = get_object_or_404(CustomerOwner, pk=pk)
     if request.method == 'POST':
+        old_email = owner.owner_email
         form = CustomerOwnerForm(request.POST, instance=owner)
         if form.is_valid():
-            old_email = owner.owner_email
-            owner = form.save()
-            ClientProfile.objects.filter(owner_email__iexact=old_email).update(
-                owner_name=owner.owner_name,
-                owner_email=owner.owner_email,
-                owner_phone=owner.owner_phone,
-            )
+            with transaction.atomic():
+                owner = form.save()
+                ClientProfile.objects.filter(owner_email__iexact=old_email).update(
+                    owner_name=owner.owner_name,
+                    owner_email=owner.owner_email,
+                    owner_phone=owner.owner_phone,
+                )
             messages.success(request, f'Updated {owner.owner_name}.')
             return redirect('operations:customer_detail', pk=owner.pk)
     else:
@@ -132,14 +147,14 @@ def customer_edit(request, pk):
 
 
 @login_required
+@require_http_methods(['GET', 'POST'])
 def dog_edit(request, pk):
     dog = get_object_or_404(ClientProfile, pk=pk)
-    customer_owner = CustomerOwner.ensure_for_client(dog)
+    customer_owner = _customer_owner_or_404(dog)
     if request.method == 'POST':
         form = DogProfileForm(request.POST, instance=dog, customer_owner=customer_owner)
         if form.is_valid():
             dog = form.save()
-            dog.ensure_feed_credentials()
             dog.sync_feed_dog_slug()
             messages.success(request, f'Updated {dog.dog_name}.')
             return redirect('operations:dog_detail', pk=dog.pk)
@@ -158,26 +173,29 @@ def dog_edit(request, pk):
 @require_POST
 def dog_delete(request, pk):
     dog = get_object_or_404(ClientProfile, pk=pk)
-    owner_pk = dog.customer_owner.pk
+    owner = _customer_owner_or_404(dog)
     name = dog.dog_name
     dog.delete()
     messages.success(request, f'Removed dog {name}.')
-    return redirect('operations:customer_detail', pk=owner_pk)
+    return redirect('operations:customer_detail', pk=owner.pk)
 
 
 @login_required
+@require_GET
 def client_edit(request, pk):
     return redirect('operations:dog_edit', pk=pk)
 
 
 @login_required
+@require_GET
 def client_add_dog(request, pk):
     """Legacy URL — redirect to customer add-dog."""
     client = get_object_or_404(ClientProfile, pk=pk)
-    return redirect('operations:customer_add_dog', pk=client.customer_owner.pk)
+    return redirect('operations:customer_add_dog', pk=_customer_owner_or_404(client).pk)
 
 
 @login_required
+@require_http_methods(['GET', 'POST'])
 def customer_add_dog(request, pk):
     """Add a dog for an existing customer — pipeline starts at Inquiry for this dog."""
     customer_owner = get_object_or_404(CustomerOwner, pk=pk)
@@ -202,6 +220,7 @@ def customer_add_dog(request, pk):
 
 
 @login_required
+@require_GET
 def customer_detail(request, pk):
     """Customer (owner) front — COI and dog list only. No vaccinations."""
     customer_owner = get_object_or_404(CustomerOwner, pk=pk)
@@ -215,17 +234,17 @@ def customer_detail(request, pk):
 
 
 @login_required
+@require_GET
 def dog_detail(request, pk):
     """Individual dog — visits and pipeline. No vaccinations on this screen."""
     dog = get_object_or_404(ClientProfile, pk=pk)
-    customer_owner = CustomerOwner.ensure_for_client(dog)
-    dog.ensure_feed_credentials()
+    customer_owner = _customer_owner_or_404(dog)
     visits = dog.visits.select_related('series').all()[:20]
     return render(request, 'operations/dog_detail.html', {
         'dog': dog,
         'customer_owner': customer_owner,
         'visits': visits,
-        'feed_url': dog.feed_url(request=request),
+        'feed_url': dog.feed_url(request=request, create=False),
         'feed_stats': feed_access_stats(dog),
     })
 
@@ -244,10 +263,11 @@ def dog_feed_regenerate(request, pk):
 
 
 @login_required
+@require_GET
 def dog_vaccinations(request, pk):
     """Vaccination records for a specific dog only."""
     dog = get_object_or_404(ClientProfile, pk=pk)
-    customer_owner = CustomerOwner.ensure_for_client(dog)
+    customer_owner = _customer_owner_or_404(dog)
     vaccinations = dog.vaccination_records.all()
     has_expired_validated = (
         not dog.has_current_vaccination
@@ -263,10 +283,11 @@ def dog_vaccinations(request, pk):
 
 
 @login_required
+@require_GET
 def client_detail(request, pk):
     """Legacy URL — open customer (owner) view."""
     client = get_object_or_404(ClientProfile, pk=pk)
-    return redirect('operations:customer_detail', pk=client.customer_owner.pk)
+    return redirect('operations:customer_detail', pk=_customer_owner_or_404(client).pk)
 
 
 @login_required
@@ -335,16 +356,19 @@ def validate_vaccination(request, pk, record_pk):
 
 
 @login_required
+@require_GET
 def client_vcard(request, pk):
     client = get_object_or_404(ClientProfile, pk=pk)
     vcard = build_vcard(client)
-    filename = f'{client.dog_name}_{client.owner_name}'.replace(' ', '_')
+    filename = re.sub(r'[^a-zA-Z0-9_-]', '_', f'{client.dog_name}_{client.owner_name}')
+    filename = filename.strip('_') or 'dog'
     response = HttpResponse(vcard, content_type='text/vcard; charset=utf-8')
     response['Content-Disposition'] = f'attachment; filename="{filename}.vcf"'
     return response
 
 
 @login_required
+@require_GET
 def contact_sync(request):
     last_import = request.session.get('contact_import_analysis')
     return render(request, 'operations/contact_sync.html', {
@@ -353,6 +377,7 @@ def contact_sync(request):
 
 
 @login_required
+@require_http_methods(['GET', 'POST'])
 def contact_import_preview(request):
     if request.method == 'POST':
         uploaded = request.FILES.get('csv_file')
@@ -387,7 +412,12 @@ def contact_import_selected(request):
         messages.error(request, 'No import session found. Upload a CSV first.')
         return redirect('operations:contact_sync')
 
-    selected_rows = [int(r) for r in request.POST.getlist('selected_rows')]
+    selected_rows = []
+    for raw in request.POST.getlist('selected_rows'):
+        try:
+            selected_rows.append(int(raw))
+        except (TypeError, ValueError):
+            continue
     if not selected_rows:
         messages.warning(request, 'No contacts selected.')
         return redirect('operations:contact_import_preview')

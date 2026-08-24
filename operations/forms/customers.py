@@ -268,7 +268,7 @@ class DogProfileForm(NanpPhoneFormMixin, forms.ModelForm):
         super().__init__(*args, **kwargs)
         self.customer_owner = customer_owner
         if self.instance.pk and not self.customer_owner:
-            self.customer_owner = CustomerOwner.ensure_for_client(self.instance)
+            self.customer_owner = CustomerOwner.for_client(self.instance)
 
     def clean_dog_name(self):
         dog_name = self.cleaned_data['dog_name'].strip()

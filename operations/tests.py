@@ -518,6 +518,18 @@ class DogProfileFormTests(TestCase):
         self.assertEqual(dog.owner_email, 'jane@example.com')
         self.assertTrue(dog.feed_secret)
 
+    def test_form_init_does_not_create_missing_owner(self):
+        dog = ClientProfile.objects.create(
+            dog_name='Orphan',
+            owner_name='Nobody',
+            owner_email='orphan-form@example.com',
+        )
+        form = DogProfileForm(instance=dog)
+        self.assertIsNone(form.customer_owner)
+        self.assertFalse(
+            CustomerOwner.objects.filter(owner_email__iexact='orphan-form@example.com').exists(),
+        )
+
     def test_save_commit_false_still_sets_feed_credentials(self):
         form = DogProfileForm(
             data={
@@ -918,6 +930,135 @@ class CustomerEditTests(TestCase):
             ClientProfile.objects.filter(owner_email='cassia@example.com').count(),
             2,
         )
+
+    def test_edit_view_updates_dogs_in_one_transaction(self):
+        owner = CustomerOwner.objects.create(
+            owner_name='Cassia Lewis',
+            owner_email='cassia-txn@example.com',
+            owner_phone='4165550100',
+        )
+        dog = ClientProfile.objects.create(
+            dog_name='Bo',
+            owner_name=owner.owner_name,
+            owner_email=owner.owner_email,
+            owner_phone=owner.owner_phone,
+        )
+        user = get_user_model().objects.create_user('david-txn', 'd@example.com', 'pass')
+        self.client.force_login(user)
+        response = self.client.post(
+            reverse('operations:customer_edit', args=[owner.pk]),
+            {
+                'owner_name': 'Cassia Lewis',
+                'owner_email': 'cassia-new@example.com',
+                'owner_phone': '519-555-1234',
+            },
+        )
+        self.assertEqual(response.status_code, 302)
+        owner.refresh_from_db()
+        dog.refresh_from_db()
+        self.assertEqual(owner.owner_email, 'cassia-new@example.com')
+        self.assertEqual(dog.owner_email, 'cassia-new@example.com')
+        self.assertEqual(dog.owner_phone, '5195551234')
+
+
+class CustomerViewsHttpTests(TestCase):
+    def setUp(self):
+        self.user = get_user_model().objects.create_user(
+            username='david',
+            password='testpass123',
+        )
+        self.client = DjangoTestClient()
+        self.client.login(username='david', password='testpass123')
+        self.owner = CustomerOwner.objects.create(
+            owner_name='Jane Doe',
+            owner_email='jane-http@example.com',
+            owner_phone='4165550100',
+        )
+        self.dog = ClientProfile.objects.create(
+            dog_name='Kobe',
+            owner_name=self.owner.owner_name,
+            owner_email=self.owner.owner_email,
+        )
+
+    def test_get_only_views_reject_post(self):
+        for url in (
+            reverse('operations:client_list'),
+            reverse('operations:customer_detail', args=[self.owner.pk]),
+            reverse('operations:dog_detail', args=[self.dog.pk]),
+            reverse('operations:dog_vaccinations', args=[self.dog.pk]),
+            reverse('operations:contact_sync'),
+        ):
+            with self.subTest(url=url):
+                response = self.client.post(url)
+                self.assertEqual(response.status_code, 405)
+
+    def test_form_views_reject_put(self):
+        for url in (
+            reverse('operations:client_create'),
+            reverse('operations:customer_edit', args=[self.owner.pk]),
+            reverse('operations:dog_edit', args=[self.dog.pk]),
+            reverse('operations:customer_add_dog', args=[self.owner.pk]),
+            reverse('operations:client_intake'),
+            reverse('operations:contact_import_preview'),
+        ):
+            with self.subTest(url=url):
+                response = self.client.put(url)
+                self.assertEqual(response.status_code, 405)
+
+    def test_get_only_views_still_load(self):
+        response = self.client.get(reverse('operations:client_list'))
+        self.assertEqual(response.status_code, 200)
+        response = self.client.get(
+            reverse('operations:customer_detail', args=[self.owner.pk]),
+        )
+        self.assertEqual(response.status_code, 200)
+
+    def test_dog_detail_get_does_not_create_owner(self):
+        orphan = ClientProfile.objects.create(
+            dog_name='Orphan',
+            owner_name='Nobody',
+            owner_email='orphan-get@example.com',
+        )
+        response = self.client.get(reverse('operations:dog_detail', args=[orphan.pk]))
+        self.assertEqual(response.status_code, 404)
+        self.assertFalse(
+            CustomerOwner.objects.filter(owner_email__iexact='orphan-get@example.com').exists(),
+        )
+        orphan.refresh_from_db()
+        self.assertFalse(orphan.feed_secret)
+
+    def test_invalid_stage_query_is_ignored(self):
+        response = self.client.get(
+            reverse('operations:client_list'),
+            {'stage': 'not-a-stage'},
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context['current_stage'], '')
+        self.assertContains(response, self.dog.dog_name)
+
+    def test_vcard_filename_strips_unsafe_characters(self):
+        self.dog.dog_name = 'Mr. Biscuit/One'
+        self.dog.save(update_fields=['dog_name', 'updated_at'])
+        response = self.client.get(reverse('operations:client_vcard', args=[self.dog.pk]))
+        self.assertEqual(response.status_code, 200)
+        disposition = response['Content-Disposition']
+        self.assertIn('filename="', disposition)
+        filename = disposition.split('filename="')[1].rstrip('"')
+        self.assertTrue(filename.endswith('.vcf'))
+        stem = filename[:-4]
+        self.assertRegex(stem, r'^[A-Za-z0-9_-]+$')
+        self.assertEqual(stem, 'Mr__Biscuit_One_Jane_Doe')
+
+    def test_import_selected_ignores_non_integer_rows(self):
+        session = self.client.session
+        session['contact_import_analysis'] = {'selectable_contacts': []}
+        session.save()
+        response = self.client.post(
+            reverse('operations:contact_import_selected'),
+            {'selected_rows': ['nope', 'x']},
+        )
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, reverse('operations:contact_import_preview'))
 
 
 class ComplianceTests(TestCase):
