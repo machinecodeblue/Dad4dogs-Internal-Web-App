@@ -75,7 +75,7 @@ operations/
 │   └── pwa.py            # manifest.webmanifest, sw.js
 ├── services/             # business logic — prefer adding here over bloating views
 │   ├── timeline_media.py, timeline_visits.py, geolocation.py
-│   ├── addresses.py, feed_slugs.py, feed_access.py
+│   ├── addresses.py, phones.py, feed_slugs.py, feed_access.py
 │   └── visit_email.py, gmail_send.py, …
 ├── pricing.py            # tiered fee engine (scheduling domain)
 ├── capacity.py           # daily dog count guards (scheduling domain)

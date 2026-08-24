@@ -1,4 +1,5 @@
 {% extends "operations/base.html" %}
+{% load phone_tags %}
 {% block title %}Check-In — Dad4dogs{% endblock %}
 {% block content %}
 <div class="card">
@@ -17,16 +18,16 @@
     <p class="muted">
         {{ visit.client.owner_name }}
         {% if visit.client.owner_phone %}
-        · <a href="tel:{{ visit.client.owner_phone }}">{{ visit.client.owner_phone }}</a>
+        · <a href="{{ visit.client.owner_phone|as_tel }}">{{ visit.client.owner_phone|phone_display }}</a>
         {% endif %}
     </p>
     {% if visit.client.vet_clinic_phone or visit.client.emergency_vet_phone %}
     <p style="font-size:0.85rem;margin-top:0.35rem">
         {% if visit.client.vet_clinic_phone %}
-        <a href="tel:{{ visit.client.vet_clinic_phone }}" class="btn btn-outline btn-sm">Vet</a>
+        <a href="{{ visit.client.vet_clinic_phone|as_tel }}" class="btn btn-outline btn-sm">Vet</a>
         {% endif %}
         {% if visit.client.emergency_vet_phone %}
-        <a href="tel:{{ visit.client.emergency_vet_phone }}" class="btn btn-warn btn-sm">Emergency Vet</a>
+        <a href="{{ visit.client.emergency_vet_phone|as_tel }}" class="btn btn-warn btn-sm">Emergency Vet</a>
         {% endif %}
     </p>
     {% endif %}

@@ -7,15 +7,43 @@ from operations.services.addresses import (
     normalize_postal_code,
     normalize_province,
 )
+from operations.services.phones import validate_phone
 
 _PHONE_WIDGET = forms.TextInput(attrs={
-    'placeholder': 'Mobile number',
+    'placeholder': '416-555-0100',
     'autocomplete': 'tel',
     'inputmode': 'tel',
 })
 
 
-class CustomerOwnerForm(forms.ModelForm):
+class NanpPhoneFormMixin:
+    """Normalize owner / emergency / vet phones to 10-digit NANP."""
+
+    def _cleaned_phone(self, field: str, *, required: bool = False):
+        message = 'Primary mobile phone is required.' if required else None
+        try:
+            return validate_phone(
+                self.cleaned_data.get(field),
+                required=required,
+                **({'required_message': message} if message else {}),
+            )
+        except ValueError as exc:
+            raise ValidationError(str(exc)) from exc
+
+    def clean_owner_phone(self):
+        return self._cleaned_phone('owner_phone', required=True)
+
+    def clean_emergency_contact_phone(self):
+        return self._cleaned_phone('emergency_contact_phone')
+
+    def clean_vet_clinic_phone(self):
+        return self._cleaned_phone('vet_clinic_phone')
+
+    def clean_emergency_vet_phone(self):
+        return self._cleaned_phone('emergency_vet_phone')
+
+
+class CustomerOwnerForm(NanpPhoneFormMixin, forms.ModelForm):
     class Meta:
         model = CustomerOwner
         fields = [
@@ -101,12 +129,6 @@ class CustomerOwnerForm(forms.ModelForm):
         ):
             self.initial.setdefault('address_street', instance.home_address)
 
-    def clean_owner_phone(self):
-        phone = (self.cleaned_data.get('owner_phone') or '').strip()
-        if not phone:
-            raise ValidationError('Primary mobile phone is required.')
-        return phone
-
     def clean_address_postal_code(self):
         raw = (self.cleaned_data.get('address_postal_code') or '').strip()
         if not raw:
@@ -125,8 +147,13 @@ class CustomerOwnerForm(forms.ModelForm):
         except ValueError as exc:
             raise ValidationError(str(exc)) from exc
 
+    def clean_authorized_pickup_names(self):
+        raw = self.cleaned_data.get('authorized_pickup_names') or ''
+        names = [line.strip() for line in raw.splitlines() if line.strip()]
+        return '\n'.join(names)
 
-class DogProfileForm(forms.ModelForm):
+
+class DogProfileForm(NanpPhoneFormMixin, forms.ModelForm):
     """Dog only — pipeline, vet contacts, notes. Owner comes from the customer record."""
 
     class Meta:
@@ -179,8 +206,9 @@ class DogProfileForm(forms.ModelForm):
         if not dog_name:
             raise ValidationError('Dog name is required.')
         if self.customer_owner:
-            owner_first = self.customer_owner.owner_name.split()[0].lower()
-            if dog_name.lower() == owner_first:
+            parts = self.customer_owner.owner_name.split()
+            owner_first = parts[0].lower() if parts else ''
+            if owner_first and dog_name.lower() == owner_first:
                 raise ValidationError(
                     'Dog name cannot be the same as the owner\'s first name.',
                 )
@@ -190,7 +218,9 @@ class DogProfileForm(forms.ModelForm):
 
     def clean(self):
         cleaned = super().clean()
-        dog_name = cleaned.get('dog_name')
+        dog_name = (cleaned.get('dog_name') or '').strip()
+        if dog_name:
+            cleaned['dog_name'] = dog_name
         if dog_name and self.customer_owner:
             qs = ClientProfile.objects.filter(
                 owner_email__iexact=self.customer_owner.owner_email,
@@ -204,10 +234,14 @@ class DogProfileForm(forms.ModelForm):
 
     def save(self, commit=True):
         dog = super().save(commit=False)
-        if self.customer_owner:
-            dog.owner_name = self.customer_owner.owner_name
-            dog.owner_email = self.customer_owner.owner_email
-            dog.owner_phone = self.customer_owner.owner_phone
+        owner = self.customer_owner
+        if owner is None and dog.pk:
+            owner = CustomerOwner.ensure_for_client(dog)
+            self.customer_owner = owner
+        if owner:
+            dog.owner_name = owner.owner_name
+            dog.owner_email = owner.owner_email
+            dog.owner_phone = owner.owner_phone
         if commit:
             dog.save()
         return dog
@@ -236,6 +270,10 @@ class VaccinationRecordForm(forms.ModelForm):
             }),
             'notes': forms.Textarea(attrs={'rows': 2, 'placeholder': 'Optional notes'}),
         }
+        labels = {
+            'received_at': 'Date papers received',
+            'expires_at': 'Vaccination expiry date',
+        }
 
     def __init__(self, *args, fixed_client=None, **kwargs):
         super().__init__(*args, **kwargs)
@@ -244,3 +282,14 @@ class VaccinationRecordForm(forms.ModelForm):
         if fixed_client:
             self.fields['client'].initial = fixed_client
             self.fields['client'].widget = forms.HiddenInput()
+
+    def clean(self):
+        cleaned = super().clean()
+        received = cleaned.get('received_at')
+        expires = cleaned.get('expires_at')
+        if received and expires and expires < received:
+            self.add_error(
+                'expires_at',
+                'Expiry date must be on or after the date papers were received.',
+            )
+        return cleaned

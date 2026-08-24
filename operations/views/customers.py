@@ -303,9 +303,14 @@ def add_vaccination(request, pk):
             f'Vaccination record added for {record.client.dog_name}.',
         )
     else:
-        for field, errors in form.errors.items():
-            for error in errors:
-                messages.error(request, f'{field}: {error}')
+        for error in form.non_field_errors():
+            messages.error(request, error)
+        for name, field in form.fields.items():
+            if name not in form.errors:
+                continue
+            label = field.label or name.replace('_', ' ')
+            for error in form.errors[name]:
+                messages.error(request, f'{label}: {error}')
     return redirect('operations:dog_vaccinations', pk=pk)
 
 

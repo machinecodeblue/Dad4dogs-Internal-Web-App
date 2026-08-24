@@ -1,4 +1,5 @@
 {% extends "operations/base.html" %}
+{% load phone_tags %}
 {% block title %}{{ customer_owner.owner_name }} — Dad4dogs{% endblock %}
 {% block content %}
 <div class="card">
@@ -6,7 +7,7 @@
     <p class="muted">
         <a href="mailto:{{ customer_owner.owner_email }}">{{ customer_owner.owner_email }}</a>
         {% if customer_owner.owner_phone %}
-        · <a href="tel:{{ customer_owner.owner_phone }}">{{ customer_owner.owner_phone }}</a>
+        · <a href="{{ customer_owner.owner_phone|as_tel }}">{{ customer_owner.owner_phone|phone_display }}</a>
         {% endif %}
     </p>
     {% if customer_owner.formatted_address %}
@@ -32,7 +33,7 @@
         <span class="muted"> · {{ customer_owner.emergency_contact_relationship }}</span>
         {% endif %}
         {% if customer_owner.emergency_contact_phone %}
-        <br><a href="tel:{{ customer_owner.emergency_contact_phone }}">{{ customer_owner.emergency_contact_phone }}</a>
+        <br><a href="{{ customer_owner.emergency_contact_phone|as_tel }}">{{ customer_owner.emergency_contact_phone|phone_display }}</a>
         {% endif %}
     </p>
     {% else %}

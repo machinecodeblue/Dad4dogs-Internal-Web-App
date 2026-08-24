@@ -3,7 +3,7 @@ from django.core.exceptions import ValidationError
 from django.db import transaction
 
 from operations.capacity import check_visit_capacity
-from operations.forms.customers import CustomerOwnerForm
+from operations.forms.customers import CustomerOwnerForm, _PHONE_WIDGET
 from operations.models import ClientProfile, Visit
 from operations.services.contacts import is_valid_dog_name
 from operations.services.datetime_parse import format_datetime_display, parse_datetime_text
@@ -13,12 +13,6 @@ _DATETIME_WIDGET = forms.TextInput(attrs={
     'autocomplete': 'off',
     'spellcheck': 'false',
     'class': 'datetime-text-input',
-})
-
-_PHONE_WIDGET = forms.TextInput(attrs={
-    'placeholder': 'Mobile number',
-    'autocomplete': 'tel',
-    'inputmode': 'tel',
 })
 
 
@@ -79,7 +73,9 @@ class IntakeWizardForm(CustomerOwnerForm):
 
     def clean(self):
         cleaned = super().clean()
-        dog_name = cleaned.get('dog_name')
+        dog_name = (cleaned.get('dog_name') or '').strip()
+        if dog_name:
+            cleaned['dog_name'] = dog_name
         email = cleaned.get('owner_email')
         if dog_name and email and ClientProfile.objects.filter(
             owner_email__iexact=email,

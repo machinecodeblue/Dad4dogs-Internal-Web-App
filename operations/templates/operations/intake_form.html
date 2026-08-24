@@ -52,6 +52,7 @@
 
         <label for="{{ form.emergency_contact_phone.id_for_label }}">Emergency Contact Phone</label>
         {{ form.emergency_contact_phone }}
+        {% if form.emergency_contact_phone.errors %}<p style="color:var(--danger);font-size:0.85rem">{{ form.emergency_contact_phone.errors.0 }}</p>{% endif %}
 
         <label for="{{ form.emergency_contact_relationship.id_for_label }}">Relationship</label>
         {{ form.emergency_contact_relationship }}
@@ -77,12 +78,14 @@
 
         <label for="{{ form.vet_clinic_phone.id_for_label }}">Clinic phone</label>
         {{ form.vet_clinic_phone }}
+        {% if form.vet_clinic_phone.errors %}<p style="color:var(--danger);font-size:0.85rem">{{ form.vet_clinic_phone.errors.0 }}</p>{% endif %}
 
         <label for="{{ form.emergency_vet_clinic.id_for_label }}">Emergency vet</label>
         {{ form.emergency_vet_clinic }}
 
         <label for="{{ form.emergency_vet_phone.id_for_label }}">Emergency vet phone</label>
         {{ form.emergency_vet_phone }}
+        {% if form.emergency_vet_phone.errors %}<p style="color:var(--danger);font-size:0.85rem">{{ form.emergency_vet_phone.errors.0 }}</p>{% endif %}
 
         <label for="{{ form.vet_care_authorization.id_for_label }}">Care authorization</label>
         {{ form.vet_care_authorization }}

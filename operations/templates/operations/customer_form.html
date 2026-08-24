@@ -45,6 +45,7 @@
 
         <label for="{{ form.emergency_contact_phone.id_for_label }}">Emergency Contact Phone</label>
         {{ form.emergency_contact_phone }}
+        {% if form.emergency_contact_phone.errors %}<p class="muted" style="color:var(--danger)">{{ form.emergency_contact_phone.errors.0 }}</p>{% endif %}
 
         <label for="{{ form.emergency_contact_relationship.id_for_label }}">Relationship to Owner</label>
         {{ form.emergency_contact_relationship }}

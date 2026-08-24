@@ -4,6 +4,7 @@ import re
 from dataclasses import dataclass, field
 
 from operations.models import ClientProfile, CustomerOwner
+from operations.services.phones import normalize_phone, validate_phone
 
 GOOGLE_CSV_FIELDS = [
     'First Name', 'Middle Name', 'Last Name',
@@ -79,13 +80,6 @@ INFORMAL_ONLY_NAMES = {
 
 def normalize_email(email: str) -> str:
     return email.strip().lower()
-
-
-def normalize_phone(phone: str) -> str:
-    digits = re.sub(r'\D', '', phone)
-    if len(digits) == 11 and digits.startswith('1'):
-        digits = digits[1:]
-    return digits
 
 
 def is_valid_dog_name(dog_name: str, owner_name: str) -> bool:
@@ -474,7 +468,8 @@ def build_vcard(client: ClientProfile) -> str:
     if client.owner_email:
         lines.append(f'EMAIL;TYPE=INTERNET:{client.owner_email}')
     if client.owner_phone:
-        lines.append(f'TEL;TYPE=CELL:{client.owner_phone}')
+        from operations.services.phones import e164
+        lines.append(f'TEL;TYPE=CELL:{e164(client.owner_phone)}')
 
     owner = CustomerOwner.objects.filter(owner_email__iexact=client.owner_email).first()
     if owner and (owner.address_street or owner.address_postal_code or owner.formatted_address):
@@ -586,6 +581,10 @@ def import_selected_contacts(
         owner_name = override.get('owner_name') or contact['suggested_owner_name']
         email = contact['suggested_email']
         phone = override.get('owner_phone') or contact['suggested_phone']
+        try:
+            phone = validate_phone(phone)
+        except ValueError:
+            phone = (phone or '').strip()
 
         if not email:
             errors.append(f'Row {row_num}: email required.')

@@ -3,7 +3,7 @@
 **Covers:** owners, dogs, COI, vaccinations, emergency contacts, veterinary contacts, Google Contacts import, pipeline per dog.
 
 **Code packages:** `operations/models/customers.py`, `forms/customers.py`, `views/customers.py`  
-**Services:** `operations/services/contacts.py`, `addresses.py`, `feed_slugs.py`, `feed_access.py`  
+**Services:** `operations/services/contacts.py`, `addresses.py`, `phones.py`, `feed_slugs.py`, `feed_access.py`  
 **Customer feed & social:** see [`feed.md`](feed.md) — private feed (react, comment, share) and public `/feed/share/<token>/` (re-share, download)
 
 ---
@@ -39,7 +39,7 @@ Operational contact data is split between **Owner Data** (`CustomerOwner`) and *
 | `owner_name` | Full name — billing, statements, waivers |
 | `owner_salutation` | Pronouns or salutation (optional) |
 | `owner_email` | Unique database key — iCal invites, statements, booking email |
-| `owner_phone` | **Primary mobile — required on form** — real-time text/PWA alerts |
+| `owner_phone` | **Primary mobile — required on form** — stored as 10-digit NANP (`4165550100`); tap-to-call uses `tel:+1…` |
 | `address_street` | Street number and name (e.g. 191 Grey Street) |
 | `address_unit` | Optional unit / apt / suite |
 | `address_city` | City |
@@ -56,9 +56,9 @@ Display helpers on `CustomerOwner`: `formatted_address` (multiline), `address_on
 | `emergency_contact_name` | Trusted fallback if primary owner unreachable |
 | `emergency_contact_phone` | Direct mobile — tap-to-call on customer/dog detail |
 | `emergency_contact_relationship` | Context for logistics (e.g. "Neighbor with house key") |
-| `authorized_pickup_names` | Multiline text — one name per line; custody authorization |
+| `authorized_pickup_names` | Multiline text — one name per line; custody authorization. `CustomerOwnerForm.clean_authorized_pickup_names()` strips blank lines and surrounding spaces before save. |
 
-Property: `authorized_pickup_list` — parsed non-empty lines for templates.
+Property: `authorized_pickup_list` — parsed non-empty stripped lines for templates.
 
 ### 2.3 Medical & Veterinary Contact (`ClientProfile` — per dog)
 
@@ -99,6 +99,7 @@ Method: `advance_pipeline()` on dog screen.
 
 ### VaccinationRecord
 - `expires_at` is **required**
+- Form: `expires_at` must be on or after `received_at` (`VaccinationRecordForm.clean()`) — clerical swap of the two dates is rejected before save
 - Current vax = `validated=True` AND `expires_at >= today` (`has_current_vaccination`) — this is the standard-stay gate
 - Latest validated expiry = `Max(expires_at)` among `validated=True` records (`current_vaccination_expires_at`)
 - `vaccination_status`: `ok` | `expiring` | `expired` | `missing`
@@ -151,10 +152,10 @@ Method: `advance_pipeline()` on dog screen.
 
 | Form | File | Purpose |
 |------|------|---------|
-| `CustomerOwnerForm` | `forms/customers.py` | Primary + **structured address** + emergency + pickup; **phone required**; postal normalized/validated |
-| `DogProfileForm` | `forms/customers.py` | Dog name, pipeline, **vet contacts**, handling notes |
-| `VaccinationRecordForm` | `forms/customers.py` | Per dog; `fixed_client` hides dog selector |
-| `IntakeWizardForm` | `forms/intake.py` | Owner + dog + vet + optional M&G datetimes; `save()` returns `(owner, dog, visit)` |
+| `CustomerOwnerForm` | `forms/customers.py` | Primary + **structured address** + emergency + pickup; **phone required** and NANP-validated; postal normalized; pickup names stripped of blank lines |
+| `DogProfileForm` | `forms/customers.py` | Dog name, pipeline, **vet contacts**, handling notes; vet phones NANP-validated. `clean_dog_name()` treats a blank/whitespace owner name as no first name (no `IndexError`). Duplicate check uses stripped `dog_name__iexact` so padded names cannot bypass uniqueness. `save()` copies owner name/email/phone onto the dog; if `customer_owner` was omitted on edit, `ensure_for_client()` resolves it so those fields are never blanked. |
+| `VaccinationRecordForm` | `forms/customers.py` | Per dog; `fixed_client` hides dog selector; `expires_at >= received_at` |
+| `IntakeWizardForm` | `forms/intake.py` | Owner + dog + vet + optional M&G datetimes; `save()` returns `(owner, dog, visit)`; inherits owner phone rules + vet phones |
 
 ---
 
@@ -186,6 +187,10 @@ Method: `advance_pipeline()` on dog screen.
 
 ### Address helpers (`addresses.py`)
 `format_address`, `normalize_postal_code`, `normalize_province`, `parse_legacy_address`, `maps_search_url` — Canadian postal + province only.
+
+### Phone helpers (`phones.py`)
+`normalize_phone` (digits, strip leading `1`), `validate_phone` (require 10-digit NANP; area/exchange cannot start with 0 or 1), `format_phone` (`(416) 555-0100`), `tel_href` (`tel:+14165550100`), `e164`.  
+`NanpPhoneFormMixin` applies this to `owner_phone` (required), `emergency_contact_phone`, `vet_clinic_phone`, `emergency_vet_phone`. Empty optional phones stay empty. Import still uses `normalize_phone` for duplicate matching; stored import phones are validated when they look like NANP.
 
 ---
 

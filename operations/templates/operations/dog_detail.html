@@ -1,4 +1,5 @@
 {% extends "operations/base.html" %}
+{% load phone_tags %}
 {% block title %}{{ dog.dog_name }} — Dad4dogs{% endblock %}
 {% block content %}
 <div class="card">
@@ -23,7 +24,7 @@
     <p>
         <strong>{{ customer_owner.owner_name }}</strong>
         {% if customer_owner.owner_phone %}
-        · <a href="tel:{{ customer_owner.owner_phone }}">{{ customer_owner.owner_phone }}</a>
+        · <a href="{{ customer_owner.owner_phone|as_tel }}">{{ customer_owner.owner_phone|phone_display }}</a>
         {% endif %}
     </p>
     {% if customer_owner.formatted_address %}
@@ -37,7 +38,7 @@
         Emergency: <strong>{{ customer_owner.emergency_contact_name|default:"—" }}</strong>
         {% if customer_owner.emergency_contact_relationship %} ({{ customer_owner.emergency_contact_relationship }}){% endif %}
         {% if customer_owner.emergency_contact_phone %}
-        · <a href="tel:{{ customer_owner.emergency_contact_phone }}">{{ customer_owner.emergency_contact_phone }}</a>
+        · <a href="{{ customer_owner.emergency_contact_phone|as_tel }}">{{ customer_owner.emergency_contact_phone|phone_display }}</a>
         {% endif %}
     </p>
     {% endif %}
@@ -53,12 +54,12 @@
     <p><strong>{{ dog.vet_clinic_name }}</strong>{% if dog.vet_name %} · {{ dog.vet_name }}{% endif %}</p>
     {% endif %}
     {% if dog.vet_clinic_phone %}
-    <p><a href="tel:{{ dog.vet_clinic_phone }}" class="btn btn-primary btn-sm">Call Clinic — {{ dog.vet_clinic_phone }}</a></p>
+    <p><a href="{{ dog.vet_clinic_phone|as_tel }}" class="btn btn-primary btn-sm">Call Clinic — {{ dog.vet_clinic_phone|phone_display }}</a></p>
     {% endif %}
     {% if dog.emergency_vet_clinic or dog.emergency_vet_phone %}
     <p class="muted" style="margin-top:0.75rem">After hours: <strong>{{ dog.emergency_vet_clinic|default:"Emergency vet" }}</strong></p>
     {% if dog.emergency_vet_phone %}
-    <p><a href="tel:{{ dog.emergency_vet_phone }}" class="btn btn-warn btn-sm">Call Emergency Vet — {{ dog.emergency_vet_phone }}</a></p>
+    <p><a href="{{ dog.emergency_vet_phone|as_tel }}" class="btn btn-warn btn-sm">Call Emergency Vet — {{ dog.emergency_vet_phone|phone_display }}</a></p>
     {% endif %}
     {% endif %}
     {% if dog.vet_care_authorization %}

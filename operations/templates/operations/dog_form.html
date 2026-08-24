@@ -41,12 +41,14 @@
 
         <label for="{{ form.vet_clinic_phone.id_for_label }}">Clinic Phone</label>
         {{ form.vet_clinic_phone }}
+        {% if form.vet_clinic_phone.errors %}<p class="muted" style="color:var(--danger)">{{ form.vet_clinic_phone.errors.0 }}</p>{% endif %}
 
         <label for="{{ form.emergency_vet_clinic.id_for_label }}">Emergency Vet Clinic (after hours)</label>
         {{ form.emergency_vet_clinic }}
 
         <label for="{{ form.emergency_vet_phone.id_for_label }}">Emergency Vet Phone</label>
         {{ form.emergency_vet_phone }}
+        {% if form.emergency_vet_phone.errors %}<p class="muted" style="color:var(--danger)">{{ form.emergency_vet_phone.errors.0 }}</p>{% endif %}
 
         <label for="{{ form.vet_care_authorization.id_for_label }}">Veterinary Care Authorization</label>
         {{ form.vet_care_authorization }}
