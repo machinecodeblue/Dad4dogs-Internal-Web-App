@@ -153,8 +153,8 @@ Method: `advance_pipeline()` on dog screen.
 
 | Form | File | Purpose |
 |------|------|---------|
-| `CustomerOwnerForm` | `forms/customers.py` | Primary + **structured address** (all-or-nothing except unit) + emergency + pickup; **phone required** and NANP-validated; email lowercased and unique; pickup names stripped of blank lines |
-| `DogProfileForm` | `forms/customers.py` | Dog name via `is_valid_dog_name()`; duplicate `dog_name` error is on that field; vet phones NANP-validated. `save()` copies owner name/email/phone (resolves owner on edit if omitted) and calls `ensure_feed_credentials()`. |
+| `CustomerOwnerForm` | `forms/customers.py` | Primary + **structured address** (all-or-nothing except unit) + emergency + pickup; **phone required** and NANP-validated; email lowercased and unique; pickup names stripped of blank lines. On edit, empty structured fields are prefilled from `parse_legacy_address(home_address)` — never dump a multiline blob into the street input. Empty province is `''`; aliases (`Ontario`) coerce to `ON`. |
+| `DogProfileForm` | `forms/customers.py` | Dog name via `is_valid_dog_name()`; duplicate `dog_name` error is on that field; vet phones NANP-validated. `save()` copies owner name/email/phone (resolves owner on edit if omitted) and always runs `ensure_feed_credentials(save=False)` so `commit=False` callers still get a secret/slug on the instance. |
 | `VaccinationRecordForm` | `forms/customers.py` | `fixed_client` pins the dog (POST cannot swap); `expires_at >= received_at`; `papers_received` checkbox `required=False` (unchecked = False); past expiry still saves with a warning |
 | `IntakeWizardForm` | `forms/intake.py` | Owner + dog + vet + optional M&G datetimes; `save()` returns `(owner, dog, visit)`; inherits owner phone rules + vet phones |
 

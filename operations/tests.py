@@ -163,6 +163,29 @@ class CustomerOwnerFormTests(TestCase):
         self.assertIn('address_city', form.errors)
         self.assertIn('address_province', form.errors)
 
+    def test_empty_province_is_valid_when_address_is_blank(self):
+        form = CustomerOwnerForm(data={
+            'owner_name': 'Jane Doe',
+            'owner_email': 'jane-noprov@example.com',
+            'owner_phone': '416-555-0100',
+            'address_province': '',
+        })
+        self.assertTrue(form.is_valid(), form.errors)
+        self.assertEqual(form.cleaned_data['address_province'], '')
+
+    def test_province_alias_coerces_to_code(self):
+        form = CustomerOwnerForm(data={
+            'owner_name': 'Jane Doe',
+            'owner_email': 'jane-ont@example.com',
+            'owner_phone': '416-555-0100',
+            'address_street': '191 Grey Street',
+            'address_city': 'London',
+            'address_province': 'Ontario',
+            'address_postal_code': 'N6B 1G2',
+        })
+        self.assertTrue(form.is_valid(), form.errors)
+        self.assertEqual(form.cleaned_data['address_province'], 'ON')
+
     def test_primary_phone_required(self):
         form = CustomerOwnerForm(data={
             'owner_name': 'Jane Doe',
@@ -263,6 +286,21 @@ class AddressHandlingTests(TestCase):
             ),
             '191 Grey Street, Unit 2B\nLondon, ON N6B 1G2',
         )
+
+    def test_edit_form_splits_legacy_home_address(self):
+        owner = CustomerOwner.objects.create(
+            owner_name='Jane Doe',
+            owner_email='jane-legacy-form@example.com',
+            owner_phone='4165550100',
+            home_address='191 Grey Street Unit 2\nLondon, ON N6B 1G2',
+        )
+        form = CustomerOwnerForm(instance=owner)
+        self.assertEqual(form.initial.get('address_street'), '191 Grey Street')
+        self.assertEqual(form.initial.get('address_unit'), '2')
+        self.assertEqual(form.initial.get('address_city'), 'London')
+        self.assertEqual(form.initial.get('address_province'), 'ON')
+        self.assertEqual(form.initial.get('address_postal_code'), 'N6B 1G2')
+        self.assertNotIn('\n', form.initial.get('address_street', ''))
 
     def test_legacy_home_address_still_displays(self):
         owner = CustomerOwner.objects.create(
@@ -479,6 +517,24 @@ class DogProfileFormTests(TestCase):
         self.assertEqual(dog.dog_name, 'Kobe')
         self.assertEqual(dog.owner_email, 'jane@example.com')
         self.assertTrue(dog.feed_secret)
+
+    def test_save_commit_false_still_sets_feed_credentials(self):
+        form = DogProfileForm(
+            data={
+                'dog_name': 'Kobe',
+                'pipeline_stage': ClientProfile.PipelineStage.INQUIRY,
+                'notes': '',
+            },
+            customer_owner=self.owner,
+        )
+        self.assertTrue(form.is_valid(), form.errors)
+        dog = form.save(commit=False)
+        self.assertIsNone(dog.pk)
+        self.assertTrue(dog.feed_secret)
+        self.assertTrue(dog.feed_dog_slug)
+        dog.save()
+        stored = ClientProfile.objects.get(pk=dog.pk)
+        self.assertEqual(stored.feed_secret, dog.feed_secret)
 
     def test_edit_without_customer_owner_copies_denormalized_fields(self):
         dog = ClientProfile.objects.create(

@@ -6,6 +6,7 @@ from operations.services.addresses import (
     CANADIAN_PROVINCES,
     normalize_postal_code,
     normalize_province,
+    parse_legacy_address,
 )
 from operations.services.contacts import is_valid_dog_name, normalize_email
 from operations.services.phones import validate_phone
@@ -15,6 +16,27 @@ _PHONE_WIDGET = forms.TextInput(attrs={
     'autocomplete': 'tel',
     'inputmode': 'tel',
 })
+
+
+class _ProvinceChoiceField(forms.ChoiceField):
+    """Select of province codes; empty stays '', aliases like 'Ontario' become 'ON'."""
+
+    def valid_value(self, value):
+        if value in self.empty_values:
+            return True
+        try:
+            return bool(normalize_province(str(value)))
+        except ValueError:
+            return False
+
+    def clean(self, value):
+        value = super().clean(value)
+        if value in self.empty_values or value is None:
+            return ''
+        try:
+            return normalize_province(str(value))
+        except ValueError as exc:
+            raise ValidationError(str(exc)) from exc
 
 
 class NanpPhoneFormMixin:
@@ -119,16 +141,25 @@ class CustomerOwnerForm(NanpPhoneFormMixin, forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields['address_province'].required = False
-        self.fields['address_province'].choices = [('', 'Province')] + list(CANADIAN_PROVINCES)
+        self.fields['address_province'] = _ProvinceChoiceField(
+            required=False,
+            choices=[('', 'Province')] + list(CANADIAN_PROVINCES),
+            widget=forms.Select(attrs={'autocomplete': 'address-level1'}),
+            label='Province',
+        )
         instance = getattr(self, 'instance', None)
-        if (
-            instance
-            and instance.pk
-            and not instance.address_street
-            and instance.home_address
-        ):
-            self.initial.setdefault('address_street', instance.home_address)
+        if instance and instance.pk and instance.home_address:
+            parsed = parse_legacy_address(instance.home_address)
+            legacy_to_field = {
+                'address_street': parsed['street'],
+                'address_unit': parsed['unit'],
+                'address_city': parsed['city'],
+                'address_province': parsed['province'],
+                'address_postal_code': parsed['postal'],
+            }
+            for field, value in legacy_to_field.items():
+                if value and not getattr(instance, field) and not self.initial.get(field):
+                    self.initial[field] = value
 
     def clean_owner_email(self):
         email = normalize_email(self.cleaned_data.get('owner_email') or '')
@@ -169,7 +200,7 @@ class CustomerOwnerForm(NanpPhoneFormMixin, forms.ModelForm):
         street = (cleaned.get('address_street') or '').strip()
         unit = (cleaned.get('address_unit') or '').strip()
         city = (cleaned.get('address_city') or '').strip()
-        province = (cleaned.get('address_province') or '').strip()
+        province = cleaned.get('address_province') or ''
         postal = (cleaned.get('address_postal_code') or '').strip()
         cleaned['address_street'] = street
         cleaned['address_unit'] = unit
@@ -279,9 +310,9 @@ class DogProfileForm(NanpPhoneFormMixin, forms.ModelForm):
             dog.owner_name = owner.owner_name
             dog.owner_email = owner.owner_email
             dog.owner_phone = owner.owner_phone
+        dog.ensure_feed_credentials(save=False)
         if commit:
             dog.save()
-            dog.ensure_feed_credentials()
         return dog
 
 
