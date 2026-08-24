@@ -244,6 +244,12 @@ Tests: `PricingEngineTests`, `VisitCheckOutTests`
 
 Counts distinct `client_id` with visits overlapping the calendar day (`scheduled`, `checked_in`, and `completed`). Filter uses `status`, `scheduled_start`, `scheduled_end` — keep the `Visit.Meta` indexes on those fields.
 
+`count_dogs_on_day` uses `Count('client_id', distinct=True)` in SQL — do not `values_list` into a Python set. If `include_client_id` is set, the same aggregate checks whether that dog is already in the day (`Count` + `filter=Q(client_id=…)`) and adds 1 only when missing.
+
+Day windows use Django’s `timezone.get_current_timezone()` (`America/Toronto`) via `_day_bounds` — **not** `datetime.now().astimezone()` (that is the host OS zone; a UTC server would shift overnight counts). `check_visit_capacity` walks `_capacity_span_dates()` via `_as_local()`: `timezone.localtime()` after `make_aware` if naive. Do **not** use `visit.scheduled_start.tzinfo` / `.astimezone(tz)` — naive datetimes have `tzinfo is None` and crash. If `scheduled_end` is **exactly local midnight**, that instant belongs to the **prior** day only — SQL is `scheduled_end > day_start`, so `2026-04-12 00:00` does not occupy 12 April.
+
+`check_visit_capacity` loads overlapping visits for **`[start_day, end_day]` in one query** (`_daily_dog_counts`), then counts distinct `client_id` per day in memory. Do **not** call `assess_capacity()` once per day (N+1 on a 14-day stay). Dashboard/check-in still use `assess_capacity` for a **single** day.
+
 Booking forms call `check_visit_capacity` in `VisitForm.clean()` (not in `save_all()`), so a full day is a form error and no `VisitSeries` / visits are created.
 
 Capacity is a **booking** rule, not a day-of-ops lock:
@@ -258,7 +264,7 @@ Capacity is a **booking** rule, not a day-of-ops lock:
 
 Do not call `full_clean()` from `check_in()` / `check_out()`. Do not pass `skip_capacity=True` from views, clone, or admin — only `VisitForm.save_all()`. If you change scheduled times outside the form, `save()` without `skip_capacity` so capacity still runs.
 
-**Tests:** `VisitCapacitySaveTests` in `operations/tests.py`.
+**Tests:** `VisitCapacitySaveTests`, `CapacityTimezoneTests` in `operations/tests.py`.
 
 ---
 

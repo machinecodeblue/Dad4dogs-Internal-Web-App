@@ -40,7 +40,12 @@ from operations.services.timeline_media import (
     forward_timeline_event,
     log_moment_for_visits,
 )
-from operations.capacity import INSURANCE_CEILING
+from operations.capacity import (
+    INSURANCE_CEILING,
+    _capacity_span_dates,
+    check_visit_capacity,
+    count_dogs_on_day,
+)
 from operations.pricing import calculate_fee, is_overnight_segment
 from operations.services.agenda import build_month_calendar, visits_for_day, visit_counts_between
 from operations.services.visit_repeat import (
@@ -1355,6 +1360,148 @@ class VisitCapacitySaveTests(TestCase):
         visit.scheduled_end = datetime(2026, 3, 10, 18, 0, tzinfo=TZ)
         with self.assertRaises(ValidationError):
             visit.save(update_fields=['scheduled_end', 'updated_at'])
+
+
+class CapacityTimezoneTests(TestCase):
+    def setUp(self):
+        self.dog = ClientProfile.objects.create(
+            dog_name='Rex',
+            owner_name='Jane Doe',
+            owner_email='jane@example.com',
+        )
+
+    def test_day_bounds_use_django_timezone(self):
+        from operations.capacity import _day_bounds
+
+        start, end = _day_bounds(date(2026, 4, 10))
+        self.assertEqual(getattr(start.tzinfo, 'key', str(start.tzinfo)), 'America/Toronto')
+        self.assertEqual(end - start, timedelta(days=1))
+
+    def test_count_include_client_when_absent(self):
+        self.assertEqual(
+            count_dogs_on_day(date(2026, 5, 1), include_client_id=self.dog.pk),
+            1,
+        )
+
+    def test_count_include_client_does_not_double_count(self):
+        Visit.objects.create(
+            client=self.dog,
+            scheduled_start=datetime(2026, 5, 1, 9, 0, tzinfo=TZ),
+            scheduled_end=datetime(2026, 5, 1, 17, 0, tzinfo=TZ),
+        )
+        self.assertEqual(
+            count_dogs_on_day(date(2026, 5, 1), include_client_id=self.dog.pk),
+            1,
+        )
+
+    def test_overnight_counts_on_both_local_calendar_days(self):
+        Visit.objects.create(
+            client=self.dog,
+            scheduled_start=datetime(2026, 4, 10, 20, 0, tzinfo=TZ),
+            scheduled_end=datetime(2026, 4, 11, 8, 0, tzinfo=TZ),
+        )
+        self.assertEqual(count_dogs_on_day(date(2026, 4, 10)), 1)
+        self.assertEqual(count_dogs_on_day(date(2026, 4, 11)), 1)
+        self.assertEqual(count_dogs_on_day(date(2026, 4, 9)), 0)
+
+    def test_naive_datetimes_do_not_crash_capacity(self):
+        visit = Visit(
+            client=self.dog,
+            scheduled_start=datetime(2026, 4, 11, 9, 0),
+            scheduled_end=datetime(2026, 4, 11, 17, 0),
+        )
+        start_day, end_day = _capacity_span_dates(visit)
+        self.assertEqual(start_day, date(2026, 4, 11))
+        self.assertEqual(end_day, date(2026, 4, 11))
+        result = check_visit_capacity(visit)
+        self.assertEqual(result['status'], 'ok')
+
+    def test_check_visit_capacity_uses_local_span(self):
+        visit = Visit.objects.create(
+            client=self.dog,
+            scheduled_start=datetime(2026, 4, 10, 20, 0, tzinfo=TZ),
+            scheduled_end=datetime(2026, 4, 11, 8, 0, tzinfo=TZ),
+        )
+        result = check_visit_capacity(visit)
+        self.assertEqual(result['status'], 'ok')
+
+    def test_exact_midnight_end_belongs_to_prior_day(self):
+        visit = Visit(
+            client=self.dog,
+            scheduled_start=datetime(2026, 4, 11, 9, 0, tzinfo=TZ),
+            scheduled_end=datetime(2026, 4, 12, 0, 0, tzinfo=TZ),
+        )
+        start_day, end_day = _capacity_span_dates(visit)
+        self.assertEqual(start_day, date(2026, 4, 11))
+        self.assertEqual(end_day, date(2026, 4, 11))
+
+    def test_end_just_after_midnight_includes_next_day(self):
+        visit = Visit(
+            client=self.dog,
+            scheduled_start=datetime(2026, 4, 11, 9, 0, tzinfo=TZ),
+            scheduled_end=datetime(2026, 4, 12, 0, 1, tzinfo=TZ),
+        )
+        _, end_day = _capacity_span_dates(visit)
+        self.assertEqual(end_day, date(2026, 4, 12))
+
+    def test_midnight_end_not_blocked_by_following_day_ceiling(self):
+        now = timezone.now()
+        extra = []
+        for i in range(INSURANCE_CEILING):
+            dog = ClientProfile.objects.create(
+                dog_name=f'Cap{i}',
+                owner_name=f'Owner{i}',
+                owner_email=f'midnight{i}@example.com',
+            )
+            extra.append(Visit(
+                client=dog,
+                scheduled_start=datetime(2026, 4, 12, 9, 0, tzinfo=TZ),
+                scheduled_end=datetime(2026, 4, 12, 17, 0, tzinfo=TZ),
+                created_at=now,
+                updated_at=now,
+            ))
+        Visit.objects.bulk_create(extra)
+        probe = Visit(
+            client=self.dog,
+            scheduled_start=datetime(2026, 4, 11, 9, 0, tzinfo=TZ),
+            scheduled_end=datetime(2026, 4, 12, 0, 0, tzinfo=TZ),
+        )
+        result = check_visit_capacity(probe)
+        self.assertNotEqual(result['status'], 'blocked')
+
+    def test_multi_day_capacity_uses_one_query(self):
+        visit = Visit(
+            client=self.dog,
+            scheduled_start=datetime(2026, 4, 1, 9, 0, tzinfo=TZ),
+            scheduled_end=datetime(2026, 4, 15, 17, 0, tzinfo=TZ),
+        )
+        with self.assertNumQueries(1):
+            check_visit_capacity(visit)
+
+    def test_multi_day_blocks_when_one_day_is_full(self):
+        now = timezone.now()
+        extra = []
+        for i in range(INSURANCE_CEILING):
+            dog = ClientProfile.objects.create(
+                dog_name=f'Span{i}',
+                owner_name=f'Owner{i}',
+                owner_email=f'span{i}@example.com',
+            )
+            extra.append(Visit(
+                client=dog,
+                scheduled_start=datetime(2026, 4, 10, 9, 0, tzinfo=TZ),
+                scheduled_end=datetime(2026, 4, 10, 17, 0, tzinfo=TZ),
+                created_at=now,
+                updated_at=now,
+            ))
+        Visit.objects.bulk_create(extra)
+        probe = Visit(
+            client=self.dog,
+            scheduled_start=datetime(2026, 4, 1, 9, 0, tzinfo=TZ),
+            scheduled_end=datetime(2026, 4, 15, 17, 0, tzinfo=TZ),
+        )
+        result = check_visit_capacity(probe)
+        self.assertEqual(result['status'], 'blocked')
 
 
 class VisitIndexTests(TestCase):
