@@ -122,8 +122,8 @@ Without it, emails omit the absolute URL; dog detail still shows full URL when b
 - Checkout removes dog from forward list
 
 ### Capture UX (`visit_timeline.html`)
-- Camera photo, gallery photo, or gallery video
-- GPS via browser geolocation; fallback to `BUSINESS_FALLBACK_LATITUDE/LONGITUDE` from settings
+- Camera photo, gallery photo, or gallery video — **one** source. `TimelineMomentForm.clean()` rejects camera+gallery together (do not `or` them so camera silently wins) and photo+video.
+- GPS via browser geolocation; fallback to `BUSINESS_FALLBACK_LATITUDE/LONGITUDE` from settings. Hidden lat/long may be blank (fallback). Non-empty values must parse as decimals in range (lat −90…90, lng −180…180); both set or both blank. `TimelineMomentForm.clean()` rejects junk so `resolve_timeline_coordinates` / `Decimal` never see invalid strings.
 - Multi-dog checkbox when multiple dogs checked in
 - Forward form per event → other checked-in dogs
 

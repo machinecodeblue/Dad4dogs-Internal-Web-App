@@ -1,14 +1,19 @@
+from decimal import Decimal, InvalidOperation
+
 from django import forms
 from django.core.exceptions import ValidationError
 from django.db import transaction
+from django.utils import timezone
 
 from operations.capacity import check_visit_capacity
 from operations.models import ClientProfile, Visit, VisitSeries
 from operations.services.datetime_parse import format_datetime_display, format_datetime_input, parse_datetime_text
 from operations.services.visit_repeat import (
     END_AFTER,
+    END_ON,
     FREQUENCY_CHOICES,
     FREQUENCY_NONE,
+    MAX_OCCURRENCES,
     generate_repeat_occurrences,
     parse_repeat_ends,
 )
@@ -124,6 +129,7 @@ class VisitForm(forms.Form):
 
         if scheduled_end <= scheduled_start:
             self.add_error('end_at', 'End must be after the start.')
+            return cleaned
 
         cleaned['scheduled_start'] = scheduled_start
         cleaned['scheduled_end'] = scheduled_end
@@ -139,26 +145,76 @@ class VisitForm(forms.Form):
                     cleaned['repeat_until_dt'] = until_dt
                 except ValueError as exc:
                     self.add_error('repeat_ends', str(exc))
+                    return cleaned
 
+        cleaned['occurrences'] = self._build_occurrences(cleaned)
+        if self._occurrence_limit_exceeded(cleaned):
+            return cleaned
+        self._validate_occurrence_capacity(cleaned['occurrences'])
         return cleaned
 
-    def _occurrences(self) -> list[tuple]:
+    def _build_occurrences(self, cleaned) -> list[tuple]:
+        start = cleaned['scheduled_start']
+        end = cleaned['scheduled_end']
         if self.instance:
-            return [(
-                self.cleaned_data['scheduled_start'],
-                self.cleaned_data['scheduled_end'],
-            )]
-        frequency = self.cleaned_data.get('repeat_frequency') or FREQUENCY_NONE
-        end_type = self.cleaned_data.get('repeat_end_type') or END_AFTER
+            return [(start, end)]
+        frequency = cleaned.get('repeat_frequency') or FREQUENCY_NONE
         return generate_repeat_occurrences(
-            self.cleaned_data['scheduled_start'],
-            self.cleaned_data['scheduled_end'],
+            start,
+            end,
             frequency=frequency,
-            interval=self.cleaned_data.get('repeat_interval') or 1,
-            end_type=end_type,
-            count=self.cleaned_data.get('repeat_count') or 1,
-            until=self.cleaned_data.get('repeat_until_dt'),
+            interval=cleaned.get('repeat_interval') or 1,
+            end_type=cleaned.get('repeat_end_type') or END_AFTER,
+            count=cleaned.get('repeat_count') or 1,
+            until=cleaned.get('repeat_until_dt'),
         )
+
+    def _occurrence_limit_exceeded(self, cleaned) -> bool:
+        occurrences = cleaned['occurrences']
+        frequency = cleaned.get('repeat_frequency') or FREQUENCY_NONE
+        if frequency == FREQUENCY_NONE:
+            return False
+        if len(occurrences) > MAX_OCCURRENCES:
+            self.add_error(
+                'repeat_ends',
+                f'Repeat is limited to {MAX_OCCURRENCES} visits.',
+            )
+            return True
+        until_dt = cleaned.get('repeat_until_dt')
+        if (
+            cleaned.get('repeat_end_type') == END_ON
+            and until_dt is not None
+            and len(occurrences) >= MAX_OCCURRENCES
+        ):
+            last_date = timezone.localtime(occurrences[-1][0]).date()
+            until_date = timezone.localtime(until_dt).date()
+            if until_date > last_date:
+                self.add_error(
+                    'repeat_ends',
+                    f'Repeat is limited to {MAX_OCCURRENCES} visits. '
+                    f'Choose a closer end date or a number from 1 to {MAX_OCCURRENCES}.',
+                )
+                return True
+        return False
+
+    def _validate_occurrence_capacity(self, occurrences: list[tuple]) -> None:
+        if not self.client:
+            self.add_error(None, 'Dog is required to schedule a visit.')
+            return
+        for occ_start, occ_end in occurrences:
+            probe = Visit(
+                pk=getattr(self.instance, 'pk', None),
+                client=self.client,
+                scheduled_start=occ_start,
+                scheduled_end=occ_end,
+            )
+            capacity = check_visit_capacity(probe)
+            if capacity['status'] == 'blocked':
+                self.add_error(
+                    None,
+                    f'Cannot schedule {format_datetime_display(occ_start)}: {capacity["message"]}',
+                )
+                return
 
     def save(self) -> Visit:
         created = self.save_all()
@@ -169,12 +225,12 @@ class VisitForm(forms.Form):
         if not self.client:
             raise ValidationError('Dog is required to schedule a visit.')
         notes = self.cleaned_data.get('notes', '')
-        occurrences = self._occurrences()
+        occurrences = self.cleaned_data['occurrences']
         created: list[Visit] = []
         series = None
+        frequency = self.cleaned_data.get('repeat_frequency') or FREQUENCY_NONE
 
-        if not self.instance and len(occurrences) > 1:
-            frequency = self.cleaned_data.get('repeat_frequency') or FREQUENCY_NONE
+        if not self.instance and frequency != FREQUENCY_NONE:
             end_type = self.cleaned_data.get('repeat_end_type') or END_AFTER
             series = VisitSeries.objects.create(
                 client=self.client,
@@ -194,6 +250,10 @@ class VisitForm(forms.Form):
                 visit.scheduled_start = occ_start
                 visit.scheduled_end = occ_end
                 visit.notes = notes
+                visit.save(
+                    skip_capacity=True,
+                    update_fields=['scheduled_start', 'scheduled_end', 'notes', 'updated_at'],
+                )
             else:
                 visit = Visit(
                     client=self.client,
@@ -203,12 +263,7 @@ class VisitForm(forms.Form):
                     series=series,
                     series_position=index if series else None,
                 )
-            capacity = check_visit_capacity(visit)
-            if capacity['status'] == 'blocked':
-                raise ValidationError(
-                    f'Cannot schedule {format_datetime_display(occ_start)}: {capacity["message"]}',
-                )
-            visit.save()
+                visit.save(skip_capacity=True)
             created.append(visit)
 
         return created
@@ -268,8 +323,12 @@ class TimelineMomentForm(forms.Form):
 
     def clean(self):
         cleaned = super().clean()
-        photo = cleaned.get('photo_camera') or cleaned.get('photo_gallery')
+        camera = cleaned.get('photo_camera')
+        gallery = cleaned.get('photo_gallery')
         video = cleaned.get('video')
+        if camera and gallery:
+            raise ValidationError('Choose a camera photo or a gallery photo, not both.')
+        photo = camera or gallery
         media_count = sum(bool(x) for x in (photo, video))
         if media_count > 1:
             raise ValidationError('Submit one photo or one video.')
@@ -277,7 +336,35 @@ class TimelineMomentForm(forms.Form):
             raise ValidationError('Capture or choose a photo, or choose a video from your gallery.')
         cleaned['uploaded_file'] = photo or video
         cleaned['media_kind'] = 'photo' if photo else 'video'
+        self._clean_coordinates(cleaned)
         return cleaned
+
+    def _clean_coordinates(self, cleaned) -> None:
+        lat = self._parse_coordinate_field(cleaned, 'latitude', Decimal('-90'), Decimal('90'))
+        lng = self._parse_coordinate_field(cleaned, 'longitude', Decimal('-180'), Decimal('180'))
+        if (lat is None) ^ (lng is None):
+            if 'latitude' not in self.errors and 'longitude' not in self.errors:
+                missing = 'longitude' if lat is not None else 'latitude'
+                self.add_error(
+                    missing,
+                    'Latitude and longitude must both be set, or both left blank.',
+                )
+
+    def _parse_coordinate_field(self, cleaned, field, minimum, maximum) -> Decimal | None:
+        raw = (cleaned.get(field) or '').strip()
+        if not raw:
+            cleaned[field] = ''
+            return None
+        try:
+            coord = Decimal(raw)
+        except (InvalidOperation, ValueError):
+            self.add_error(field, 'Enter a valid coordinate.')
+            return None
+        if coord < minimum or coord > maximum:
+            self.add_error(field, 'Enter a valid coordinate.')
+            return None
+        cleaned[field] = coord
+        return coord
 
 
 class TimelineForwardForm(forms.Form):

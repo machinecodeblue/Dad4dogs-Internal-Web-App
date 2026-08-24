@@ -46,6 +46,7 @@ from operations.services.visit_repeat import (
     END_AFTER,
     END_ON,
     FREQUENCY_DAILY,
+    MAX_OCCURRENCES,
     generate_repeat_occurrences,
     parse_repeat_ends,
 )
@@ -590,6 +591,99 @@ class VisitRepeatTests(TestCase):
         self.assertEqual(visits[0].series, series)
         self.assertEqual(visits[0].series_position, 1)
 
+    def test_single_occurrence_repeat_still_creates_series(self):
+        dog = ClientProfile.objects.create(
+            dog_name='Winston',
+            owner_name='Alexa Green',
+            owner_email='alexagreen4@outlook.com',
+        )
+        form = VisitForm(
+            data={
+                'start_at': 'April 10, 2026 9 am',
+                'end_at': 'April 10, 2026 5 pm',
+                'notes': '',
+                'repeat_frequency': 'weekly',
+                'repeat_interval': 2,
+                'repeat_ends': '1',
+            },
+            client=dog,
+        )
+        self.assertTrue(form.is_valid(), form.errors)
+        visits = form.save_all()
+        self.assertEqual(len(visits), 1)
+        series = VisitSeries.objects.get(client=dog)
+        self.assertEqual(series.frequency, 'weekly')
+        self.assertEqual(series.interval, 2)
+        self.assertEqual(series.total_occurrences, 1)
+        self.assertEqual(series.end_type, END_AFTER)
+        self.assertEqual(visits[0].series_id, series.pk)
+        self.assertEqual(visits[0].series_position, 1)
+
+    def test_non_repeat_does_not_create_series(self):
+        dog = ClientProfile.objects.create(
+            dog_name='Winston',
+            owner_name='Alexa Green',
+            owner_email='alexagreen4@outlook.com',
+        )
+        form = VisitForm(
+            data={
+                'start_at': 'April 10, 2026 9 am',
+                'end_at': 'April 10, 2026 5 pm',
+                'notes': '',
+                'repeat_frequency': 'none',
+            },
+            client=dog,
+        )
+        self.assertTrue(form.is_valid(), form.errors)
+        visits = form.save_all()
+        self.assertEqual(len(visits), 1)
+        self.assertIsNone(visits[0].series_id)
+        self.assertIsNone(visits[0].series_position)
+        self.assertFalse(VisitSeries.objects.filter(client=dog).exists())
+
+    def test_until_date_beyond_max_occurrences_is_rejected(self):
+        dog = ClientProfile.objects.create(
+            dog_name='Winston',
+            owner_name='Alexa Green',
+            owner_email='alexagreen4@outlook.com',
+        )
+        form = VisitForm(
+            data={
+                'start_at': 'April 10, 2026 9 am',
+                'end_at': 'April 10, 2026 5 pm',
+                'notes': '',
+                'repeat_frequency': 'daily',
+                'repeat_interval': 1,
+                'repeat_ends': 'April 10, 2028',
+            },
+            client=dog,
+        )
+        self.assertFalse(form.is_valid())
+        self.assertIn('repeat_ends', form.errors)
+        self.assertIn(str(MAX_OCCURRENCES), str(form.errors['repeat_ends']))
+        self.assertFalse(Visit.objects.filter(client=dog).exists())
+
+    def test_exactly_max_occurrences_by_count_is_allowed(self):
+        dog = ClientProfile.objects.create(
+            dog_name='Winston',
+            owner_name='Alexa Green',
+            owner_email='alexagreen4@outlook.com',
+        )
+        form = VisitForm(
+            data={
+                'start_at': 'April 10, 2026 9 am',
+                'end_at': 'April 10, 2026 5 pm',
+                'notes': '',
+                'repeat_frequency': 'weekly',
+                'repeat_interval': 1,
+                'repeat_ends': str(MAX_OCCURRENCES),
+            },
+            client=dog,
+        )
+        self.assertTrue(form.is_valid(), form.errors)
+        visits = form.save_all()
+        self.assertEqual(len(visits), MAX_OCCURRENCES)
+
 
 class VisitFormTests(TestCase):
     def setUp(self):
@@ -658,6 +752,36 @@ class VisitFormTests(TestCase):
         self.assertEqual(updated.notes, 'Moved')
         self.assertEqual(timezone.localtime(updated.scheduled_start).hour, 10)
 
+    def test_edit_does_not_overwrite_non_form_fields(self):
+        sent_at = datetime(2026, 4, 9, 12, 0, tzinfo=TZ)
+        visit = Visit.objects.create(
+            client=self.dog,
+            scheduled_start=datetime(2026, 4, 10, 9, 0, tzinfo=TZ),
+            scheduled_end=datetime(2026, 4, 10, 17, 0, tzinfo=TZ),
+            status=Visit.Status.COMPLETED,
+            calculated_fee=Decimal('25.00'),
+            fee_breakdown=[{'tier': 'Daytime Visit', 'amount': '25.00'}],
+            confirmation_email_sent_at=sent_at,
+            notes='Original',
+        )
+        visit.status = Visit.Status.SCHEDULED
+        form = VisitForm(
+            data={
+                'start_at': 'April 11, 2026 10 am',
+                'end_at': 'April 11, 2026 6 pm',
+                'notes': 'Moved',
+            },
+            instance=visit,
+        )
+        self.assertTrue(form.is_valid(), form.errors)
+        form.save()
+        visit.refresh_from_db()
+        self.assertEqual(visit.notes, 'Moved')
+        self.assertEqual(timezone.localtime(visit.scheduled_start).hour, 10)
+        self.assertEqual(visit.status, Visit.Status.COMPLETED)
+        self.assertEqual(visit.calculated_fee, Decimal('25.00'))
+        self.assertEqual(visit.confirmation_email_sent_at, sent_at)
+
     def test_schedule_display_spans_days(self):
         visit = Visit.objects.create(
             client=self.dog,
@@ -666,6 +790,104 @@ class VisitFormTests(TestCase):
         )
         self.assertIn('Apr 10', visit.schedule_display)
         self.assertIn('Apr 11', visit.schedule_display)
+
+    def _fill_day(self, day_start, day_end, count):
+        now = timezone.now()
+        extra = []
+        for i in range(count):
+            dog = ClientProfile.objects.create(
+                dog_name=f'Cap{i}',
+                owner_name=f'Owner{i}',
+                owner_email=f'cap{i}@example.com',
+            )
+            extra.append(Visit(
+                client=dog,
+                scheduled_start=day_start,
+                scheduled_end=day_end,
+                created_at=now,
+                updated_at=now,
+            ))
+        Visit.objects.bulk_create(extra)
+
+    def test_capacity_block_is_a_form_error_before_save(self):
+        start = datetime(2026, 4, 11, 13, 0, tzinfo=TZ)
+        end = datetime(2026, 4, 11, 18, 0, tzinfo=TZ)
+        self._fill_day(start, end, INSURANCE_CEILING)
+        before = Visit.objects.count()
+        form = VisitForm(
+            data={
+                'start_at': 'April 11, 2026 1 pm',
+                'end_at': 'April 11, 2026 6 pm',
+                'notes': '',
+            },
+            client=self.dog,
+        )
+        self.assertFalse(form.is_valid())
+        self.assertTrue(form.non_field_errors())
+        self.assertIn('Cannot schedule', str(form.non_field_errors()))
+        self.assertEqual(Visit.objects.count(), before)
+        self.assertFalse(VisitSeries.objects.filter(client=self.dog).exists())
+
+    def test_repeat_series_blocked_before_any_visit_is_created(self):
+        start = datetime(2026, 4, 11, 13, 0, tzinfo=TZ)
+        end = datetime(2026, 4, 11, 18, 0, tzinfo=TZ)
+        self._fill_day(start, end, INSURANCE_CEILING)
+        before = Visit.objects.count()
+        form = VisitForm(
+            data={
+                'start_at': 'April 11, 2026 1 pm',
+                'end_at': 'April 11, 2026 6 pm',
+                'notes': '',
+                'repeat_frequency': 'daily',
+                'repeat_interval': 1,
+                'repeat_ends': '5',
+            },
+            client=self.dog,
+        )
+        self.assertFalse(form.is_valid())
+        self.assertEqual(Visit.objects.count(), before)
+        self.assertFalse(VisitSeries.objects.filter(client=self.dog).exists())
+
+    def test_edit_excludes_self_from_capacity(self):
+        visit = Visit.objects.create(
+            client=self.dog,
+            scheduled_start=datetime(2026, 4, 11, 13, 0, tzinfo=TZ),
+            scheduled_end=datetime(2026, 4, 11, 18, 0, tzinfo=TZ),
+        )
+        self._fill_day(
+            datetime(2026, 4, 11, 13, 0, tzinfo=TZ),
+            datetime(2026, 4, 11, 18, 0, tzinfo=TZ),
+            INSURANCE_CEILING - 1,
+        )
+        form = VisitForm(
+            data={
+                'start_at': 'April 11, 2026 2 pm',
+                'end_at': 'April 11, 2026 6 pm',
+                'notes': 'Moved',
+            },
+            instance=visit,
+        )
+        self.assertTrue(form.is_valid(), form.errors)
+        updated = form.save()
+        self.assertEqual(timezone.localtime(updated.scheduled_start).hour, 14)
+
+    def test_save_all_does_not_recheck_capacity(self):
+        form = VisitForm(
+            data={
+                'start_at': 'April 10, 2026 9 am',
+                'end_at': 'April 10, 2026 5 pm',
+                'notes': '',
+                'repeat_frequency': 'daily',
+                'repeat_interval': 1,
+                'repeat_ends': '5',
+            },
+            client=self.dog,
+        )
+        self.assertTrue(form.is_valid(), form.errors)
+        with patch('operations.models.scheduling.check_visit_capacity') as mock_capacity:
+            visits = form.save_all()
+        self.assertEqual(len(visits), 5)
+        mock_capacity.assert_not_called()
 
 
 class PricingEngineTests(TestCase):
@@ -1390,6 +1612,18 @@ class TimelineMomentFormTests(TestCase):
         )
         self.assertFalse(form.is_valid())
 
+    def test_rejects_camera_and_gallery_together(self):
+        form = TimelineMomentForm(
+            data={'caption_notes': 'Two photos', 'visit_ids': [str(self.visit.pk)]},
+            files={
+                'photo_camera': _test_image_file('cam.jpg'),
+                'photo_gallery': _test_image_file('gal.jpg'),
+            },
+            eligible_visits=Visit.objects.filter(pk=self.visit.pk),
+        )
+        self.assertFalse(form.is_valid())
+        self.assertIn('not both', str(form.errors).lower())
+
     def test_accepts_gallery_photo_only(self):
         form = TimelineMomentForm(
             data={
@@ -1403,6 +1637,59 @@ class TimelineMomentFormTests(TestCase):
         )
         self.assertTrue(form.is_valid(), form.errors)
         self.assertEqual(form.cleaned_data['media_kind'], 'photo')
+        self.assertEqual(form.cleaned_data['latitude'], Decimal('43.0'))
+        self.assertEqual(form.cleaned_data['longitude'], Decimal('-81.2'))
+
+    def test_blank_coordinates_are_allowed(self):
+        form = TimelineMomentForm(
+            data={'caption_notes': '', 'visit_ids': [str(self.visit.pk)]},
+            files={'photo_gallery': _test_image_file()},
+            eligible_visits=Visit.objects.filter(pk=self.visit.pk),
+        )
+        self.assertTrue(form.is_valid(), form.errors)
+        self.assertEqual(form.cleaned_data['latitude'], '')
+        self.assertEqual(form.cleaned_data['longitude'], '')
+
+    def test_rejects_non_numeric_coordinates(self):
+        form = TimelineMomentForm(
+            data={
+                'caption_notes': '',
+                'visit_ids': [str(self.visit.pk)],
+                'latitude': 'north',
+                'longitude': '-81.2',
+            },
+            files={'photo_gallery': _test_image_file()},
+            eligible_visits=Visit.objects.filter(pk=self.visit.pk),
+        )
+        self.assertFalse(form.is_valid())
+        self.assertIn('latitude', form.errors)
+
+    def test_rejects_out_of_range_coordinates(self):
+        form = TimelineMomentForm(
+            data={
+                'caption_notes': '',
+                'visit_ids': [str(self.visit.pk)],
+                'latitude': '91',
+                'longitude': '-81.2',
+            },
+            files={'photo_gallery': _test_image_file()},
+            eligible_visits=Visit.objects.filter(pk=self.visit.pk),
+        )
+        self.assertFalse(form.is_valid())
+        self.assertIn('latitude', form.errors)
+
+    def test_rejects_latitude_without_longitude(self):
+        form = TimelineMomentForm(
+            data={
+                'caption_notes': '',
+                'visit_ids': [str(self.visit.pk)],
+                'latitude': '43.0',
+            },
+            files={'photo_gallery': _test_image_file()},
+            eligible_visits=Visit.objects.filter(pk=self.visit.pk),
+        )
+        self.assertFalse(form.is_valid())
+        self.assertIn('longitude', form.errors)
 
 
 class VisitTimelineTests(TestCase):

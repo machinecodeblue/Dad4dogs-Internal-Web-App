@@ -102,6 +102,9 @@ class Visit(models.Model):
         if self.scheduled_end <= self.scheduled_start:
             raise ValidationError('Scheduled end must be after scheduled start.')
 
+        if getattr(self, '_skip_capacity_check', False):
+            return
+
         capacity = check_visit_capacity(self)
         if capacity['status'] == 'blocked':
             raise ValidationError(capacity['message'])
@@ -110,10 +113,16 @@ class Visit(models.Model):
     _SCHEDULE_FIELDS = frozenset({'scheduled_start', 'scheduled_end', 'client', 'client_id'})
 
     def save(self, *args, **kwargs):
-        update_fields = kwargs.get('update_fields')
-        if update_fields is None or self._SCHEDULE_FIELDS.intersection(update_fields):
-            self.full_clean()
-        super().save(*args, **kwargs)
+        skip_capacity = kwargs.pop('skip_capacity', False)
+        previous = getattr(self, '_skip_capacity_check', False)
+        self._skip_capacity_check = skip_capacity
+        try:
+            update_fields = kwargs.get('update_fields')
+            if update_fields is None or self._SCHEDULE_FIELDS.intersection(update_fields):
+                self.full_clean()
+            super().save(*args, **kwargs)
+        finally:
+            self._skip_capacity_check = previous
 
     def check_in(self):
         if self.status != self.Status.SCHEDULED:

@@ -75,8 +75,11 @@ David books per **dog**. Two free-text fields only — **no multi-step date/time
 - **Repeat:** none | daily | weekly | weekdays | monthly
 - **Every** N days/weeks/months
 - **Ends:** number (`5`) or date (`April 15, 2026`) — auto-detected
-- Max 52 occurrences; capacity checked for **every** occurrence (whole series fails if any day blocked)
+- Max 52 occurrences (`MAX_OCCURRENCES`). Count “Ends” of 53+ is rejected in `parse_repeat_ends`. An **until date** that would produce more than 52 visits is a `repeat_ends` error in `VisitForm.clean()` — do not silently clip to 52. `len(occurrences) > 52` is also rejected there so a generator change cannot create a huge series.
+- Capacity runs in `VisitForm.clean()` — blocked days are **non-field form errors** (`visit_form.html` already shows them). `save_all()` only writes after `is_valid()` and calls `visit.save(skip_capacity=True)` so series creation does not query capacity a second time per occurrence. Direct `Visit.save()`, clone, and admin still run the check.
 - `VisitForm.save_all()` creates series + visits in one transaction
+- **Edit** (`self.instance`): `save(update_fields=['scheduled_start', 'scheduled_end', 'notes', 'updated_at'], skip_capacity=True)` — do not write status, fees, series, or `confirmation_email_sent_at` from a stale in-memory instance. New visits still save the full row.
+- `VisitSeries` is created when **Repeat** is not “Does not repeat” — including a series of **one** visit (`Ends: 1`, or an until-date that yields a single occurrence). Skipping the series when `len(occurrences) == 1` used to drop frequency/interval. A non-repeating booking still has `series=None`.
 
 ### Clone past visit
 On visit create page: select completed visit + new start date → copies duration and **local** time-of-day.
@@ -209,7 +212,7 @@ David logs photos/videos during active check-in. Customers see the same media la
 - Video max size: `TIMELINE_VIDEO_MAX_BYTES` (25 MB)
 
 ### Forms
-`TimelineMomentForm`, `TimelineForwardForm` in `forms/scheduling.py`
+`TimelineMomentForm`, `TimelineForwardForm` in `forms/scheduling.py`. Moment form: exactly one of camera photo, gallery photo, or video — camera+gallery is a validation error, not camera-wins. Lat/long: blank (GPS fallback) or both valid decimals in range.
 
 ### Full detail
 See [`feed.md`](feed.md) for model fields, customer feed URLs, and security model.
@@ -238,16 +241,19 @@ Tests: `PricingEngineTests`, `VisitCheckOutTests`
 
 Counts distinct `client_id` with visits overlapping the calendar day (`scheduled`, `checked_in`, and `completed`). Filter uses `status`, `scheduled_start`, `scheduled_end` — keep the `Visit.Meta` indexes on those fields.
 
+Booking forms call `check_visit_capacity` in `VisitForm.clean()` (not in `save_all()`), so a full day is a form error and no `VisitSeries` / visits are created.
+
 Capacity is a **booking** rule, not a day-of-ops lock:
 
 | Write | Runs `full_clean()` / `check_visit_capacity()`? |
 |-------|--------------------------------------------------|
-| `Visit.save()` with no `update_fields` (create, edit times, clone) | Yes — block if any spanned day is over 10 |
+| `Visit.save()` with no `update_fields` (create, edit times, clone, admin) | Yes — block if any spanned day is over 10 |
+| `VisitForm.save_all()` after a valid `clean()` | `full_clean()` **yes** (end-after-start); capacity query **no** (`skip_capacity=True`). Edits use `update_fields` for start/end/notes/`updated_at` only. |
 | `save(update_fields=…)` that includes `scheduled_start`, `scheduled_end`, or `client` | Yes |
 | `check_in()` / `check_out()` (status, timestamps, fee) | **No** — the visit is already on the books |
 | Check-in **view** (`visit_check_in`) | Still `assess_capacity` for a warning/block *message*; model save does not re-block |
 
-Do not call `full_clean()` from `check_in()` / `check_out()`. If you change scheduled times, `save()` without `update_fields` (or include those fields in `update_fields`) so capacity still runs.
+Do not call `full_clean()` from `check_in()` / `check_out()`. Do not pass `skip_capacity=True` from views, clone, or admin — only `VisitForm.save_all()`. If you change scheduled times outside the form, `save()` without `skip_capacity` so capacity still runs.
 
 **Tests:** `VisitCapacitySaveTests` in `operations/tests.py`.
 
@@ -269,7 +275,7 @@ Do not call `full_clean()` from `check_in()` / `check_out()`. If you change sche
 
 | File | Contents |
 |------|----------|
-| `forms/scheduling.py` | `VisitForm`, `VisitScheduleForm` alias |
+| `forms/scheduling.py` | `VisitForm` (parse + repeat + capacity in `clean()`), `VisitScheduleForm` alias |
 | `views/scheduling.py` | `dashboard`, `mobile_checkin`, `visit_*`, `visit_timeline*`, `pending_events`, `parse_datetime_field`, `ical_feed` |
 
 ---

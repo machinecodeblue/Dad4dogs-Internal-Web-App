@@ -134,6 +134,7 @@ Overnight is evaluated **before** hour tiers. Multi-day: each full 24h = Overnig
 - Views catch that error and redirect — no 500 on a mobile double-tap
 - Do not set those fields (or `status`) in views to bypass the methods
 - Capacity is enforced on **booking** saves, not on check-in/out `update_fields` — a full day must not block checkout
+- `VisitForm.save_all()` may pass `skip_capacity=True` after `clean()` already checked every occurrence; clone/admin/direct `save()` must not
 
 ---
 
@@ -199,7 +200,8 @@ $env:PUBLIC_SITE_URL = "https://your-subdomain.ngrok.app"
 7. Add tests in `operations/tests.py` for pricing, capacity, forms, or imports you touch.
 8. Do not bypass `Visit.check_in()` / `check_out()` status guards.
 9. Do not re-run `full_clean()` / capacity on check-in or check-out saves.
-10. Never commit `O-Auth Key/`, `certs/`, or live client PII.
+10. Do not pass `skip_capacity=True` except from `VisitForm.save_all()`.
+11. Never commit `O-Auth Key/`, `certs/`, or live client PII.
 
 ---
 
