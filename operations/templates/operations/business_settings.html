@@ -72,4 +72,10 @@
         <button type="submit" class="btn btn-primary">Save Settings</button>
     </div>
 </form>
+
+<div class="card">
+    <h2>Tools</h2>
+    <p class="muted" style="margin-bottom:0.75rem">Google Contacts import is configuration, not a daily Clients-list task.</p>
+    <a href="{% url 'operations:contact_sync' %}" class="btn btn-outline">Google Contact Sync</a>
+</div>
 {% endblock %}

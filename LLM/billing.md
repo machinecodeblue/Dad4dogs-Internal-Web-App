@@ -39,7 +39,7 @@ Unique constraint: one statement per dog per `week_start`.
 
 | Path | Purpose |
 |------|---------|
-| `/statements/` | Compact list; amber badge only when not yet sent |
+| `/statements/` | Dense list (same tenet as `/clients/`): one card, hairline rows, name is the link. Amber badge only when not yet sent. |
 | `/statements/<id>/` | Detail + formatted email body preview |
 
 Bottom nav **Billing** links here.

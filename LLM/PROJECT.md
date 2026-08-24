@@ -201,13 +201,10 @@ $env:PUBLIC_SITE_URL = "https://your-subdomain.ngrok.app"
 
 1. Identify the **domain** before editing (customers / scheduling / billing / admin / platform).
 2. Open the matching `LLM/<domain>.md` file.
-3. Keep **mobile-first, one-handed** UX. **Every detail screen** (customer, dog, future records) follows the **labeled-card policy** in `platform.md`:
-   - Each card is labeled by **job** (`.card-kicker` or `h2`). No untitled stacks of buttons.
-   - Name + **Edit** (existing form). Phones are `.phone-row` (number + compact Call beside the person they belong to). Emergency Call is yellow.
-   - Short facts stay visible (address). Admin (feed, hide, vCard) in **More actions**.
-   - Customer: **Primary owner contact**, **Emergency & Pickups**, **Dogs**. COI: warn if missing; **✓** if received.
-   - Dog: **Dog**, **Veterinary**, **Visits**. Drop-off on the Dog card. Emergency vet on Veterinary, not under the dog’s name.
-   - Client list is **owner-first**: one card per customer (View → summary). Dogs nest under the owner with **Book**. Do not flatten to `Dog · Owner · phone` rows.
+3. Keep **mobile-first, one-handed** UX. Standing rules in `platform.md`:
+   - **Lists** (clients, statements, pending calendar, agenda, nested dogs/visits): **minimize real estate**. Flat rows, hairline dividers, name is the link, text-link actions. No per-item cards. Check-in stays a working surface with large CTAs.
+   - **Detail screens** (customer, dog, future records) follow the **labeled-card policy**: each card named by job; Edit beside the name; `.phone-row` Calls; address visible; admin in More actions. Customer: Primary owner / Emergency & Pickups / Dogs. Dog: Dog / Veterinary / Visits.
+   - Client list specifically: dense owner-first (`Last, First`), browser search, text **Book**. No Customer-only or Google Sync on that page.
 4. Visit booking stays **two free-text fields** (Start/End) — no multi-step pickers.
 5. No bulk Google contact import without preview + checkboxes.
 6. Extend `operations/services/` for new business logic.

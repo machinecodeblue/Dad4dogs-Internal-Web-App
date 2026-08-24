@@ -52,7 +52,8 @@ def client_list(request):
     for dog in dogs_qs:
         dogs_by_email[dog.owner_email.lower()].append(dog)
 
-    owners = list(CustomerOwner.objects.all().order_by('owner_name'))
+    owners = list(CustomerOwner.objects.all())
+    owners.sort(key=lambda owner: owner.list_sort_key)
     owner_emails = {owner.owner_email.lower() for owner in owners}
 
     customers = []

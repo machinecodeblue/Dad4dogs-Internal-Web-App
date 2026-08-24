@@ -120,7 +120,7 @@ Method: `advance_pipeline()` on dog screen — returns `False` (no write) if alr
 
 | Screen | URL | Contents |
 |--------|-----|----------|
-| Client list | `/clients/` | **Owner-first.** One card per customer: name, phone, **View** → customer summary. Dogs nested under that owner with vax/pipeline badges and **Book** → visit create for that dog. Dog name links to dog detail. Filters in a disclosure. Orphans under **Dogs without a customer**. |
+| Client list | `/clients/` | **Dense owner-first list** (not per-client cards). Search (client-side, owner + dog names). **+ New Client** → intake only (no Customer-only on this page). Stage/vax filters inline. Rows: `Last, First — phone`; dogs nested with badges + text **Book**. Owner name → customer summary. Google Contact Sync lives on **Settings**, not here. |
 | Create customer from dog | `POST /dogs/<id>/create-customer/` | `ensure_for_client()` for an orphan dog, then customer detail |
 | **New Client & Dog** | `/clients/intake/` | One POST: owner + first dog + vet + optional Meet & Greet (`IntakeWizardForm`). Atomic. M&G visit **skips** standard-stay Approved/vax/COI gate. Pipeline → Meet & Greet if times set, else Inquiry. |
 | Add customer | `/clients/add/` | Owner + emergency contacts — no dog |
@@ -218,7 +218,7 @@ Public feed view lives in `views/customer_feed.py` — not in this package.
 
 `CustomerOwnerFormTests`, `AddressHandlingTests`, `CognitiveLoadUXTests`, `DogProfileFormTests`, `IntakeWizardTests`, `ContactDataTests`, `CustomerEditTests`, `CustomerViewsHttpTests`, `ContactSyncTests`, `ComplianceTests`, `VaccinationExpiryViewTests`, `FeedSlugTests`, `CustomerFeedTests` in `operations/tests.py`.
 
-`CognitiveLoadUXTests` covers the customer **summary** (labeled cards, Edit, COI ✓ / warning) and the **client list** (`test_client_list_is_owner_first_with_view_and_book`: owner `h2`, View, nested dog **Book**). Keep those green if you touch `customer_detail.html` or `client_list.html`.
+`CognitiveLoadUXTests` covers the customer **summary** and the **client list** (`Doe, Jane` as the profile link, nested **Book**, search box, no Customer only / Google Sync on `/clients/`). Keep those green if you touch `customer_detail.html` or `client_list.html`.
 
 ---
 

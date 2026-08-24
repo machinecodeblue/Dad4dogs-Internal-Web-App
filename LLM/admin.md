@@ -69,7 +69,7 @@ How it is read at runtime (`operations/capacity.py`):
 
 | Screen | URL | Contents |
 |--------|-----|----------|
-| Business settings | `/settings/` | Identity, location/hours, phones, **standard capacity** + **insurance max** |
+| Business settings | `/settings/` | Identity, location/hours, phones, **standard capacity** + **insurance max**, **Google Contact Sync** (not on `/clients/`) |
 
 Bottom nav **Settings** links here.
 

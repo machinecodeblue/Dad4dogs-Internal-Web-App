@@ -72,6 +72,29 @@ Messages appear in Gmail **Sent Mail** for audit trail.
 - Cards, large touch targets, green brand (`#2d6a4f`)
 - Max content width ~600px centred
 
+### Lists vs details
+
+Two different jobs:
+
+| Screen type | Job | Density |
+|-------------|-----|---------|
+| **List** (`/clients/`, `/statements/`, `/calendar/pending/`, dashboard agenda, nested dogs/visits) | Scan, pick, go | **Minimize real estate** — flat rows, hairline dividers, no per-item cards |
+| **Detail** (customer, dog, future records) | Understand one record | Labeled cards (below) |
+| **Working surface** (`/checkin/`, visit timeline) | Do the day’s work | Large Check In / Log Moment / Check Out stay; do not flatten those CTAs |
+
+### Lists (minimize real estate) — standing policy
+
+A listing of items is a **juncture**. The core tenet is **use as little vertical space as possible** so 25–50 rows stay scannable.
+
+- One toolbar (search/filters/primary add) + **one** list. Hairline dividers (`.client-row` / `.compact-row`). **Do not wrap each item in its own padded `.card`.**
+- The **name is the link** to the record. Do not add a full-width View button per row.
+- Row actions are **text links** or `btn-sm` (Book, Approve). Never a full-width button on every row.
+- Search, when the set is ~50 or fewer, runs **in the browser** on the loaded list.
+- Sort for people lists: `Last, First`.
+- Admin tools (Google Contact Sync, iCal) do not live on a list screen.
+
+`/clients/` is the reference implementation. Copy that density, not the old per-client cards.
+
 ### Detail screens (labeled cards) — standing policy
 
 This is the expected look for **every record-detail screen** (customer, dog, and any future detail). Forms (intake, edit customer, edit dog, visit) stay as they are. Change **this section** if the pattern changes.
@@ -101,10 +124,11 @@ Each card has one job. A kicker (`.card-kicker`) or `h2` names that job so the p
 
 **Do not add SMS** unless David asks. Do not put a second Edit on every card — one Edit on the identity card is enough.
 
-**Client list (`/clients/`) — owner-first**
-- The page is **Clients**, so the **human** is the parent. One card per owner (name + phone + **View** → customer summary). Dogs nest under that owner. Do not flatten to dog-first run-on rows (`Dog · Owner · phone`).
-- Dog row: name (link to dog detail) + actionable badges + **Book** (visit create for that dog). Book answers “which dog?” Multi-dog households share one owner card.
-- Filters stay in a disclosure if more than 2. Extra create/sync links in **More**.
+**Client list (`/clients/`) — dense, owner-first**
+- A listing screen is a **juncture**, not a stack of padded cards. One toolbar + one flat list with hairline dividers. ~25–50 clients: load the (filtered) list and **search in the browser** (owner name + dog name). Do not round-trip the server on every keystroke.
+- Toolbar: search, **+ New Client** (intake only — a client without a dog is not a Clients-list action). Stage and vax `<select>`s inline. **No More accordion. No Customer only. No Google Contact Sync here** — sync is on Settings.
+- Rows: `Last, First — phone` (name is the profile link). Dogs nest under the owner; **Book** is a small text link, not a button. Sort by last name.
+- Do not restore per-client white cards or full-width View/Book buttons on this page.
 
 **Action density**
 - At most **2 primary CTA buttons** visible at once per card (check-in: Log Moment + Check Out). Detail phones use compact `.phone-row` Calls instead of two full-width stacked buttons.
@@ -117,7 +141,7 @@ Each card has one job. A kicker (`.card-kicker`) or `h2` names that job so the p
 **Where this lands today**
 - Dashboard agenda: compact rows; occupancy as `N / standard` from Settings (never a bare 0 for the ceiling); vax tiles only if count > 0; capacity **badge** only when warning/over; iCal in a disclosure.
 - Check-in: Check In, or Log Moment + Check Out; emergency (else clinic) as tap-to-call, not a third button.
-- Shared CSS in `base.html`: `.compact-row`, `.card-head`, `.card-kicker`, `.phone-row`, `.truncate`, `details.disclosure`, `details.coi-mark`, `.admin-drawer`. Shared badges: `_pipeline_badge.html`, `_vax_badge.html` (warn/danger only).
+- Shared CSS in `base.html`: `.client-row` / `.compact-row` (dense lists), `.list-toolbar`, `.card-head`, `.card-kicker`, `.phone-row`, `.truncate`, `details.disclosure`, `details.coi-mark`, `.admin-drawer`. Shared badges: `_pipeline_badge.html`, `_vax_badge.html` (warn/danger only).
 
 ### Progressive Web App (PWA) — David's admin app only
 Install to home screen for standalone mode (no browser address bar). Customer feed is a normal web page — they can bookmark or add to home screen manually.

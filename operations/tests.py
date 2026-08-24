@@ -436,16 +436,24 @@ class CognitiveLoadUXTests(TestCase):
 
     def test_client_list_is_owner_first_with_view_and_book(self):
         response = self.client.get(reverse('operations:client_list'))
-        self.assertContains(response, f'<h2>{self.owner.owner_name}</h2>')
+        self.assertContains(response, 'Doe, Jane')
         self.assertContains(response, reverse('operations:customer_detail', args=[self.owner.pk]))
-        self.assertContains(response, '>View<')
+        self.assertContains(response, 'id="client-search"')
+        self.assertContains(response, '+ New Client')
+        self.assertNotContains(response, 'Customer only')
+        self.assertNotContains(response, 'Google Contact Sync')
+        self.assertNotContains(response, '>View<')
         self.assertContains(response, 'class="title">Kobe<')
         self.assertContains(response, reverse('operations:dog_detail', args=[self.dog.pk]))
         self.assertContains(response, reverse('operations:visit_create', args=[self.dog.pk]))
-        self.assertContains(response, '>Book<')
+        self.assertContains(response, 'class="book-link">Book<')
         self.assertContains(response, '(416) 555-0100')
         self.assertNotContains(response, 'class="badge badge-ok"')
         self.assertNotContains(response, '>COI<')
+
+    def test_owner_list_name_is_last_comma_first(self):
+        self.assertEqual(self.owner.list_name, 'Doe, Jane')
+        self.assertEqual(self.owner.list_sort_key, ('doe', 'jane'))
 
     def test_dog_detail_keeps_call_and_emergency_as_primary_actions(self):
         self.dog.emergency_vet_phone = '5195559999'
@@ -2998,6 +3006,8 @@ class BusinessSettingsViewTests(TestCase):
         self.assertContains(response, 'Emergency Contact Number')
         self.assertContains(response, 'Daily capacity')
         self.assertContains(response, 'Insurance max')
+        self.assertContains(response, 'Google Contact Sync')
+        self.assertContains(response, reverse('operations:contact_sync'))
 
     def test_settings_page_saves(self):
         response = self.client.post(reverse('operations:business_settings'), {

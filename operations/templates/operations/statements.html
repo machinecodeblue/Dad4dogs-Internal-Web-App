@@ -4,21 +4,17 @@
 <div class="card">
     <h2>Weekly Statements</h2>
     <p class="muted">Automated account statements for e-Transfer billing.</p>
-</div>
-
 {% for statement in statements %}
-<a href="{% url 'operations:statement_detail' statement.pk %}" style="text-decoration:none;color:inherit">
-<div class="card">
-    <strong>{{ statement.client.dog_name }}</strong>
-    <span class="muted"> — week of {{ statement.week_start }}</span>
-    <br>
-    <strong>${{ statement.total_amount }} CAD</strong>
-    {% if statement.send_status != 'sent' %}
-    <span class="badge badge-warn">{{ statement.get_send_status_display }}</span>
-    {% endif %}
-</div>
-</a>
+    <a href="{% url 'operations:statement_detail' statement.pk %}" class="client-row" style="display:block;text-decoration:none;color:inherit">
+        <span class="owner-name">{{ statement.client.dog_name }}</span>
+        <span class="muted"> — week of {{ statement.week_start }}</span>
+        <span> · ${{ statement.total_amount }} CAD</span>
+        {% if statement.send_status != 'sent' %}
+        <span class="badge badge-warn">{{ statement.get_send_status_display }}</span>
+        {% endif %}
+    </a>
 {% empty %}
-<div class="card"><p class="muted">No statements yet. Run the weekly statement command.</p></div>
+    <p class="muted">No statements yet. Run the weekly statement command.</p>
 {% endfor %}
+</div>
 {% endblock %}

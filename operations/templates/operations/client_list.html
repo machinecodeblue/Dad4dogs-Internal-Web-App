@@ -2,82 +2,63 @@
 {% load phone_tags %}
 {% block title %}Clients — Dad4dogs{% endblock %}
 {% block content %}
-<div class="card">
+<div class="card list-toolbar">
     <h2>Clients</h2>
-    <a href="{% url 'operations:client_intake' %}" class="btn btn-primary">+ New Client &amp; Dog</a>
-    <details class="disclosure">
-        <summary>More</summary>
-        <div class="disclosure-body">
-            <a href="{% url 'operations:client_create' %}" class="btn btn-outline btn-sm" style="margin-bottom:0.5rem">Customer only</a>
-            <a href="{% url 'operations:contact_sync' %}" class="btn btn-outline btn-sm">Google Contact Sync</a>
-        </div>
-    </details>
-    <details class="disclosure"{% if current_stage or current_vax %} open{% endif %}>
-        <summary>Filter</summary>
-        <div class="disclosure-body">
-            <form method="get">
-                <select name="stage" onchange="this.form.submit()">
-                    <option value="">All Stages</option>
-                    {% for value, label in stages %}
-                    <option value="{{ value }}" {% if current_stage == value %}selected{% endif %}>{{ label }}</option>
-                    {% endfor %}
-                </select>
-                <select name="vax" onchange="this.form.submit()">
-                    <option value="">All vaccinations</option>
-                    {% for value, label in vax_filters %}
-                    <option value="{{ value }}" {% if current_vax == value %}selected{% endif %}>{{ label }}</option>
-                    {% endfor %}
-                </select>
-            </form>
-            {% if current_vax == 'expiring' %}
-            <p class="muted">Validated vaccinations that expire within 30 days.</p>
-            {% elif current_vax == 'expired' %}
-            <p class="muted">Latest validated vaccination has expired.</p>
-            {% elif current_vax == 'missing' %}
-            <p class="muted">No validated vaccination record.</p>
-            {% endif %}
-        </div>
-    </details>
-</div>
-
-{% for group in customers %}
-<div class="card">
-    <div class="card-head">
-        <div>
-            <h2>{{ group.owner.owner_name }}</h2>
-            {% if group.owner.owner_phone %}
-            <p class="muted" style="margin:0.15rem 0 0">{{ group.owner.owner_phone|phone_display }}</p>
-            {% endif %}
-        </div>
-        <a href="{% url 'operations:customer_detail' group.owner.pk %}" class="btn btn-outline btn-sm">View</a>
-    </div>
-    {% if group.dogs %}
-    <p class="muted" style="margin:0.5rem 0 0.25rem">Dogs</p>
-    {% for dog in group.dogs %}
-    <div class="compact-row split">
-        <a href="{% url 'operations:dog_detail' dog.pk %}" class="title">{{ dog.dog_name }}</a>
-        {% include "operations/_pipeline_badge.html" %}
-        {% include "operations/_vax_badge.html" %}
-        <a href="{% url 'operations:visit_create' dog.pk %}" class="btn btn-outline btn-sm">Book</a>
-    </div>
-    {% endfor %}
-    {% else %}
-    <p class="muted" style="margin-top:0.5rem">No dogs on file.</p>
-    <a href="{% url 'operations:customer_add_dog' group.owner.pk %}" class="btn btn-outline btn-sm" style="margin-top:0.35rem">Add dog</a>
+    <input type="search" id="client-search" placeholder="Search by client or dog name" autocomplete="off">
+    <a href="{% url 'operations:client_intake' %}" class="btn btn-primary">+ New Client</a>
+    <form method="get" class="filter-row">
+        <select name="stage" onchange="this.form.submit()">
+            <option value="">All stages</option>
+            {% for value, label in stages %}
+            <option value="{{ value }}" {% if current_stage == value %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+        </select>
+        <select name="vax" onchange="this.form.submit()">
+            <option value="">All vaccinations</option>
+            {% for value, label in vax_filters %}
+            <option value="{{ value }}" {% if current_vax == value %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+        </select>
+    </form>
+    {% if current_vax == 'expiring' %}
+    <p class="muted" style="margin-top:0.5rem">Validated vaccinations that expire within 30 days.</p>
+    {% elif current_vax == 'expired' %}
+    <p class="muted" style="margin-top:0.5rem">Latest validated vaccination has expired.</p>
+    {% elif current_vax == 'missing' %}
+    <p class="muted" style="margin-top:0.5rem">No validated vaccination record.</p>
     {% endif %}
 </div>
+
+<div class="card" id="client-list">
+{% for group in customers %}
+    <div class="client-row" data-search="{{ group.owner.owner_name }} {{ group.owner.list_name }}{% for dog in group.dogs %} {{ dog.dog_name }}{% endfor %}">
+        <a href="{% url 'operations:customer_detail' group.owner.pk %}" class="owner-name">{{ group.owner.list_name }}</a>
+        {% if group.owner.owner_phone %}
+        <span class="muted"> — {{ group.owner.owner_phone|phone_display }}</span>
+        {% endif %}
+        {% for dog in group.dogs %}
+        <div class="client-dog">
+            <a href="{% url 'operations:dog_detail' dog.pk %}" class="title">{{ dog.dog_name }}</a>
+            {% include "operations/_pipeline_badge.html" %}
+            {% include "operations/_vax_badge.html" %}
+            <a href="{% url 'operations:visit_create' dog.pk %}" class="book-link">Book</a>
+        </div>
+        {% empty %}
+        <p class="muted" style="margin:0.25rem 0 0 0.85rem">No dogs on file.</p>
+        {% endfor %}
+    </div>
 {% empty %}
-<div class="card">
     {% if current_stage or current_vax %}
         {% if not orphan_dogs %}
         <p class="muted">No clients match these filters.</p>
         {% endif %}
     {% elif not orphan_dogs %}
     <p class="muted">No clients yet.</p>
-    <a href="{% url 'operations:client_intake' %}" class="btn btn-primary" style="margin-top:0.5rem">New Client &amp; Dog</a>
+    <a href="{% url 'operations:client_intake' %}" class="btn btn-primary" style="margin-top:0.5rem">+ New Client</a>
     {% endif %}
-</div>
 {% endfor %}
+    <p class="muted" id="client-search-empty" hidden>No names match that search.</p>
+</div>
 
 {% if orphan_dogs %}
 <div class="card">
@@ -96,4 +77,24 @@
     {% endfor %}
 </div>
 {% endif %}
+
+<script>
+(function () {
+    const input = document.getElementById('client-search');
+    const rows = document.querySelectorAll('#client-list .client-row');
+    const empty = document.getElementById('client-search-empty');
+    if (!input || !rows.length) return;
+    input.addEventListener('input', function () {
+        const q = (input.value || '').trim().toLowerCase();
+        let shown = 0;
+        rows.forEach(function (row) {
+            const hay = (row.getAttribute('data-search') || '').toLowerCase();
+            const match = !q || hay.indexOf(q) !== -1;
+            row.hidden = !match;
+            if (match) shown += 1;
+        });
+        if (empty) empty.hidden = shown !== 0;
+    });
+})();
+</script>
 {% endblock %}

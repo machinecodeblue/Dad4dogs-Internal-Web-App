@@ -95,6 +95,23 @@ class CustomerOwner(models.Model):
     def __str__(self):
         return f'{self.owner_name} ({self.owner_email})'
 
+    @property
+    def list_name(self) -> str:
+        """Last, First for scannable client lists."""
+        parts = (self.owner_name or '').strip().split()
+        if len(parts) < 2:
+            return (self.owner_name or '').strip()
+        return f'{parts[-1]}, {" ".join(parts[:-1])}'
+
+    @property
+    def list_sort_key(self) -> tuple:
+        parts = (self.owner_name or '').strip().split()
+        if not parts:
+            return ('', '')
+        if len(parts) == 1:
+            return (parts[0].lower(), '')
+        return (parts[-1].lower(), ' '.join(parts[:-1]).lower())
+
     def build_home_address(self, *, oneline: bool = False) -> str:
         return format_address(
             street=self.address_street,

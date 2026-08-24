@@ -153,7 +153,7 @@ Every view in `views/scheduling.py` declares allowed methods (`@require_GET`, `@
 | `/visits/<id>/check-out/` | POST — `check_out()` + fee; illegal status → error message, no write |
 | `/visits/<id>/timeline/` | Log moment (photo/video) while checked in |
 | `/visits/<id>/timeline/<event>/forward/` | POST — share moment to other checked-in dogs |
-| `/calendar/pending/` | Review imported calendar events |
+| `/calendar/pending/` | Dense list of imported events (Approve/Reject as `btn-sm` on the row). Not one padded card per event. |
 | `/ical/` | Public read-only iCal feed (David's calendar) |
 | `/feed/<secret>/<dog>/` | Public customer photo feed — see `feed.md` |
 
