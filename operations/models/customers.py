@@ -185,6 +185,12 @@ class CustomerOwner(models.Model):
 
 
 class ClientProfileQuerySet(models.QuerySet):
+    def visible(self):
+        return self.filter(is_hidden=False)
+
+    def hidden(self):
+        return self.filter(is_hidden=True)
+
     def with_vaccination_expiry(self):
         """Annotate `current_vax_expires` = latest validated `expires_at` (or NULL)."""
         if 'current_vax_expires' in self.query.annotations:
@@ -255,6 +261,10 @@ class ClientProfile(models.Model):
         help_text='Dollar cap or directive for lifesaving triage before owner contact.',
     )
     notes = models.TextField(blank=True)
+    is_hidden = models.BooleanField(
+        default=False,
+        help_text='Hidden dogs stay on file with visits and photos, but leave the client list.',
+    )
     pipeline_stage = models.CharField(
         max_length=20,
         choices=PipelineStage.choices,
@@ -346,9 +356,23 @@ class ClientProfile(models.Model):
         self._vaccination_status = status
         return status
 
+    def hide(self):
+        if not self.is_hidden:
+            self.is_hidden = True
+            self.save(update_fields=['is_hidden', 'updated_at'])
+
+    def unhide(self):
+        if self.is_hidden:
+            self.is_hidden = False
+            self.save(update_fields=['is_hidden', 'updated_at'])
+
     def standard_stay_blockers(self) -> list[str]:
         """Reasons this dog cannot be booked for a standard stay (VisitForm create)."""
         blockers = []
+        if self.is_hidden:
+            blockers.append(
+                f'{self.dog_name} is hidden from the client list and cannot be booked for a new stay.'
+            )
         if self.pipeline_stage != self.PipelineStage.APPROVED:
             blockers.append(
                 f'{self.dog_name} is still in {self.get_pipeline_stage_display()}. '
@@ -365,19 +389,25 @@ class ClientProfile(models.Model):
             )
         return blockers
 
-    def advance_pipeline(self):
+    def advance_pipeline(self) -> bool:
+        """Move one stage forward. Returns True if the stage changed."""
         order = [
             self.PipelineStage.INQUIRY,
             self.PipelineStage.MEET_GREET,
             self.PipelineStage.EVALUATION,
             self.PipelineStage.APPROVED,
         ]
-        idx = order.index(self.pipeline_stage)
-        if idx < len(order) - 1:
-            self.pipeline_stage = order[idx + 1]
-            if self.pipeline_stage == self.PipelineStage.APPROVED:
-                self.approved_at = timezone.now()
-            self.save()
+        try:
+            idx = order.index(self.pipeline_stage)
+        except ValueError:
+            return False
+        if idx >= len(order) - 1:
+            return False
+        self.pipeline_stage = order[idx + 1]
+        if self.pipeline_stage == self.PipelineStage.APPROVED:
+            self.approved_at = timezone.now()
+        self.save()
+        return True
 
     def ensure_feed_credentials(self, *, save: bool = True) -> 'ClientProfile':
         update_fields = []

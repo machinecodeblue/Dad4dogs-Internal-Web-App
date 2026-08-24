@@ -1060,6 +1060,87 @@ class CustomerViewsHttpTests(TestCase):
         self.assertEqual(response.status_code, 302)
         self.assertEqual(response.url, reverse('operations:contact_import_preview'))
 
+    def test_advance_pipeline_noops_when_already_approved(self):
+        self.dog.pipeline_stage = ClientProfile.PipelineStage.APPROVED
+        self.dog.save(update_fields=['pipeline_stage', 'updated_at'])
+        response = self.client.post(
+            reverse('operations:advance_pipeline', args=[self.dog.pk]),
+            follow=True,
+        )
+        self.dog.refresh_from_db()
+        self.assertEqual(self.dog.pipeline_stage, ClientProfile.PipelineStage.APPROVED)
+        self.assertContains(response, 'already')
+
+    def test_advance_pipeline_moves_inquiry_forward(self):
+        response = self.client.post(
+            reverse('operations:advance_pipeline', args=[self.dog.pk]),
+            follow=True,
+        )
+        self.dog.refresh_from_db()
+        self.assertEqual(
+            self.dog.pipeline_stage,
+            ClientProfile.PipelineStage.MEET_GREET,
+        )
+        self.assertContains(response, 'Meet')
+
+    def test_orphan_dog_appears_on_client_list(self):
+        orphan = ClientProfile.objects.create(
+            dog_name='Stray',
+            owner_name='Lost Owner',
+            owner_email='stray-list@example.com',
+        )
+        response = self.client.get(reverse('operations:client_list'))
+        self.assertContains(response, 'Dogs without a customer')
+        self.assertContains(response, 'Stray')
+        self.assertContains(response, 'stray-list@example.com')
+        self.assertContains(response, reverse('operations:dog_create_customer', args=[orphan.pk]))
+
+    def test_create_customer_from_orphan_dog(self):
+        orphan = ClientProfile.objects.create(
+            dog_name='Stray',
+            owner_name='Lost Owner',
+            owner_email='stray-create@example.com',
+        )
+        response = self.client.post(
+            reverse('operations:dog_create_customer', args=[orphan.pk]),
+        )
+        self.assertEqual(response.status_code, 302)
+        owner = CustomerOwner.objects.get(owner_email='stray-create@example.com')
+        self.assertEqual(owner.owner_name, 'Lost Owner')
+        self.assertEqual(
+            response.url,
+            reverse('operations:customer_detail', args=[owner.pk]),
+        )
+
+    def test_hide_removes_dog_from_client_list_not_database(self):
+        response = self.client.post(reverse('operations:dog_hide', args=[self.dog.pk]))
+        self.assertEqual(response.status_code, 302)
+        self.dog.refresh_from_db()
+        self.assertTrue(self.dog.is_hidden)
+        self.assertTrue(ClientProfile.objects.filter(pk=self.dog.pk).exists())
+        customer_page = self.client.get(
+            reverse('operations:customer_detail', args=[self.owner.pk]),
+        )
+        self.assertContains(customer_page, 'Hidden dogs')
+        self.assertContains(customer_page, self.dog.dog_name)
+        list_page = self.client.get(reverse('operations:client_list'))
+        self.assertNotContains(list_page, f'<strong>{self.dog.dog_name}</strong>', html=True)
+
+    def test_unhide_returns_dog_to_client_list(self):
+        self.dog.hide()
+        response = self.client.post(reverse('operations:dog_unhide', args=[self.dog.pk]))
+        self.assertEqual(response.status_code, 302)
+        self.dog.refresh_from_db()
+        self.assertFalse(self.dog.is_hidden)
+        list_page = self.client.get(reverse('operations:client_list'))
+        self.assertContains(list_page, self.dog.dog_name)
+
+    def test_legacy_delete_url_hides_instead_of_deleting(self):
+        self.client.post(reverse('operations:dog_delete', args=[self.dog.pk]))
+        self.assertTrue(ClientProfile.objects.filter(pk=self.dog.pk).exists())
+        self.dog.refresh_from_db()
+        self.assertTrue(self.dog.is_hidden)
+
 
 class ComplianceTests(TestCase):
     def setUp(self):
@@ -1594,6 +1675,19 @@ class VisitFormTests(TestCase):
         self.assertIn('vaccination', text)
         self.assertIn('coi', text)
         self.assertFalse(Visit.objects.filter(client=dog).exists())
+
+    def test_hidden_dog_cannot_book_new_stay(self):
+        self.dog.hide()
+        form = VisitForm(
+            data={
+                'start_at': 'April 11, 2026 1 pm',
+                'end_at': 'April 11, 2026 6 pm',
+                'notes': '',
+            },
+            client=self.dog,
+        )
+        self.assertFalse(form.is_valid())
+        self.assertIn('hidden', str(form.non_field_errors()).lower())
 
     def test_approved_dog_without_vax_cannot_book(self):
         dog = ClientProfile.objects.create(

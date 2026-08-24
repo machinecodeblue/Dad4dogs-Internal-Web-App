@@ -101,11 +101,31 @@
         </div>
     </a>
     {% endfor %}
-    {% else %}
+    {% elif not hidden_dogs %}
     <p class="muted">No dogs on file yet. Add a dog when you're ready — pipeline starts at Inquiry for each dog.</p>
     <a href="{% url 'operations:customer_add_dog' customer_owner.pk %}" class="btn btn-primary" style="margin-top:0.5rem">Add First Dog</a>
     {% endif %}
 </div>
+
+{% if hidden_dogs %}
+<div class="card">
+    <h2>Hidden dogs</h2>
+    <p class="muted">Off the client list. Visits and photos stay on file.</p>
+    {% for dog in hidden_dogs %}
+    <div style="margin-bottom:0.75rem;padding:0.75rem;background:#f8f9fa;border-radius:8px">
+        <a href="{% url 'operations:dog_detail' dog.pk %}" style="text-decoration:none;color:inherit">
+            <strong>{{ dog.dog_name }}</strong>
+            <span class="badge badge-warn">HIDDEN</span>
+            <span class="badge badge-ok">{{ dog.get_pipeline_stage_display }}</span>
+        </a>
+        <form method="post" action="{% url 'operations:dog_unhide' dog.pk %}" style="margin-top:0.5rem">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-outline btn-sm">Show on client list</button>
+        </form>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
 
 <a href="{% url 'operations:client_list' %}" class="btn btn-outline">Back to Clients</a>
 {% endblock %}

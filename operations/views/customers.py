@@ -42,7 +42,7 @@ def client_list(request):
     if vax_filter not in valid_vax:
         vax_filter = ''
 
-    dogs_qs = ClientProfile.objects.with_vaccination_expiry().order_by('dog_name')
+    dogs_qs = ClientProfile.objects.visible().with_vaccination_expiry().order_by('dog_name')
     if stage_filter:
         dogs_qs = dogs_qs.filter(pipeline_stage=stage_filter)
     if vax_filter:
@@ -52,15 +52,25 @@ def client_list(request):
     for dog in dogs_qs:
         dogs_by_email[dog.owner_email.lower()].append(dog)
 
+    owners = list(CustomerOwner.objects.all().order_by('owner_name'))
+    owner_emails = {owner.owner_email.lower() for owner in owners}
+
     customers = []
-    for owner in CustomerOwner.objects.all().order_by('owner_name'):
+    for owner in owners:
         dogs = dogs_by_email.get(owner.owner_email.lower(), [])
         if (stage_filter or vax_filter) and not dogs:
             continue
         customers.append({'owner': owner, 'dogs': dogs})
 
+    orphan_dogs = []
+    for email, dogs in dogs_by_email.items():
+        if email not in owner_emails:
+            orphan_dogs.extend(dogs)
+    orphan_dogs.sort(key=lambda dog: dog.dog_name.lower())
+
     return render(request, 'operations/client_list.html', {
         'customers': customers,
+        'orphan_dogs': orphan_dogs,
         'stages': ClientProfile.PipelineStage.choices,
         'current_stage': stage_filter,
         'vax_filters': VAX_FILTER_CHOICES,
@@ -171,13 +181,32 @@ def dog_edit(request, pk):
 
 @login_required
 @require_POST
-def dog_delete(request, pk):
+def dog_hide(request, pk):
     dog = get_object_or_404(ClientProfile, pk=pk)
     owner = _customer_owner_or_404(dog)
-    name = dog.dog_name
-    dog.delete()
-    messages.success(request, f'Removed dog {name}.')
+    dog.hide()
+    messages.success(
+        request,
+        f'{dog.dog_name} is hidden from the client list. Visits and photos stay on file.',
+    )
     return redirect('operations:customer_detail', pk=owner.pk)
+
+
+@login_required
+@require_POST
+def dog_unhide(request, pk):
+    dog = get_object_or_404(ClientProfile, pk=pk)
+    owner = _customer_owner_or_404(dog)
+    dog.unhide()
+    messages.success(request, f'{dog.dog_name} is on the client list again.')
+    return redirect('operations:dog_detail', pk=dog.pk)
+
+
+@login_required
+@require_POST
+def dog_delete(request, pk):
+    """Legacy URL — hide, never hard-delete (visits and photos must stay)."""
+    return dog_hide(request, pk)
 
 
 @login_required
@@ -224,12 +253,13 @@ def customer_add_dog(request, pk):
 def customer_detail(request, pk):
     """Customer (owner) front — COI and dog list only. No vaccinations."""
     customer_owner = get_object_or_404(CustomerOwner, pk=pk)
-    dogs = ClientProfile.objects.filter(
+    dogs_qs = ClientProfile.objects.filter(
         owner_email__iexact=customer_owner.owner_email,
     ).with_vaccination_expiry()
     return render(request, 'operations/customer_detail.html', {
         'customer_owner': customer_owner,
-        'dogs': dogs,
+        'dogs': dogs_qs.visible(),
+        'hidden_dogs': dogs_qs.hidden(),
     })
 
 
@@ -451,8 +481,33 @@ def contact_import_selected(request):
 
 @login_required
 @require_POST
+def dog_create_customer(request, pk):
+    """Create a CustomerOwner from a dog that has no matching customer row."""
+    dog = get_object_or_404(ClientProfile, pk=pk)
+    existing = CustomerOwner.for_client(dog)
+    owner = CustomerOwner.ensure_for_client(dog)
+    if existing is None:
+        messages.success(
+            request,
+            f'Created customer {owner.owner_name} for {dog.dog_name}.',
+        )
+    else:
+        messages.info(request, f'{dog.dog_name} already belongs to {owner.owner_name}.')
+    return redirect('operations:customer_detail', pk=owner.pk)
+
+
+@login_required
+@require_POST
 def advance_pipeline(request, pk):
     client = get_object_or_404(ClientProfile, pk=pk)
-    client.advance_pipeline()
-    messages.success(request, f'{client.dog_name} advanced to {client.get_pipeline_stage_display()}.')
+    if client.advance_pipeline():
+        messages.success(
+            request,
+            f'{client.dog_name} advanced to {client.get_pipeline_stage_display()}.',
+        )
+    else:
+        messages.info(
+            request,
+            f'{client.dog_name} is already {client.get_pipeline_stage_display()}.',
+        )
     return redirect('operations:dog_detail', pk=pk)

@@ -57,11 +57,32 @@
 {% empty %}
 <div class="card">
     {% if current_stage or current_vax %}
-    <p class="muted">No clients match these filters.</p>
-    {% else %}
+        {% if not orphan_dogs %}
+        <p class="muted">No clients match these filters.</p>
+        {% endif %}
+    {% elif not orphan_dogs %}
     <p class="muted">No clients yet.</p>
     <a href="{% url 'operations:client_intake' %}" class="btn btn-primary" style="margin-top:0.5rem">New Client &amp; Dog</a>
     {% endif %}
 </div>
 {% endfor %}
+
+{% if orphan_dogs %}
+<div class="card">
+    <h2>Dogs without a customer</h2>
+    <p class="muted">These dogs have an email that does not match a customer record. Create a customer to open their full profile.</p>
+    {% for dog in orphan_dogs %}
+    <div style="margin-top:0.75rem;padding:0.5rem;background:#f8f9fa;border-radius:8px">
+        <strong>{{ dog.dog_name }}</strong>
+        <span class="muted"> · {{ dog.owner_email }}</span>
+        <span class="badge badge-ok">{{ dog.get_pipeline_stage_display }}</span>
+        {% include "operations/_vax_badge.html" %}
+        <form method="post" action="{% url 'operations:dog_create_customer' dog.pk %}" style="margin-top:0.5rem">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-outline btn-sm">Create customer</button>
+        </form>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
 {% endblock %}

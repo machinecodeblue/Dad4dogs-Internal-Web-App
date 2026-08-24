@@ -148,6 +148,7 @@ Overnight is evaluated **before** hour tiers. Multi-day: each full 24h = Overnig
 | New Client & Dog intake | Done — `/clients/intake/`, optional Meet & Greet visit |
 | Vaccination expiry tracking | Done — dashboard 30-day / expired cards; `/clients/?vax=` |
 | Structured owner address | Done — street / unit / city / province / postal; Maps + statements + vCard |
+| Soft-hide dogs | Done — `is_hidden`; no UI hard-delete (visits/photos stay) |
 | Pipeline per dog, COI per customer | Done |
 | Visit booking (natural-language Start/End) | Done |
 | Repeat series (daily/weekly/weekdays/monthly) | Done |

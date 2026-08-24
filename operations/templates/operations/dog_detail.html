@@ -7,16 +7,26 @@
     <span class="muted" style="font-size:0.8rem">DOG</span>
     <h2>{{ dog.dog_name }}</h2>
     <span class="badge badge-ok">{{ dog.get_pipeline_stage_display }}</span>
+    {% if dog.is_hidden %}
+    <span class="badge badge-warn">HIDDEN</span>
+    {% endif %}
     <p class="muted" style="margin-top:0.5rem">Pipeline applies to this dog.</p>
     <div class="actions" style="margin-top:0.75rem">
         <a href="{% url 'operations:dog_edit' dog.pk %}" class="btn btn-primary btn-sm">Edit Dog</a>
         <a href="{% url 'operations:dog_vaccinations' dog.pk %}" class="btn btn-outline btn-sm">Vaccination Records</a>
         <a href="{% url 'operations:client_vcard' dog.pk %}" class="btn btn-outline btn-sm">Export vCard</a>
     </div>
-    <form method="post" action="{% url 'operations:dog_delete' dog.pk %}" style="margin-top:0.75rem" onsubmit="return confirm('Remove {{ dog.dog_name }} from the system?');">
+    {% if dog.is_hidden %}
+    <form method="post" action="{% url 'operations:dog_unhide' dog.pk %}" style="margin-top:0.75rem">
         {% csrf_token %}
-        <button type="submit" class="btn btn-outline btn-sm" style="color:var(--danger);border-color:var(--danger)">Remove Dog</button>
+        <button type="submit" class="btn btn-outline btn-sm">Show on client list</button>
     </form>
+    {% else %}
+    <form method="post" action="{% url 'operations:dog_hide' dog.pk %}" style="margin-top:0.75rem" onsubmit="return confirm('Hide {{ dog.dog_name }} from the client list? Visits and photos stay on file.');">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-outline btn-sm">Hide dog</button>
+    </form>
+    {% endif %}
 </div>
 
 <div class="card">

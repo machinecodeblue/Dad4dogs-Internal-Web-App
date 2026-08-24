@@ -25,6 +25,7 @@
 5. **Emergency contacts and authorized pickup are per owner** — shared across all dogs.
 6. **Veterinary contacts and care authorization are per dog** — act immediately without asking the owner which vet to call.
 7. `is_valid_dog_name()` rejects TBD, UNKNOWN, and dog name = owner's first name.
+8. **Never hard-delete a dog from the UI.** `is_hidden` removes them from the client list; visits and photos stay. Hide/unhide only.
 
 ---
 
@@ -89,7 +90,7 @@ Property: `authorized_pickup_list` — parsed non-empty stripped lines for templ
 
 ### Pipeline
 `INQUIRY` → `MEET_GREET` → `EVALUATION` → `APPROVED`  
-Method: `advance_pipeline()` on dog screen.
+Method: `advance_pipeline()` on dog screen — returns `False` (no write) if already Approved; the view flashes info, not success. The Advance button is hidden at Approved.
 
 ### Customer feed fields
 - `feed_secret` — speakable unique slug (CV syllables, e.g. `movakitu`)
@@ -117,13 +118,15 @@ Method: `advance_pipeline()` on dog screen.
 
 | Screen | URL | Contents |
 |--------|-----|----------|
-| Client list | `/clients/` | All customers + nested dogs; `?stage=` pipeline filter; `?vax=` vaccination filter (`expiring` / `expired` / `missing` / `ok`) |
+| Client list | `/clients/` | All customers + nested dogs; `?stage=` pipeline filter; `?vax=` vaccination filter (`expiring` / `expired` / `missing` / `ok`). Dogs whose email matches no `CustomerOwner` appear under **Dogs without a customer**. |
+| Create customer from dog | `POST /dogs/<id>/create-customer/` | `ensure_for_client()` for an orphan dog, then customer detail |
 | **New Client & Dog** | `/clients/intake/` | One POST: owner + first dog + vet + optional Meet & Greet (`IntakeWizardForm`). Atomic. M&G visit **skips** standard-stay Approved/vax/COI gate. Pipeline → Meet & Greet if times set, else Inquiry. |
 | Add customer | `/clients/add/` | Owner + emergency contacts — no dog |
 | Customer | `/customers/<id>/` | Primary contact, formatted address + **Open in Maps**, emergency/pickup, COI, dog list |
 | Edit customer | `/customers/<id>/edit/` | Primary + structured address (street / unit / city / province / postal) + emergency |
 | Add dog | `/customers/<id>/add-dog/` | Dog profile + vet contacts; pipeline starts at Inquiry |
-| Dog | `/dogs/<id>/` | Owner/emergency summary, **vet tap-to-call**, feed, visits |
+| Dog | `/dogs/<id>/` | Owner/emergency summary, **vet tap-to-call**, feed, visits; **Hide dog** (not delete) |
+| Hide / unhide dog | `POST /dogs/<id>/hide/` · `POST /dogs/<id>/unhide/` | Soft-hide from client list. Legacy `/dogs/<id>/delete/` aliases hide. |
 | Edit dog | `/dogs/<id>/edit/` | Dog profile + veterinary section |
 | Regenerate feed | `POST /dogs/<id>/feed/regenerate/` | New `feed_secret` — old links stop working |
 | Vaccinations | `/dogs/<id>/vaccinations/` | List, add, validate — dog only |
@@ -203,7 +206,7 @@ GET paths do **not** call `ensure_for_client()` or `ensure_feed_credentials()`. 
 
 `?stage=` must be a `PipelineStage` value or it is ignored (same as invalid `?vax=`). vCard filenames keep only `A-Za-z0-9_-`. Import `selected_rows` skip non-integers instead of 500.
 
-`client_list`, `client_create`, `customer_edit`, `customer_detail`, `customer_add_dog`, `dog_edit`, `dog_detail`, `dog_delete`, `dog_feed_regenerate`, `dog_vaccinations`, `update_coi`, `add_vaccination`, `validate_vaccination`, `advance_pipeline`, `contact_sync`, `contact_import_preview`, `contact_import_selected`, `client_vcard`, plus legacy redirects.
+`client_list`, `client_create`, `customer_edit`, `customer_detail`, `customer_add_dog`, `dog_edit`, `dog_detail`, `dog_delete`, `dog_create_customer`, `dog_feed_regenerate`, `dog_vaccinations`, `update_coi`, `add_vaccination`, `validate_vaccination`, `advance_pipeline`, `contact_sync`, `contact_import_preview`, `contact_import_selected`, `client_vcard`, plus legacy redirects.
 
 Public feed view lives in `views/customer_feed.py` — not in this package.
 
@@ -223,6 +226,7 @@ Public feed view lives in `views/customer_feed.py` — not in this package.
 | `0014_owner_emergency_and_vet_contacts` | Owner emergency/pickup + per-dog vet fields |
 | `0017_structured_home_address` | `address_street` / `unit` / `city` / `province` / `postal_code`; copies legacy `home_address` via `parse_legacy_address()` |
 | `0018_backfill_owners_and_feed_credentials` | Create missing `CustomerOwner` rows and fill blank feed secret/slug |
+| `0019_clientprofile_is_hidden` | Soft-hide flag; UI never hard-deletes dogs |
 
 ---
 

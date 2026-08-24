@@ -77,6 +77,7 @@ David books per **dog**. Two free-text fields only — **no multi-step date/time
 - Pipeline is not **Approved** (Inquiry / Meet & Greet / Evaluation cannot book a standard stay)
 - No current validated vaccination (`has_current_vaccination`)
 - Owner COI not confirmed (`CustomerOwner.coi_confirmed_received`)
+- Dog is **hidden** (`is_hidden`) — cannot book a new stay; existing visits still check in/out
 
 Clone (`clone_to_date`), calendar approve, and **intake Meet & Greet** (`IntakeWizardForm`) still bypass the form gate. Do not put this gate on `Visit.save()` — that would block check-in `update_fields` if we ever full_clean those rows.
 

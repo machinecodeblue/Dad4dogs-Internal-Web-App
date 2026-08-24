@@ -349,7 +349,10 @@ class VaccinationRecordForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         self.fixed_client = fixed_client
         self.fields['client'].label = 'Dog (who these papers belong to)'
-        self.fields['client'].queryset = ClientProfile.objects.all()
+        qs = ClientProfile.objects.visible()
+        if fixed_client:
+            qs = ClientProfile.objects.filter(pk=fixed_client.pk) | qs
+        self.fields['client'].queryset = qs.distinct()
         self.fields['papers_received'].required = False
         if not self.is_bound and not (self.instance and self.instance.pk):
             self.initial.setdefault('papers_received', True)
