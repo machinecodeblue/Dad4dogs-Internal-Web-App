@@ -1,61 +1,64 @@
 {% extends "operations/base.html" %}
+{% load phone_tags %}
 {% block title %}Clients — Dad4dogs{% endblock %}
 {% block content %}
 <div class="card">
-    <h2>Client Pipeline</h2>
-    <a href="{% url 'operations:client_intake' %}" class="btn btn-primary" style="margin-bottom:0.5rem">+ New Client &amp; Dog</a>
-    <a href="{% url 'operations:client_create' %}" class="btn btn-outline" style="margin-bottom:0.5rem">Customer only</a>
-    <a href="{% url 'operations:contact_sync' %}" class="btn btn-outline" style="margin-bottom:0.75rem">Google Contact Sync</a>
-    <form method="get">
-        <select name="stage" onchange="this.form.submit()">
-            <option value="">All Stages</option>
-            {% for value, label in stages %}
-            <option value="{{ value }}" {% if current_stage == value %}selected{% endif %}>{{ label }}</option>
-            {% endfor %}
-        </select>
-        <select name="vax" onchange="this.form.submit()" style="margin-top:0.5rem">
-            <option value="">All vaccinations</option>
-            {% for value, label in vax_filters %}
-            <option value="{{ value }}" {% if current_vax == value %}selected{% endif %}>{{ label }}</option>
-            {% endfor %}
-        </select>
-    </form>
-    {% if current_vax == 'expiring' %}
-    <p class="muted" style="margin-top:0.5rem">Validated vaccinations that expire within 30 days — still current, chase papers before they lapse.</p>
-    {% elif current_vax == 'expired' %}
-    <p class="muted" style="margin-top:0.5rem">Dogs whose latest validated vaccination has already expired. Do not book a standard stay.</p>
-    {% elif current_vax == 'missing' %}
-    <p class="muted" style="margin-top:0.5rem">Dogs with no validated vaccination record.</p>
-    {% endif %}
+    <h2>Clients</h2>
+    <a href="{% url 'operations:client_intake' %}" class="btn btn-primary">+ New Client &amp; Dog</a>
+    <details class="disclosure">
+        <summary>More</summary>
+        <div class="disclosure-body">
+            <a href="{% url 'operations:client_create' %}" class="btn btn-outline btn-sm" style="margin-bottom:0.5rem">Customer only</a>
+            <a href="{% url 'operations:contact_sync' %}" class="btn btn-outline btn-sm">Google Contact Sync</a>
+        </div>
+    </details>
+    <details class="disclosure"{% if current_stage or current_vax %} open{% endif %}>
+        <summary>Filter</summary>
+        <div class="disclosure-body">
+            <form method="get">
+                <select name="stage" onchange="this.form.submit()">
+                    <option value="">All Stages</option>
+                    {% for value, label in stages %}
+                    <option value="{{ value }}" {% if current_stage == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+                <select name="vax" onchange="this.form.submit()">
+                    <option value="">All vaccinations</option>
+                    {% for value, label in vax_filters %}
+                    <option value="{{ value }}" {% if current_vax == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </form>
+            {% if current_vax == 'expiring' %}
+            <p class="muted">Validated vaccinations that expire within 30 days.</p>
+            {% elif current_vax == 'expired' %}
+            <p class="muted">Latest validated vaccination has expired.</p>
+            {% elif current_vax == 'missing' %}
+            <p class="muted">No validated vaccination record.</p>
+            {% endif %}
+        </div>
+    </details>
 </div>
 
+<div class="card">
 {% for group in customers %}
-<div class="card visit-card">
-    <a href="{% url 'operations:customer_detail' group.owner.pk %}" style="text-decoration:none;color:inherit">
-        <span class="muted" style="font-size:0.8rem">CUSTOMER</span><br>
-        <strong>{{ group.owner.owner_name }}</strong>
-        <span class="muted"> · {{ group.owner.owner_email }}</span>
-        <br>
-        {% if group.owner.coi_status == 'received' %}
-        <span class="badge badge-ok">COI</span>
-        {% else %}
-        <span class="badge badge-warn">COI</span>
+    {% for dog in group.dogs %}
+    <a href="{% url 'operations:dog_detail' dog.pk %}" class="compact-row">
+        <span class="title">{{ dog.dog_name }}</span>
+        <span class="muted"> · {{ group.owner.owner_name }}</span>
+        {% include "operations/_pipeline_badge.html" %}
+        {% include "operations/_vax_badge.html" %}
+        {% if group.owner.owner_phone %}
+        <br><span class="muted truncate">{{ group.owner.owner_phone|phone_display }}</span>
         {% endif %}
     </a>
-
-    {% for dog in group.dogs %}
-    <a href="{% url 'operations:dog_detail' dog.pk %}" style="text-decoration:none;color:inherit;display:block;margin-top:0.5rem;padding:0.5rem;background:#f8f9fa;border-radius:8px">
-        <span class="muted" style="font-size:0.8rem">DOG</span><br>
-        <strong>{{ dog.dog_name }}</strong>
-        <span class="badge badge-ok">{{ dog.get_pipeline_stage_display }}</span>
-        {% include "operations/_vax_badge.html" %}
-    </a>
     {% empty %}
-    <p class="muted" style="margin-top:0.5rem">No dogs yet — <a href="{% url 'operations:customer_add_dog' group.owner.pk %}">add a dog</a></p>
+    <a href="{% url 'operations:customer_detail' group.owner.pk %}" class="compact-row">
+        <span class="title">{{ group.owner.owner_name }}</span>
+        <span class="muted"> · no dogs</span>
+    </a>
     {% endfor %}
-</div>
 {% empty %}
-<div class="card">
     {% if current_stage or current_vax %}
         {% if not orphan_dogs %}
         <p class="muted">No clients match these filters.</p>
@@ -64,18 +67,17 @@
     <p class="muted">No clients yet.</p>
     <a href="{% url 'operations:client_intake' %}" class="btn btn-primary" style="margin-top:0.5rem">New Client &amp; Dog</a>
     {% endif %}
-</div>
 {% endfor %}
+</div>
 
 {% if orphan_dogs %}
 <div class="card">
     <h2>Dogs without a customer</h2>
-    <p class="muted">These dogs have an email that does not match a customer record. Create a customer to open their full profile.</p>
     {% for dog in orphan_dogs %}
-    <div style="margin-top:0.75rem;padding:0.5rem;background:#f8f9fa;border-radius:8px">
-        <strong>{{ dog.dog_name }}</strong>
-        <span class="muted"> · {{ dog.owner_email }}</span>
-        <span class="badge badge-ok">{{ dog.get_pipeline_stage_display }}</span>
+    <div class="compact-row">
+        <span class="title">{{ dog.dog_name }}</span>
+        <span class="muted truncate"> · {{ dog.owner_email }}</span>
+        {% include "operations/_pipeline_badge.html" %}
         {% include "operations/_vax_badge.html" %}
         <form method="post" action="{% url 'operations:dog_create_customer' dog.pk %}" style="margin-top:0.5rem">
             {% csrf_token %}

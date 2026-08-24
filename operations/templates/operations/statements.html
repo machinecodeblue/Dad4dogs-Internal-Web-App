@@ -13,7 +13,9 @@
     <span class="muted"> — week of {{ statement.week_start }}</span>
     <br>
     <strong>${{ statement.total_amount }} CAD</strong>
-    <span class="badge badge-{% if statement.send_status == 'sent' %}ok{% else %}warn{% endif %}">{{ statement.get_send_status_display }}</span>
+    {% if statement.send_status != 'sent' %}
+    <span class="badge badge-warn">{{ statement.get_send_status_display }}</span>
+    {% endif %}
 </div>
 </a>
 {% empty %}

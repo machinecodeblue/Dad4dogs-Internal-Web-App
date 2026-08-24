@@ -14,7 +14,7 @@ A **Django 5 monolith** for David's single-user dog boarding operation (~25 repe
 
 | Principle | Detail |
 |-----------|--------|
-| **Persona** | David-only, mobile-first (phone via ngrok during dev) |
+| **Persona** | David-only, mobile-first, **one-handed** (phone in one hand, dogs in the other) |
 | **Database** | SQLite |
 | **Timezone** | `America/Toronto` |
 | **Scale** | ~25 dogs; capacity warns at 9+, blocks above 10/day (insurance ceiling) |
@@ -41,7 +41,7 @@ A **Django 5 monolith** for David's single-user dog boarding operation (~25 repe
    - `billing.md` — statements
    - `admin.md` — business settings, baseline contact info, documents (planned)
    - `feed.md` — timeline capture, customer photo feed, speakable URLs
-3. **`platform.md`** — dev server, HTTPS, ngrok, Gmail OAuth, PWA, UI conventions, testing
+3. **`platform.md`** — dev server, HTTPS, ngrok, Gmail OAuth, PWA, **cognitive-load UX rules**, testing. Any list/detail/dashboard/check-in template change must follow those rules.
 
 Do **not** change pricing tiers, capacity ceilings, pipeline stages, or visit status guards unless David explicitly asks.
 
@@ -199,7 +199,12 @@ $env:PUBLIC_SITE_URL = "https://your-subdomain.ngrok.app"
 
 1. Identify the **domain** before editing (customers / scheduling / billing / admin / platform).
 2. Open the matching `LLM/<domain>.md` file.
-3. Keep **mobile-first** UX — no desktop-only patterns.
+3. Keep **mobile-first, one-handed** UX — no desktop-only patterns, no dashboard sprawl. Standing rules in `platform.md` (source: `Proposed work/Gemini suggested UX cognitive overload guidelines.md`):
+   - Detail screens: ≤5 primary fields above the fold (name, tap-to-call mobile, emergency call). Address, COI, pickup, feed admin, hide/vCard go in `<details>`.
+   - Client list: compact `Dog · Owner · badge · phone` rows. No nested cards. Filters in a disclosure if more than 2.
+   - ≤2 primary CTAs per card. Dangerous/admin actions in **More actions**.
+   - ≤2 badges, and only for work that still needs doing (no green OK / COMPLETED / OK VAX).
+   - List notes: one line + `.truncate`. Reuse `.compact-row`, `details.disclosure`, `.admin-drawer`.
 4. Visit booking stays **two free-text fields** (Start/End) — no multi-step pickers.
 5. No bulk Google contact import without preview + checkboxes.
 6. Extend `operations/services/` for new business logic.
@@ -220,4 +225,5 @@ $env:PUBLIC_SITE_URL = "https://your-subdomain.ngrok.app"
 | [`billing.md`](billing.md) | Weekly statements, checkout totals |
 | [`admin.md`](admin.md) | Business settings, baseline contact info, documents |
 | [`feed.md`](feed.md) | Staff timeline, customer feed, speakable URLs, access logging |
-| [`platform.md`](platform.md) | Dev environment, HTTPS, ngrok, PWA, Gmail, UI, testing |
+| [`platform.md`](platform.md) | Dev environment, HTTPS, ngrok, PWA, Gmail, **cognitive-load UX**, testing |
+| [`Proposed work/Gemini suggested UX cognitive overload guidelines.md`](Proposed%20work/Gemini%20suggested%20UX%20cognitive%20overload%20guidelines.md) | Original UX constraints — adopted into `platform.md`; keep in sync if the rules change |

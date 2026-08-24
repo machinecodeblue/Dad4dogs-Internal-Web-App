@@ -8,13 +8,11 @@
     </p>
     <h2>{{ dog.dog_name }} — Vaccination Records</h2>
     <p class="muted">Vaccination papers belong to this dog only. Expiry date is required.</p>
-    {% if dog.vaccination_status == 'ok' %}
-    <span class="badge badge-ok">CURRENT VALIDATED VAX</span>
-    {% elif dog.vaccination_status == 'expiring' %}
+    {% if dog.vaccination_status == 'expiring' %}
     <span class="badge badge-warn">EXPIRING {{ dog.current_vaccination_expires_at|date:"M j, Y" }}</span>
     {% elif dog.vaccination_status == 'expired' or has_expired_validated %}
     <span class="badge badge-danger">VAX EXPIRED</span>
-    {% else %}
+    {% elif dog.vaccination_status != 'ok' %}
     <span class="badge badge-warn">NO VALIDATED VAX</span>
     {% endif %}
 </div>
@@ -27,10 +25,7 @@
     <span class="badge badge-danger">EXPIRED</span>
     {% elif record.validated and record.is_expiring_soon %}
     <span class="badge badge-warn">EXPIRING SOON</span>
-    <span class="badge badge-ok">VALIDATED</span>
-    {% elif record.validated %}
-    <span class="badge badge-ok">VALIDATED</span>
-    {% elif record.papers_received %}
+    {% elif record.papers_received and not record.validated %}
     <span class="badge badge-warn">RECEIVED — NOT VALIDATED</span>
     {% endif %}
     {% if record.vet_clinic %}<p class="muted">{{ record.vet_clinic }}</p>{% endif %}

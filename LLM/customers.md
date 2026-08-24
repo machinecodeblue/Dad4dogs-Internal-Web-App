@@ -67,7 +67,7 @@ Property: `authorized_pickup_list` — parsed non-empty stripped lines for templ
 |-------|---------|
 | `vet_clinic_name` | Primary clinic (e.g. Grey Street Animal Hospital) |
 | `vet_name` | Doctor who knows the dog's history |
-| `vet_clinic_phone` | Tap-to-call on dog detail and check-in screen |
+| `vet_clinic_phone` | Tap-to-call in dog-detail Veterinary disclosure; check-in uses it if no emergency vet |
 | `emergency_vet_clinic` | Preferred 24-hour hospital after regular hours |
 | `emergency_vet_phone` | Tap-to-call emergency vet |
 | `vet_care_authorization` | Dollar cap or directive (e.g. approve $500 triage before contacting owner) |
@@ -118,19 +118,19 @@ Method: `advance_pipeline()` on dog screen — returns `False` (no write) if alr
 
 | Screen | URL | Contents |
 |--------|-----|----------|
-| Client list | `/clients/` | All customers + nested dogs; `?stage=` pipeline filter; `?vax=` vaccination filter (`expiring` / `expired` / `missing` / `ok`). Dogs whose email matches no `CustomerOwner` appear under **Dogs without a customer**. |
+| Client list | `/clients/` | Compact dog rows (`Dog · Owner · phone`); filters and extra create links in disclosures. `?stage=` / `?vax=`. Orphans under **Dogs without a customer**. |
 | Create customer from dog | `POST /dogs/<id>/create-customer/` | `ensure_for_client()` for an orphan dog, then customer detail |
 | **New Client & Dog** | `/clients/intake/` | One POST: owner + first dog + vet + optional Meet & Greet (`IntakeWizardForm`). Atomic. M&G visit **skips** standard-stay Approved/vax/COI gate. Pipeline → Meet & Greet if times set, else Inquiry. |
 | Add customer | `/clients/add/` | Owner + emergency contacts — no dog |
-| Customer | `/customers/<id>/` | Primary contact, formatted address + **Open in Maps**, emergency/pickup, COI, dog list |
+| Customer | `/customers/<id>/` | Name, Call, emergency call. Address/maps, pickup, COI timestamps, hide/edit sit in `<details>`. Dogs are compact rows. |
 | Edit customer | `/customers/<id>/edit/` | Primary + structured address (street / unit / city / province / postal) + emergency |
 | Add dog | `/customers/<id>/add-dog/` | Dog profile + vet contacts; pipeline starts at Inquiry |
-| Dog | `/dogs/<id>/` | Owner/emergency summary, **vet tap-to-call**, feed, visits; **Hide dog** (not delete) |
+| Dog | `/dogs/<id>/` | Name, Call owner, emergency-vet call (max two primary buttons). Visits compact + Schedule stay. Address, clinic, feed, Hide/vCard in `<details>`. |
 | Hide / unhide dog | `POST /dogs/<id>/hide/` · `POST /dogs/<id>/unhide/` | Soft-hide from client list. Legacy `/dogs/<id>/delete/` aliases hide. |
 | Edit dog | `/dogs/<id>/edit/` | Dog profile + veterinary section |
 | Regenerate feed | `POST /dogs/<id>/feed/regenerate/` | New `feed_secret` — old links stop working |
 | Vaccinations | `/dogs/<id>/vaccinations/` | List, add, validate — dog only |
-| Check-in | `/checkin/` | Per-visit owner phone + Vet / Emergency Vet buttons |
+| Check-in | `/checkin/` | Per-visit owner phone + emergency (or clinic) tap-to-call. **Check In**, or **Log Moment** + **Check Out**. |
 | vCard export | `/clients/<id>/vcard/` | Per-dog `.vcf` for Google |
 | Contact sync | `/contacts/sync/` | CSV upload hub |
 | Import preview | `/contacts/import/` | Analysis before DB write |
@@ -140,15 +140,15 @@ Method: `advance_pipeline()` on dog screen — returns `False` (no write) if alr
 - `/clients/<dog_pk>/` → customer view for that dog's owner
 - `/clients/<dog_pk>/edit/` → dog edit
 
-### Client list badges
-| Badge | Scope |
-|-------|-------|
-| COI | Customer (`CustomerOwner`) |
-| VAX (green) | Dog — current validated, more than 30 days left |
-| VAX + date (amber) | Dog — current but expires within 30 days |
-| VAX EXPIRED (red) | Dog — latest validated record already expired |
-| VAX (amber, no date) | Dog — no validated record |
-| Pipeline | Dog stage |
+### Client list badges (actionable only — no green OK; at most two per row)
+| Badge | When shown |
+|-------|------------|
+| VAX + date (amber) | Current vax expires within 30 days |
+| VAX EXPIRED (red) | Latest validated record expired |
+| VAX (amber) | No validated record |
+| Pipeline (amber) | Dog is not Approved |
+
+COI warnings live on the **customer** screen, not the compact list (keeps rows at ≤2 badges).
 
 ---
 
@@ -214,7 +214,7 @@ Public feed view lives in `views/customer_feed.py` — not in this package.
 
 ## 9. Tests
 
-`CustomerOwnerFormTests`, `AddressHandlingTests`, `DogProfileFormTests`, `IntakeWizardTests`, `ContactDataTests`, `CustomerEditTests`, `CustomerViewsHttpTests`, `ContactSyncTests`, `ComplianceTests`, `VaccinationExpiryViewTests`, `FeedSlugTests`, `CustomerFeedTests` in `operations/tests.py`.
+`CustomerOwnerFormTests`, `AddressHandlingTests`, `CognitiveLoadUXTests`, `DogProfileFormTests`, `IntakeWizardTests`, `ContactDataTests`, `CustomerEditTests`, `CustomerViewsHttpTests`, `ContactSyncTests`, `ComplianceTests`, `VaccinationExpiryViewTests`, `FeedSlugTests`, `CustomerFeedTests` in `operations/tests.py`.
 
 ---
 

@@ -143,6 +143,39 @@
             grid-template-columns: 1fr 1fr;
             gap: 0 0.75rem;
         }
+        .compact-row {
+            display: block;
+            text-decoration: none;
+            color: inherit;
+            padding: 0.75rem 0;
+            border-bottom: 1px solid #eee;
+            min-height: 2.75rem;
+        }
+        .compact-row:last-child { border-bottom: none; }
+        .compact-row .title { font-weight: 600; }
+        .truncate {
+            overflow: hidden;
+            white-space: nowrap;
+            text-overflow: ellipsis;
+        }
+        details.disclosure {
+            margin-top: 0.5rem;
+        }
+        details.disclosure > summary {
+            font-weight: 600;
+            cursor: pointer;
+            padding: 0.5rem 0;
+            list-style: disclosure-closed;
+        }
+        details.disclosure[open] > summary { list-style: disclosure-open; }
+        details.disclosure .disclosure-body { padding: 0.25rem 0 0.5rem; }
+        .admin-drawer { margin-top: 0.75rem; }
+        .tap-call {
+            display: inline-block;
+            font-weight: 600;
+            color: var(--brand);
+            text-decoration: none;
+        }
         .import-row-flagged { background: #fff9f9; border-color: #f5c6cb !important; }
         .import-row-disabled { opacity: 0.55; }
         input[type="checkbox"] { width: 1.25rem; height: 1.25rem; accent-color: var(--brand); }

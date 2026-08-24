@@ -407,6 +407,70 @@ class AddressHandlingTests(TestCase):
         response = self.client.get(reverse('operations:dog_detail', kwargs={'pk': dog.pk}))
         self.assertContains(response, '191 Grey Street')
         self.assertContains(response, 'Open in Maps')
+        self.assertContains(response, '<summary>Address</summary>')
+
+
+class CognitiveLoadUXTests(TestCase):
+    """Client/list/detail screens follow one-handed cognitive-load rules."""
+
+    def setUp(self):
+        self.owner = CustomerOwner.objects.create(
+            owner_name='Jane Doe',
+            owner_email='jane-ux@example.com',
+            owner_phone='4165550100',
+            address_street='191 Grey Street',
+            address_city='London',
+            address_province='ON',
+            address_postal_code='N6B 1G2',
+        )
+        self.dog = ClientProfile.objects.create(
+            dog_name='Kobe',
+            owner_name=self.owner.owner_name,
+            owner_email=self.owner.owner_email,
+            owner_phone=self.owner.owner_phone,
+            pipeline_stage=ClientProfile.PipelineStage.APPROVED,
+        )
+        user = get_user_model().objects.create_user('david-ux', 'ux@example.com', 'pass')
+        self.client.force_login(user)
+
+    def test_client_list_is_compact_dog_owner_rows(self):
+        response = self.client.get(reverse('operations:client_list'))
+        self.assertContains(response, 'class="compact-row"')
+        self.assertContains(response, 'class="title">Kobe<')
+        self.assertContains(response, self.owner.owner_name)
+        self.assertContains(response, '(416) 555-0100')
+        self.assertNotContains(response, 'class="badge badge-ok"')
+        self.assertNotContains(response, '>COI<')
+
+    def test_dog_detail_keeps_call_and_emergency_as_primary_actions(self):
+        self.dog.emergency_vet_phone = '5195559999'
+        self.dog.save(update_fields=['emergency_vet_phone', 'updated_at'])
+        response = self.client.get(reverse('operations:dog_detail', args=[self.dog.pk]))
+        self.assertContains(response, 'Call (416) 555-0100')
+        self.assertContains(response, 'Emergency vet')
+        self.assertContains(response, 'Schedule stay')
+        self.assertContains(response, '<summary>Address</summary>')
+        self.assertContains(response, '<summary>More actions</summary>')
+        self.assertContains(response, 'Hide dog')
+
+    def test_vaccination_page_omits_green_ok_badges(self):
+        VaccinationRecord.objects.create(
+            client=self.dog,
+            received_at=timezone.localdate(),
+            expires_at=timezone.localdate() + timedelta(days=120),
+            validated=True,
+            papers_received=True,
+        )
+        response = self.client.get(reverse('operations:dog_vaccinations', args=[self.dog.pk]))
+        self.assertNotContains(response, 'CURRENT VALIDATED VAX')
+        self.assertNotContains(response, 'class="badge badge-ok"')
+
+    def test_dashboard_omits_always_on_stats_and_ok_badges(self):
+        response = self.client.get(reverse('operations:dashboard'))
+        self.assertNotContains(response, 'Approved Dogs')
+        self.assertNotContains(response, 'Standard Max')
+        self.assertNotContains(response, 'class="badge badge-ok"')
+        self.assertContains(response, '<summary>Calendar feed</summary>')
 
 
 class IntakeWizardTests(TestCase):
@@ -1124,7 +1188,7 @@ class CustomerViewsHttpTests(TestCase):
         self.assertContains(customer_page, 'Hidden dogs')
         self.assertContains(customer_page, self.dog.dog_name)
         list_page = self.client.get(reverse('operations:client_list'))
-        self.assertNotContains(list_page, f'<strong>{self.dog.dog_name}</strong>', html=True)
+        self.assertNotContains(list_page, f'class="title">{self.dog.dog_name}<')
 
     def test_unhide_returns_dog_to_client_list(self):
         self.dog.hide()

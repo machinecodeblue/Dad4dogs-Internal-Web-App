@@ -170,14 +170,17 @@ Home screen (`/`) = David's daily operations view.
 - Query `year` must be `datetime.MINYEAR`…`MAXYEAR` (1–9999); `month` 1–12. Out-of-range or huge integers fall back to the selected day’s month — do not call `date(cal_year, …)` unbounded (`OverflowError` / `ValueError`).
 
 ### Daily agenda
-- All visits **overlapping** selected day (overnight spans included)
-- Checked-in: amber background + badge
-- Scheduled: green left border
-- Completed: muted grey
-- Capacity stats for **selected** day
+- Compact rows: `Dog · Owner` plus time; tap opens dog detail
+- Checked-in: amber left border + **CHECKED IN** badge only
+- Scheduled: green left border, no status badge
+- Completed: muted grey, no green COMPLETED badge
+- Capacity counts always; **WARNING/OVER** badge only when not ok
+- **Open Check-In** on today
+- iCal link is in a **Calendar feed** disclosure (not a permanent Quick Links card)
 
 ### Vaccination compliance cards
-- **Vax Expiring (30d)** — count of dogs whose latest validated `expires_at` is today through today+30; links to `/clients/?vax=expiring`
+- Shown **only when the count is > 0** (no always-on Approved Dogs / Standard Max tiles)
+- **Vax Expiring (30d)** — latest validated `expires_at` is today through today+30; links to `/clients/?vax=expiring`
 - **Vax Expired** — latest validated `expires_at` already past; links to `/clients/?vax=expired`
 - Counts come from `ClientProfile.objects.vaccination_status_counts()` (one annotated aggregate). Do not N+1 `has_current_vaccination` on the dashboard.
 
@@ -189,6 +192,9 @@ Home screen (`/`) = David's daily operations view.
 ## 5. Check-In / Check-Out
 
 - `/checkin/` lists today's overlapping scheduled + checked-in visits (`day_bounds`, not `__date__`)
+- Each card: dog, owner, tap-to-call (emergency vet if present, else clinic). No green OK badges.
+- Scheduled: one CTA (**Check In**). Checked-in: **Log Moment** + **Check Out**.
+- Capacity count always; WARNING/OVER badge only when not ok
 - Check-in sets `actual_arrival = now`, status `checked_in`
 - Check-out sets `actual_departure = now`, runs `calculate_fee()`, status `completed`
 - Capacity re-checked at check-in

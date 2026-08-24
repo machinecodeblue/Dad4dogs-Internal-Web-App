@@ -58,10 +58,9 @@
     .cal-day.empty { visibility: hidden; pointer-events: none; }
     .agenda-visit {
         border-left: 4px solid var(--brand-light);
-        padding: 0.75rem;
-        margin-top: 0.5rem;
-        background: #f8f9fa;
-        border-radius: 8px;
+        padding-left: 0.75rem;
+        background: transparent;
+        border-radius: 0;
     }
     .agenda-visit.checked-in {
         border-left-color: var(--warn);
@@ -69,11 +68,8 @@
     }
     .agenda-visit.completed {
         border-left-color: #adb5bd;
-        background: #f1f3f5;
-        opacity: 0.9;
+        opacity: 0.85;
     }
-    .agenda-visit a { color: inherit; text-decoration: none; }
-    .agenda-visit a:hover strong { color: var(--brand); }
 </style>
 
 <div class="card">
@@ -123,33 +119,25 @@
             <div class="label">Capacity</div>
         </div>
     </div>
+    {% if capacity.status != 'ok' %}
     <p>
-        <span class="badge badge-{% if capacity.status == 'ok' %}ok{% elif capacity.status == 'warning' %}warn{% else %}danger{% endif %}">
+        <span class="badge badge-{% if capacity.status == 'warning' %}warn{% else %}danger{% endif %}">
             {{ capacity.status|upper }}
         </span>
         <span class="muted" style="margin-left:0.5rem">{{ capacity.message }}</span>
     </p>
+    {% endif %}
 
     {% for visit in agenda_visits %}
-    <div class="agenda-visit{% if visit.status == 'checked_in' %} checked-in{% elif visit.status == 'completed' %} completed{% endif %}">
-        <a href="{% url 'operations:dog_detail' visit.client.pk %}">
-            <strong>{{ visit.client.dog_name }}</strong>
-            <span class="muted"> — {{ visit.client.owner_name }}</span>
-        </a>
-        <br>
-        <span class="muted">{{ visit.schedule_display }}</span>
-        <br>
+    <a href="{% url 'operations:dog_detail' visit.client.pk %}" class="compact-row agenda-visit{% if visit.status == 'checked_in' %} checked-in{% elif visit.status == 'completed' %} completed{% endif %}">
+        <span class="title">{{ visit.client.dog_name }}</span>
+        <span class="muted"> · {{ visit.client.owner_name }}</span>
         {% if visit.status == 'checked_in' %}
         <span class="badge badge-warn">CHECKED IN</span>
-        {% elif visit.status == 'completed' %}
-        <span class="badge badge-ok">COMPLETED</span>
-        {% else %}
-        <span class="badge badge-ok">{{ visit.get_status_display }}</span>
         {% endif %}
-        {% if visit.actual_arrival %}
-        <span class="muted"> · arrived {{ visit.actual_arrival|time:"g:i A" }}</span>
-        {% endif %}
-    </div>
+        <br>
+        <span class="muted truncate">{{ visit.schedule_display }}{% if visit.actual_arrival %} · arrived {{ visit.actual_arrival|time:"g:i A" }}{% endif %}</span>
+    </a>
     {% empty %}
     <p class="muted" style="margin-top:0.5rem">No visits on this day.</p>
     {% endfor %}
@@ -159,24 +147,22 @@
     {% endif %}
 </div>
 
+{% if vax_expiring_count or vax_expired_count %}
 <div class="stat-grid" style="margin-bottom:0.75rem">
-    <div class="card stat">
-        <div class="number">{{ approved_clients }}</div>
-        <div class="label">Approved Dogs</div>
-    </div>
-    <div class="card stat">
-        <div class="number">8</div>
-        <div class="label">Standard Max</div>
-    </div>
+    {% if vax_expiring_count %}
     <a href="{% url 'operations:client_list' %}?vax=expiring" class="card stat" style="text-decoration:none;color:inherit">
-        <div class="number"{% if vax_expiring_count %} style="color:#856404"{% endif %}>{{ vax_expiring_count }}</div>
+        <div class="number" style="color:#856404">{{ vax_expiring_count }}</div>
         <div class="label">Vax Expiring (30d)</div>
     </a>
+    {% endif %}
+    {% if vax_expired_count %}
     <a href="{% url 'operations:client_list' %}?vax=expired" class="card stat" style="text-decoration:none;color:inherit">
-        <div class="number"{% if vax_expired_count %} style="color:#721c24"{% endif %}>{{ vax_expired_count }}</div>
+        <div class="number" style="color:#721c24">{{ vax_expired_count }}</div>
         <div class="label">Vax Expired</div>
     </a>
+    {% endif %}
 </div>
+{% endif %}
 
 {% if pending_events %}
 <div class="card">
@@ -188,8 +174,10 @@
 </div>
 {% endif %}
 
-<div class="card">
-    <h2>Quick Links</h2>
-    <a href="{% url 'operations:ical_feed' %}" class="btn btn-outline">iCal Feed (Google Calendar)</a>
-</div>
+<details class="card disclosure">
+    <summary>Calendar feed</summary>
+    <div class="disclosure-body">
+        <a href="{% url 'operations:ical_feed' %}" class="btn btn-outline btn-sm">iCal Feed (Google Calendar)</a>
+    </div>
+</details>
 {% endblock %}

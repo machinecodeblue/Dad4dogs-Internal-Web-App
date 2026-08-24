@@ -4,12 +4,14 @@
 {% block content %}
 <div class="card">
     <h2>Live Check-In — {{ today }}</h2>
+    <p class="muted">{{ capacity.count }} dog{{ capacity.count|pluralize }} · {{ capacity.message }}</p>
+    {% if capacity.status != 'ok' %}
     <p>
-        <span class="badge badge-{% if capacity.status == 'ok' %}ok{% elif capacity.status == 'warning' %}warn{% else %}danger{% endif %}">
-            {{ capacity.count }} dogs
+        <span class="badge badge-{% if capacity.status == 'warning' %}warn{% else %}danger{% endif %}">
+            {{ capacity.status|upper }}
         </span>
-        <span class="muted" style="margin-left:0.5rem">{{ capacity.message }}</span>
     </p>
+    {% endif %}
 </div>
 
 {% for visit in visits %}
@@ -21,14 +23,13 @@
         · <a href="{{ visit.client.owner_phone|as_tel }}">{{ visit.client.owner_phone|phone_display }}</a>
         {% endif %}
     </p>
-    {% if visit.client.vet_clinic_phone or visit.client.emergency_vet_phone %}
-    <p style="font-size:0.85rem;margin-top:0.35rem">
-        {% if visit.client.vet_clinic_phone %}
-        <a href="{{ visit.client.vet_clinic_phone|as_tel }}" class="btn btn-outline btn-sm">Vet</a>
-        {% endif %}
-        {% if visit.client.emergency_vet_phone %}
-        <a href="{{ visit.client.emergency_vet_phone|as_tel }}" class="btn btn-warn btn-sm">Emergency Vet</a>
-        {% endif %}
+    {% if visit.client.emergency_vet_phone %}
+    <p style="margin-top:0.35rem">
+        <a href="{{ visit.client.emergency_vet_phone|as_tel }}" class="tap-call">Emergency vet — {{ visit.client.emergency_vet_phone|phone_display }}</a>
+    </p>
+    {% elif visit.client.vet_clinic_phone %}
+    <p style="margin-top:0.35rem">
+        <a href="{{ visit.client.vet_clinic_phone|as_tel }}" class="tap-call">Clinic — {{ visit.client.vet_clinic_phone|phone_display }}</a>
     </p>
     {% endif %}
     <p>Scheduled: {{ visit.scheduled_start|time:"g:i A" }} – {{ visit.scheduled_end|time:"g:i A" }}</p>
@@ -47,22 +48,22 @@
     </div>
     {% endif %}
 
+    {% if visit.status == 'scheduled' or visit.status == 'checked_in' %}
     <div class="actions">
         {% if visit.status == 'scheduled' %}
         <form method="post" action="{% url 'operations:visit_check_in' visit.pk %}">
             {% csrf_token %}
             <button type="submit" class="btn btn-success">Check In</button>
         </form>
-        {% elif visit.status == 'checked_in' %}
+        {% else %}
         <a href="{% url 'operations:visit_timeline' visit.pk %}" class="btn btn-primary">Log Moment</a>
         <form method="post" action="{% url 'operations:visit_check_out' visit.pk %}">
             {% csrf_token %}
             <button type="submit" class="btn btn-warn">Check Out</button>
         </form>
-        {% else %}
-        <span class="badge badge-ok">{{ visit.get_status_display }}</span>
         {% endif %}
     </div>
+    {% endif %}
 </div>
 {% empty %}
 <div class="card">

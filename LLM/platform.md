@@ -72,6 +72,27 @@ Messages appear in Gmail **Sent Mail** for audit trail.
 - Cards, large touch targets, green brand (`#2d6a4f`)
 - Max content width ~600px centred
 
+### Cognitive load (one-handed, dogs in hand)
+
+**Standing rules** — adopted from `Proposed work/Gemini suggested UX cognitive overload guidelines.md`. New screens and template edits must follow these. Do not reintroduce wall-of-data cards.
+
+**Progressive disclosure**
+- **Customer & dog detail:** never more than 5 primary data points above the fold. Top card: full name, tap-to-call primary mobile, emergency (vet or contact) tap-to-call. Secondary details (full address, COI timestamps, pickup names, care caps, clinic, feed admin) go in native `<details>` or a **More actions** drawer.
+- **Client list (`/clients/`):** compact rows `Dog Name · Owner Name · Status Badge · Primary Phone`. Do not nest full cards with notes, feed links, or address previews. Tap the row to open dog (or customer) detail. Group search/filter controls in a disclosure if more than 2 filters are present.
+
+**Action density**
+- At most **2 primary CTA buttons** visible at once per card (e.g. Call + Emergency, or Log Moment + Check Out).
+- Dangerous or admin actions (Hide dog, regenerate feed, reset COI, vCard, iCal) belong in a grouped **More actions** / admin drawer at the bottom.
+
+**Visual noise**
+- At most **2 badges** per card. Only actionable states (expiring/missing vax, pipeline not Approved, CHECKED IN, COI not received on the *customer* screen). Do not show green OK badges for a normal state — no OK VAX, no COMPLETED, no capacity OK, no SENT.
+- List notes and free text: one line with ellipsis (`.truncate`).
+
+**Where this lands today**
+- Dashboard agenda: compact rows; vax tiles only if count > 0; capacity badge only when warning/over; iCal in a disclosure.
+- Check-in: Check In, or Log Moment + Check Out; emergency (else clinic) as tap-to-call, not a third button.
+- Shared CSS in `base.html`: `.compact-row`, `.truncate`, `details.disclosure`, `.admin-drawer`. Shared badges: `_pipeline_badge.html`, `_vax_badge.html` (warn/danger only).
+
 ### Progressive Web App (PWA) — David's admin app only
 Install to home screen for standalone mode (no browser address bar). Customer feed is a normal web page — they can bookmark or add to home screen manually.
 
@@ -151,8 +172,9 @@ Get-ChildItem -Recurse -Directory -Filter "__pycache__" | Remove-Item -Recurse -
 python manage.py test operations
 ```
 
-All tests in `operations/tests.py` (~70+ tests). Update tests when changing:
+All tests in `operations/tests.py`. Update tests when changing:
 - Pricing, capacity (booking vs check-in/out saves), visit forms, check-in/out status guards, agenda, contacts, compliance, Gmail helpers, business settings, timeline, customer feed, PWA endpoints
+- List/detail/dashboard/check-in templates — keep `CognitiveLoadUXTests` green (compact rows, no green OK badges, address in a disclosure, ≤2 primary CTAs)
 
 ---
 

@@ -3,148 +3,134 @@
 {% block title %}{{ dog.dog_name }} — Dad4dogs{% endblock %}
 {% block content %}
 <div class="card">
-    <p class="muted"><a href="{% url 'operations:customer_detail' customer_owner.pk %}" style="color:var(--brand)">← {{ customer_owner.owner_name }}</a></p>
-    <span class="muted" style="font-size:0.8rem">DOG</span>
+    <p class="muted"><a href="{% url 'operations:customer_detail' customer_owner.pk %}" class="tap-call">← {{ customer_owner.owner_name }}</a></p>
     <h2>{{ dog.dog_name }}</h2>
-    <span class="badge badge-ok">{{ dog.get_pipeline_stage_display }}</span>
+    {% include "operations/_pipeline_badge.html" %}
+    {% include "operations/_vax_badge.html" %}
     {% if dog.is_hidden %}
     <span class="badge badge-warn">HIDDEN</span>
     {% endif %}
-    <p class="muted" style="margin-top:0.5rem">Pipeline applies to this dog.</p>
-    <div class="actions" style="margin-top:0.75rem">
-        <a href="{% url 'operations:dog_edit' dog.pk %}" class="btn btn-primary btn-sm">Edit Dog</a>
-        <a href="{% url 'operations:dog_vaccinations' dog.pk %}" class="btn btn-outline btn-sm">Vaccination Records</a>
-        <a href="{% url 'operations:client_vcard' dog.pk %}" class="btn btn-outline btn-sm">Export vCard</a>
-    </div>
-    {% if dog.is_hidden %}
-    <form method="post" action="{% url 'operations:dog_unhide' dog.pk %}" style="margin-top:0.75rem">
-        {% csrf_token %}
-        <button type="submit" class="btn btn-outline btn-sm">Show on client list</button>
-    </form>
-    {% else %}
-    <form method="post" action="{% url 'operations:dog_hide' dog.pk %}" style="margin-top:0.75rem" onsubmit="return confirm('Hide {{ dog.dog_name }} from the client list? Visits and photos stay on file.');">
-        {% csrf_token %}
-        <button type="submit" class="btn btn-outline btn-sm">Hide dog</button>
-    </form>
+    {% if customer_owner.owner_phone %}
+    <a href="{{ customer_owner.owner_phone|as_tel }}" class="btn btn-primary" style="margin-top:0.75rem">Call {{ customer_owner.owner_phone|phone_display }}</a>
     {% endif %}
-</div>
-
-<div class="card">
-    <h2>Owner &amp; Emergency Contacts</h2>
-    <p>
-        <strong>{{ customer_owner.owner_name }}</strong>
-        {% if customer_owner.owner_phone %}
-        · <a href="{{ customer_owner.owner_phone|as_tel }}">{{ customer_owner.owner_phone|phone_display }}</a>
-        {% endif %}
-    </p>
-    {% if customer_owner.formatted_address %}
-    <p class="muted" style="margin-top:0.5rem;white-space:pre-line">{{ customer_owner.formatted_address }}</p>
-    {% if customer_owner.address_maps_url %}
-    <p style="margin-top:0.25rem"><a href="{{ customer_owner.address_maps_url }}" target="_blank" rel="noopener">Open in Maps</a></p>
-    {% endif %}
-    {% endif %}
-    {% if customer_owner.emergency_contact_name or customer_owner.emergency_contact_phone %}
-    <p class="muted" style="margin-top:0.5rem">
-        Emergency: <strong>{{ customer_owner.emergency_contact_name|default:"—" }}</strong>
-        {% if customer_owner.emergency_contact_relationship %} ({{ customer_owner.emergency_contact_relationship }}){% endif %}
-        {% if customer_owner.emergency_contact_phone %}
-        · <a href="{{ customer_owner.emergency_contact_phone|as_tel }}">{{ customer_owner.emergency_contact_phone|phone_display }}</a>
-        {% endif %}
-    </p>
-    {% endif %}
-    <p class="muted" style="margin-top:0.35rem">
-        <a href="{% url 'operations:customer_detail' customer_owner.pk %}">Full customer contact record →</a>
-    </p>
-</div>
-
-<div class="card">
-    <h2>Veterinary Contacts</h2>
-    {% if dog.vet_clinic_name or dog.vet_clinic_phone or dog.emergency_vet_clinic %}
-    {% if dog.vet_clinic_name %}
-    <p><strong>{{ dog.vet_clinic_name }}</strong>{% if dog.vet_name %} · {{ dog.vet_name }}{% endif %}</p>
-    {% endif %}
-    {% if dog.vet_clinic_phone %}
-    <p><a href="{{ dog.vet_clinic_phone|as_tel }}" class="btn btn-primary btn-sm">Call Clinic — {{ dog.vet_clinic_phone|phone_display }}</a></p>
-    {% endif %}
-    {% if dog.emergency_vet_clinic or dog.emergency_vet_phone %}
-    <p class="muted" style="margin-top:0.75rem">After hours: <strong>{{ dog.emergency_vet_clinic|default:"Emergency vet" }}</strong></p>
     {% if dog.emergency_vet_phone %}
-    <p><a href="{{ dog.emergency_vet_phone|as_tel }}" class="btn btn-warn btn-sm">Call Emergency Vet — {{ dog.emergency_vet_phone|phone_display }}</a></p>
-    {% endif %}
-    {% endif %}
-    {% if dog.vet_care_authorization %}
-    <p class="muted" style="margin-top:0.75rem;white-space:pre-line"><strong>Care authorization:</strong> {{ dog.vet_care_authorization }}</p>
-    {% endif %}
-    {% else %}
-    <p class="muted">No veterinary contacts on file. <a href="{% url 'operations:dog_edit' dog.pk %}">Add vet details</a></p>
+    <a href="{{ dog.emergency_vet_phone|as_tel }}" class="btn btn-warn" style="margin-top:0.5rem">Emergency vet — {{ dog.emergency_vet_phone|phone_display }}</a>
     {% endif %}
 </div>
 
 <div class="card">
-    <h2>Customer Photo Feed</h2>
-    {% if feed_url %}
-    <p class="muted">Share this link when they book — no password, full history, easy to forward to family.</p>
-    <p style="margin:0.75rem 0;font-weight:600;word-break:break-all">{{ feed_url }}</p>
-    <div class="actions">
-        <a href="{{ feed_url }}" class="btn btn-outline btn-sm" target="_blank" rel="noopener">Open Feed</a>
-        <button type="button" class="btn btn-primary btn-sm" id="copy-feed-url" data-feed-url="{{ feed_url }}">Copy Link</button>
-    </div>
-    {% else %}
-    <p class="muted">Feed link is created when the dog is saved.</p>
-    {% endif %}
-    <p class="muted" style="margin-top:0.75rem">
-        Last 30 days: {{ feed_stats.views }} view{{ feed_stats.views|pluralize }},
-        ~{{ feed_stats.devices }} browser{{ feed_stats.devices|pluralize }} (local ID cookie).
-    </p>
-    <form method="post" action="{% url 'operations:dog_feed_regenerate' dog.pk %}" style="margin-top:0.75rem"
-          onsubmit="return confirm('Create a new feed link? Old links shared with others will stop working.');">
-        {% csrf_token %}
-        <button type="submit" class="btn btn-outline btn-sm">Regenerate Link (unshare old devices)</button>
-    </form>
-</div>
-
-{% if dog.pipeline_stage != 'approved' %}
-<div class="card">
-    <form method="post" action="{% url 'operations:advance_pipeline' dog.pk %}">
-        {% csrf_token %}
-        <button type="submit" class="btn btn-primary">Advance Pipeline Stage</button>
-    </form>
-</div>
-{% endif %}
-
-<div class="card">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem;gap:0.5rem">
         <h2 style="margin:0">Visits</h2>
-        <a href="{% url 'operations:visit_create' dog.pk %}" class="btn btn-primary btn-sm">+ Add Visit (repeat OK)</a>
+        <a href="{% url 'operations:visit_create' dog.pk %}" class="btn btn-outline btn-sm">Schedule stay</a>
     </div>
     {% for visit in visits %}
-    <div style="margin-bottom:0.75rem;padding:0.75rem;background:#f8f9fa;border-radius:8px">
-        <strong>{{ visit.schedule_display }}</strong>
-        <br>
-        <span class="badge badge-{% if visit.status == 'completed' %}ok{% elif visit.status == 'scheduled' %}warn{% else %}warn{% endif %}">{{ visit.get_status_display }}</span>
-        {% if visit.series %}
-        <span class="badge badge-ok">Repeat {{ visit.series_position }}/{{ visit.series.total_occurrences }}</span>
+    {% if visit.is_editable %}
+    <a href="{% url 'operations:visit_edit' visit.pk %}" class="compact-row">
+    {% else %}
+    <div class="compact-row">
+    {% endif %}
+        <span class="title truncate">{{ visit.schedule_display }}</span>
+        {% if visit.status == 'checked_in' %}
+        <span class="badge badge-warn">CHECKED IN</span>
         {% endif %}
         {% if visit.calculated_fee %}<span class="muted"> · ${{ visit.calculated_fee }} CAD</span>{% endif %}
-        {% if visit.confirmation_email_sent_at %}
-        <span class="badge badge-ok">Email sent</span>
-        {% endif %}
-        {% if visit.is_editable %}
-        <div class="actions" style="margin-top:0.5rem">
-            <a href="{% url 'operations:visit_edit' visit.pk %}" class="btn btn-outline btn-sm">Edit</a>
-            <form method="post" action="{% url 'operations:visit_delete' visit.pk %}" style="display:inline"
-                  onsubmit="return confirm('Remove this scheduled visit?');">
-                {% csrf_token %}
-                <button type="submit" class="btn btn-outline btn-sm" style="color:var(--danger);border-color:var(--danger)">Delete</button>
-            </form>
-        </div>
-        {% endif %}
+    {% if visit.is_editable %}
+    </a>
+    {% else %}
     </div>
+    {% endif %}
     {% empty %}
     <p class="muted">No visits yet.</p>
-    <a href="{% url 'operations:visit_create' dog.pk %}" class="btn btn-primary" style="margin-top:0.5rem">Schedule First Visit</a>
     {% endfor %}
 </div>
+
+{% if customer_owner.formatted_address %}
+<details class="card disclosure">
+    <summary>Address</summary>
+    <div class="disclosure-body">
+        <p class="muted" style="white-space:pre-line">{{ customer_owner.formatted_address }}</p>
+        {% if customer_owner.address_maps_url %}
+        <p style="margin-top:0.35rem">
+            <a href="{{ customer_owner.address_maps_url }}" class="tap-call" target="_blank" rel="noopener">Open in Maps</a>
+        </p>
+        {% endif %}
+    </div>
+</details>
+{% endif %}
+
+<details class="card disclosure">
+    <summary>Veterinary</summary>
+    <div class="disclosure-body">
+        {% if dog.vet_clinic_name or dog.vet_clinic_phone or dog.emergency_vet_clinic %}
+        {% if dog.vet_clinic_name %}
+        <p><strong>{{ dog.vet_clinic_name }}</strong>{% if dog.vet_name %} · {{ dog.vet_name }}{% endif %}</p>
+        {% endif %}
+        {% if dog.vet_clinic_phone %}
+        <p style="margin-top:0.5rem"><a href="{{ dog.vet_clinic_phone|as_tel }}" class="tap-call">Call clinic — {{ dog.vet_clinic_phone|phone_display }}</a></p>
+        {% endif %}
+        {% if dog.emergency_vet_clinic %}
+        <p class="muted" style="margin-top:0.5rem">After hours: {{ dog.emergency_vet_clinic }}</p>
+        {% endif %}
+        {% if dog.vet_care_authorization %}
+        <p class="muted" style="margin-top:0.5rem;white-space:pre-line">{{ dog.vet_care_authorization }}</p>
+        {% endif %}
+        {% else %}
+        <p class="muted">No veterinary contacts on file.</p>
+        {% endif %}
+    </div>
+</details>
+
+<details class="card disclosure">
+    <summary>Photo feed</summary>
+    <div class="disclosure-body">
+        {% if feed_url %}
+        <p class="muted truncate">{{ feed_url }}</p>
+        <div class="actions">
+            <a href="{{ feed_url }}" class="btn btn-outline btn-sm" target="_blank" rel="noopener">Open</a>
+            <button type="button" class="btn btn-primary btn-sm" id="copy-feed-url" data-feed-url="{{ feed_url }}">Copy link</button>
+        </div>
+        {% else %}
+        <p class="muted">Feed link is created when the dog is saved.</p>
+        {% endif %}
+        <p class="muted" style="margin-top:0.5rem">
+            Last 30 days: {{ feed_stats.views }} view{{ feed_stats.views|pluralize }},
+            ~{{ feed_stats.devices }} browser{{ feed_stats.devices|pluralize }}.
+        </p>
+    </div>
+</details>
+
+<details class="card disclosure admin-drawer">
+    <summary>More actions</summary>
+    <div class="disclosure-body">
+        <a href="{% url 'operations:dog_edit' dog.pk %}" class="btn btn-outline btn-sm" style="margin-bottom:0.5rem">Edit dog</a>
+        <a href="{% url 'operations:dog_vaccinations' dog.pk %}" class="btn btn-outline btn-sm" style="margin-bottom:0.5rem">Vaccination records</a>
+        <a href="{% url 'operations:client_vcard' dog.pk %}" class="btn btn-outline btn-sm" style="margin-bottom:0.5rem">Export vCard</a>
+        {% if dog.pipeline_stage != 'approved' %}
+        <form method="post" action="{% url 'operations:advance_pipeline' dog.pk %}" style="margin-bottom:0.5rem">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-outline btn-sm">Advance pipeline</button>
+        </form>
+        {% endif %}
+        {% if feed_url %}
+        <form method="post" action="{% url 'operations:dog_feed_regenerate' dog.pk %}" style="margin-bottom:0.5rem"
+              onsubmit="return confirm('Create a new feed link? Old links will stop working.');">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-outline btn-sm">Regenerate feed link</button>
+        </form>
+        {% endif %}
+        {% if dog.is_hidden %}
+        <form method="post" action="{% url 'operations:dog_unhide' dog.pk %}">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-outline btn-sm">Show on client list</button>
+        </form>
+        {% else %}
+        <form method="post" action="{% url 'operations:dog_hide' dog.pk %}" onsubmit="return confirm('Hide {{ dog.dog_name }} from the client list? Visits and photos stay on file.');">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-outline btn-sm">Hide dog</button>
+        </form>
+        {% endif %}
+    </div>
+</details>
 
 <script>
 (function () {
@@ -155,7 +141,7 @@
         try {
             await navigator.clipboard.writeText(url);
             btn.textContent = 'Copied!';
-            window.setTimeout(function () { btn.textContent = 'Copy Link'; }, 2000);
+            window.setTimeout(function () { btn.textContent = 'Copy link'; }, 2000);
         } catch (err) {
             window.prompt('Copy this feed link:', url);
         }
