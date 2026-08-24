@@ -14,11 +14,15 @@ ACTIVE_STATUSES = (
 )
 
 
-def _day_bounds(day: date) -> tuple[datetime, datetime]:
+def day_bounds(day: date) -> tuple[datetime, datetime]:
+    """Local midnight … next midnight for overlap queries (not __date__)."""
     tz = timezone.get_current_timezone()
     start = timezone.make_aware(datetime.combine(day, time.min), tz)
     end = start + timedelta(days=1)
     return start, end
+
+
+_day_bounds = day_bounds
 
 
 def visits_for_day(day: date):

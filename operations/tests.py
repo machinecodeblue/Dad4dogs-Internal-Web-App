@@ -23,6 +23,7 @@ from operations.models import (
     CustomerOwner,
     MediaComment,
     MediaReaction,
+    PendingCalendarEvent,
     SharedMediaLink,
     TimelineMediaAsset,
     VaccinationRecord,
@@ -1492,6 +1493,151 @@ class VisitCheckInOutViewTests(TestCase):
         self.assertEqual(visit.actual_departure, first_departure)
         self.assertEqual(visit.calculated_fee, first_fee)
 
+    @patch('operations.views.scheduling.timezone.localdate', return_value=date(2026, 4, 10))
+    def test_overnight_visit_appears_on_checkin(self, _mock_today):
+        Visit.objects.create(
+            client=self.dog,
+            scheduled_start=datetime(2026, 4, 10, 20, 0, tzinfo=TZ),
+            scheduled_end=datetime(2026, 4, 11, 8, 0, tzinfo=TZ),
+            status=Visit.Status.SCHEDULED,
+        )
+        response = self.client.get(reverse('operations:mobile_checkin'))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Rex')
+
+    @patch('operations.services.timeline_visits.timezone.localdate', return_value=date(2026, 4, 10))
+    def test_overnight_checked_in_is_timeline_eligible(self, _mock_today):
+        from operations.services.timeline_visits import active_checked_in_visits
+
+        Visit.objects.create(
+            client=self.dog,
+            scheduled_start=datetime(2026, 4, 10, 20, 0, tzinfo=TZ),
+            scheduled_end=datetime(2026, 4, 11, 8, 0, tzinfo=TZ),
+            status=Visit.Status.CHECKED_IN,
+            actual_arrival=datetime(2026, 4, 10, 20, 5, tzinfo=TZ),
+        )
+        self.assertEqual(active_checked_in_visits().count(), 1)
+
+
+class DashboardViewTests(TestCase):
+    def setUp(self):
+        self.user = get_user_model().objects.create_user(
+            username='david',
+            password='testpass123',
+        )
+        self.client = DjangoTestClient()
+        self.client.login(username='david', password='testpass123')
+
+    def test_dashboard_loads(self):
+        response = self.client.get(reverse('operations:dashboard'))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Dad4dogs')
+
+    def test_dashboard_rejects_huge_year(self):
+        today = timezone.localdate()
+        response = self.client.get(
+            reverse('operations:dashboard'),
+            {'year': '999999', 'month': '1'},
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context['cal_year'], today.year)
+        self.assertEqual(response.context['cal_month'], today.month)
+
+    def test_dashboard_rejects_year_zero(self):
+        today = timezone.localdate()
+        response = self.client.get(
+            reverse('operations:dashboard'),
+            {'year': '0', 'month': '6'},
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context['cal_year'], today.year)
+
+    def test_dashboard_rejects_post(self):
+        response = self.client.post(reverse('operations:dashboard'))
+        self.assertEqual(response.status_code, 405)
+
+    def test_parse_datetime_rejects_post(self):
+        response = self.client.post(reverse('operations:parse_datetime'))
+        self.assertEqual(response.status_code, 405)
+
+    def test_visit_create_rejects_put(self):
+        dog = ClientProfile.objects.create(
+            dog_name='Rex',
+            owner_name='Jane Doe',
+            owner_email='jane@example.com',
+        )
+        response = self.client.put(
+            reverse('operations:visit_create', args=[dog.pk]),
+        )
+        self.assertEqual(response.status_code, 405)
+
+
+class PendingEventApproveTests(TestCase):
+    def setUp(self):
+        self.user = get_user_model().objects.create_user(
+            username='david',
+            password='testpass123',
+        )
+        self.client = DjangoTestClient()
+        self.client.login(username='david', password='testpass123')
+        self.dog = ClientProfile.objects.create(
+            dog_name='Rex',
+            owner_name='Jane Doe',
+            owner_email='jane@example.com',
+        )
+        self.start = datetime(2026, 3, 10, 9, 0, tzinfo=TZ)
+        self.end = datetime(2026, 3, 10, 17, 0, tzinfo=TZ)
+
+    def test_approve_creates_visit(self):
+        event = PendingCalendarEvent.objects.create(
+            event_uid='uid-ok',
+            summary='Rex boarding',
+            start_datetime=self.start,
+            end_datetime=self.end,
+            matched_client=self.dog,
+        )
+        response = self.client.post(
+            reverse('operations:approve_pending_event', args=[event.pk]),
+        )
+        self.assertEqual(response.status_code, 302)
+        event.refresh_from_db()
+        self.assertEqual(event.review_status, PendingCalendarEvent.ReviewStatus.APPROVED)
+        self.assertTrue(
+            Visit.objects.filter(client=self.dog, scheduled_start=self.start).exists(),
+        )
+
+    def test_approve_capacity_block_keeps_event_pending(self):
+        now = timezone.now()
+        extra = []
+        for i in range(INSURANCE_CEILING):
+            dog = ClientProfile.objects.create(
+                dog_name=f'Dog{i}',
+                owner_name=f'Owner{i}',
+                owner_email=f'cap{i}@example.com',
+            )
+            extra.append(Visit(
+                client=dog,
+                scheduled_start=self.start,
+                scheduled_end=self.end,
+                created_at=now,
+                updated_at=now,
+            ))
+        Visit.objects.bulk_create(extra)
+        event = PendingCalendarEvent.objects.create(
+            event_uid='uid-full',
+            summary='One more dog',
+            start_datetime=self.start,
+            end_datetime=self.end,
+            matched_client=self.dog,
+        )
+        response = self.client.post(
+            reverse('operations:approve_pending_event', args=[event.pk]),
+        )
+        self.assertEqual(response.status_code, 302)
+        event.refresh_from_db()
+        self.assertEqual(event.review_status, PendingCalendarEvent.ReviewStatus.PENDING)
+        self.assertFalse(Visit.objects.filter(client=self.dog).exists())
+
 
 class BusinessProfileTests(TestCase):
     def test_load_returns_singleton(self):
@@ -1734,6 +1880,65 @@ class VisitTimelineTests(TestCase):
         self.assertContains(response, 'Log Moment')
         self.assertContains(response, 'capture="environment"', html=False)
         self.assertContains(response, 'Choose Photo (gallery)')
+
+    def test_timeline_get_does_not_query_forward_targets_per_event(self):
+        for caption in ('One', 'Two', 'Three'):
+            log_moment_for_visits(
+                visits=[self.visit],
+                media_kind='photo',
+                uploaded_file=_test_image_file(),
+                caption_notes=caption,
+                latitude=Decimal('43.01'),
+                longitude=Decimal('-81.23'),
+                used_fallback=False,
+                fallback_label='',
+            )
+        with patch('operations.views.scheduling.visits_available_for_forward') as mock_fwd:
+            response = self.client.get(
+                reverse('operations:visit_timeline', args=[self.visit.pk]),
+            )
+        self.assertEqual(response.status_code, 200)
+        mock_fwd.assert_not_called()
+
+    def test_invalid_moment_flashes_plain_error(self):
+        from django.contrib.messages import get_messages
+
+        response = self.client.post(
+            reverse('operations:visit_timeline', args=[self.visit.pk]),
+            {'caption_notes': '', 'visit_ids': [str(self.visit.pk)]},
+        )
+        self.assertEqual(response.status_code, 302)
+        text = ' '.join(str(m) for m in get_messages(response.wsgi_request))
+        self.assertNotIn('*', text)
+        self.assertNotIn('visit_ids', text)
+        self.assertTrue(text)
+        self.assertRegex(text.lower(), r'photo|video|capture')
+
+    def test_invalid_forward_flashes_plain_error(self):
+        from django.contrib.messages import get_messages
+
+        _, events = log_moment_for_visits(
+            visits=[self.visit],
+            media_kind='photo',
+            uploaded_file=_test_image_file(),
+            caption_notes='Share me',
+            latitude=Decimal('43.01'),
+            longitude=Decimal('-81.23'),
+            used_fallback=False,
+            fallback_label='',
+        )
+        response = self.client.post(
+            reverse(
+                'operations:visit_timeline_forward',
+                args=[self.visit.pk, events[0].pk],
+            ),
+            {},
+        )
+        self.assertEqual(response.status_code, 302)
+        text = ' '.join(str(m) for m in get_messages(response.wsgi_request))
+        self.assertNotIn('*', text)
+        self.assertNotIn('visit_ids', text)
+        self.assertIn('Share with', text)
 
     def test_create_photo_asset_pipeline(self):
         asset = create_photo_asset(

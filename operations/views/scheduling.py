@@ -1,4 +1,4 @@
-from datetime import date, datetime
+from datetime import MAXYEAR, MINYEAR, date, datetime
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
@@ -7,7 +7,7 @@ from django.http import JsonResponse
 from django.utils.dateparse import parse_datetime
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
-from django.views.decorators.http import require_GET, require_POST
+from django.views.decorators.http import require_GET, require_POST, require_http_methods
 
 from operations.capacity import assess_capacity
 from operations.forms import TimelineForwardForm, TimelineMomentForm, VisitForm
@@ -22,6 +22,7 @@ from operations.services.timeline_media import (
 from operations.services.timeline_visits import active_checked_in_visits
 from operations.services.agenda import (
     build_month_calendar,
+    day_bounds,
     month_bounds,
     shift_month,
     visits_for_day,
@@ -42,7 +43,20 @@ def _apply_visit_form_errors(form, error: ValidationError):
         form.add_error(None, '; '.join(error.messages))
 
 
+def _form_error_message(form) -> str:
+    """Flash-friendly form errors — labels and sentences, not as_text() asterisks."""
+    parts = [str(err) for err in form.non_field_errors()]
+    for name, field in form.fields.items():
+        if name not in form.errors:
+            continue
+        label = field.label or name.replace('_', ' ')
+        for err in form.errors[name]:
+            parts.append(f'{label}: {err}')
+    return '; '.join(parts) or 'Please check the form and try again.'
+
+
 @login_required
+@require_GET
 def dashboard(request):
     today = timezone.localdate()
 
@@ -59,7 +73,9 @@ def dashboard(request):
         cal_month = int(request.GET.get('month', selected_date.month))
         if not 1 <= cal_month <= 12:
             raise ValueError
-    except (TypeError, ValueError):
+        if not MINYEAR <= cal_year <= MAXYEAR:
+            raise ValueError
+    except (TypeError, ValueError, OverflowError):
         cal_year = selected_date.year
         cal_month = selected_date.month
 
@@ -101,11 +117,13 @@ def dashboard(request):
 
 
 @login_required
+@require_GET
 def mobile_checkin(request):
     today = timezone.localdate()
+    day_start, day_end = day_bounds(today)
     visits = Visit.objects.filter(
-        scheduled_start__date__lte=today,
-        scheduled_end__date__gte=today,
+        scheduled_start__lt=day_end,
+        scheduled_end__gt=day_start,
         status__in=[Visit.Status.SCHEDULED, Visit.Status.CHECKED_IN],
     ).select_related('client').order_by('scheduled_start')
     capacity = assess_capacity(today)
@@ -121,10 +139,11 @@ def mobile_checkin(request):
 def checkin_feed_activity(request):
     """Lightweight JSON poll — owner reactions/comments on checked-in dogs."""
     today = timezone.localdate()
+    day_start, day_end = day_bounds(today)
     client_ids = list(
         Visit.objects.filter(
-            scheduled_start__date__lte=today,
-            scheduled_end__date__gte=today,
+            scheduled_start__lt=day_end,
+            scheduled_end__gt=day_start,
             status=Visit.Status.CHECKED_IN,
         ).values_list('client_id', flat=True)
     )
@@ -172,6 +191,7 @@ def visit_check_out(request, pk):
 
 
 @login_required
+@require_GET
 def parse_datetime_field(request):
     """Preview parse for a free-text date/time field (blur on visit form)."""
     text = request.GET.get('q', '').strip()
@@ -194,6 +214,7 @@ def parse_datetime_field(request):
 
 
 @login_required
+@require_http_methods(['GET', 'POST'])
 def visit_create(request, pk):
     client = get_object_or_404(ClientProfile, pk=pk)
     client_visits = client.visits.filter(
@@ -274,12 +295,14 @@ def visit_create(request, pk):
 
 
 @login_required
+@require_http_methods(['GET', 'POST'])
 def duplicate_visit(request, pk):
     """Legacy URL — same as visit_create."""
     return visit_create(request, pk)
 
 
 @login_required
+@require_http_methods(['GET', 'POST'])
 def visit_edit(request, pk):
     visit = get_object_or_404(Visit, pk=pk)
     if not visit.is_editable:
@@ -325,6 +348,7 @@ def visit_delete(request, pk):
 
 
 @login_required
+@require_GET
 def pending_events(request):
     events = PendingCalendarEvent.objects.filter(
         review_status=PendingCalendarEvent.ReviewStatus.PENDING,
@@ -337,15 +361,19 @@ def pending_events(request):
 def approve_pending_event(request, pk):
     event = get_object_or_404(PendingCalendarEvent, pk=pk)
     if event.matched_client:
-        Visit.objects.create(
-            client=event.matched_client,
-            scheduled_start=event.start_datetime,
-            scheduled_end=event.end_datetime,
-            notes=f'From calendar: {event.summary}',
-        )
-        event.review_status = PendingCalendarEvent.ReviewStatus.APPROVED
-        event.save()
-        messages.success(request, 'Calendar event approved and visit created.')
+        try:
+            Visit.objects.create(
+                client=event.matched_client,
+                scheduled_start=event.start_datetime,
+                scheduled_end=event.end_datetime,
+                notes=f'From calendar: {event.summary}',
+            )
+        except ValidationError as e:
+            messages.error(request, '; '.join(e.messages))
+        else:
+            event.review_status = PendingCalendarEvent.ReviewStatus.APPROVED
+            event.save()
+            messages.success(request, 'Calendar event approved and visit created.')
     else:
         messages.error(request, 'No matched client — assign a client in admin first.')
     return redirect('operations:pending_events')
@@ -366,6 +394,7 @@ def _timeline_eligible_visits():
 
 
 @login_required
+@require_http_methods(['GET', 'POST'])
 def visit_timeline(request, pk):
     """Contemporaneous photo/video log for an actively checked-in visit."""
     visit = get_object_or_404(
@@ -414,20 +443,22 @@ def visit_timeline(request, pk):
             except TimelineMediaError as exc:
                 messages.error(request, str(exc))
         else:
-            messages.error(request, form.errors.as_text())
+            messages.error(request, _form_error_message(form))
         return redirect('operations:visit_timeline', pk=visit.pk)
 
     events = visit.timeline_events.select_related(
         'media_asset',
         'source_event__visit__client',
     )
+    forward_targets = eligible_visits.exclude(pk=visit.pk)
+    list(forward_targets)
     forward_forms = []
-    for event in events:
-        targets = visits_available_for_forward(event)
-        if targets.exists():
+    if forward_targets:
+        shared_form = TimelineForwardForm(eligible_visits=forward_targets)
+        for event in events:
             forward_forms.append({
                 'event': event,
-                'form': TimelineForwardForm(eligible_visits=targets),
+                'form': shared_form,
             })
 
     return render(request, 'operations/visit_timeline.html', {
@@ -469,10 +500,11 @@ def visit_timeline_forward(request, pk, event_pk):
         except TimelineMediaError as exc:
             messages.error(request, str(exc))
     else:
-        messages.error(request, form.errors.as_text())
+        messages.error(request, _form_error_message(form))
     return redirect('operations:visit_timeline', pk=visit.pk)
 
 
+@require_GET
 def ical_feed(request):
     """Public read-only iCal feed for Google Calendar subscription."""
     return generate_ical_feed()

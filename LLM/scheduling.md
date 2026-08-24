@@ -36,8 +36,8 @@ Single-column indexes on the hot lookup fields used by capacity, agenda, check-i
 
 | Index name | Field | Why |
 |------------|-------|-----|
-| `visit_scheduled_start_idx` | `scheduled_start` | Day overlap (`scheduled_start__lt` / `__date__lte`), agenda order |
-| `visit_scheduled_end_idx` | `scheduled_end` | Day overlap (`scheduled_end__gt` / `__date__gte`) |
+| `visit_scheduled_start_idx` | `scheduled_start` | Day overlap (`scheduled_start__lt=day_end`), agenda order |
+| `visit_scheduled_end_idx` | `scheduled_end` | Day overlap (`scheduled_end__gt=day_start`) |
 | `visit_status_idx` | `status` | `status__in` on capacity, agenda, check-in, timeline eligibility |
 
 Do not drop these to “simplify” Meta. `client` already has an FK index. A composite `(status, scheduled_start, scheduled_end)` is **not** a substitute — overlap queries (`start < day_end AND end > day_start`) need both ends independently.
@@ -129,14 +129,16 @@ Updates/cancellations (METHOD:UPDATE/CANCEL) — not yet built
 
 ## 3. URLs
 
-| Path | Purpose |
-|------|---------|
-| `/` | Dashboard — month calendar + daily agenda |
-| `/checkin/` | Mobile check-in/out |
-| `/dogs/<id>/visits/add/` | Schedule visit (+ repeat + clone) |
-| `/visits/<id>/edit/` | Edit scheduled visit only |
-| `/visits/<id>/delete/` | POST — scheduled only |
-| `/visits/parse-datetime/` | JSON parse preview |
+Every view in `views/scheduling.py` declares allowed methods (`@require_GET`, `@require_POST`, or `@require_http_methods(['GET', 'POST'])`). Wrong verbs return **405**.
+
+| Path | Methods | Purpose |
+|------|---------|---------|
+| `/` | GET | Dashboard — month calendar + daily agenda |
+| `/checkin/` | GET | Mobile check-in/out |
+| `/dogs/<id>/visits/add/` | GET, POST | Schedule visit (+ repeat + clone) |
+| `/visits/<id>/edit/` | GET, POST | Edit scheduled visit only |
+| `/visits/<id>/delete/` | POST | scheduled only |
+| `/visits/parse-datetime/` | GET | JSON parse preview |
 | `/visits/<id>/check-in/` | POST — `check_in()`; illegal status → error message, no write |
 | `/visits/<id>/check-out/` | POST — `check_out()` + fee; illegal status → error message, no write |
 | `/visits/<id>/timeline/` | Log moment (photo/video) while checked in |
@@ -155,6 +157,7 @@ Home screen (`/`) = David's daily operations view.
 - Monday-first grid; prev/next month
 - Dot on days with visits; today outlined; selected day filled green
 - Click day → `?year=&month=&date=YYYY-MM-DD`
+- Query `year` must be `datetime.MINYEAR`…`MAXYEAR` (1–9999); `month` 1–12. Out-of-range or huge integers fall back to the selected day’s month — do not call `date(cal_year, …)` unbounded (`OverflowError` / `ValueError`).
 
 ### Daily agenda
 - All visits **overlapping** selected day (overnight spans included)
@@ -163,14 +166,14 @@ Home screen (`/`) = David's daily operations view.
 - Completed: muted grey
 - Capacity stats for **selected** day
 
-### Overlap query (same as capacity)
-`scheduled_start < day_end` AND `scheduled_end > day_start`
+### Overlap query (same as capacity, check-in, feed activity, timeline eligibility)
+`scheduled_start < day_end` AND `scheduled_end > day_start` where bounds are **local** midnight from `agenda.day_bounds()`. Do **not** use `scheduled_start__date` / `scheduled_end__date` — SQLite `__date__` on aware datetimes is UTC-ish and drops overnight stays that cross midnight.
 
 ---
 
 ## 5. Check-In / Check-Out
 
-- `/checkin/` lists today's overlapping scheduled + checked-in visits
+- `/checkin/` lists today's overlapping scheduled + checked-in visits (`day_bounds`, not `__date__`)
 - Check-in sets `actual_arrival = now`, status `checked_in`
 - Check-out sets `actual_departure = now`, runs `calculate_fee()`, status `completed`
 - Capacity re-checked at check-in
@@ -267,6 +270,7 @@ Do not call `full_clean()` from `check_in()` / `check_out()`. Do not pass `skip_
 ### Inbound (partial)
 - `python manage.py import_calendar path/to/file.ics`
 - Creates `PendingCalendarEvent`; David approves at `/calendar/pending/`
+- `approve_pending_event` uses `Visit.objects.create()` (full `save()` / capacity). Catch `ValidationError` and flash it — do not 500; leave the event **pending** if create fails (full day, end-before-start, etc.).
 - `gmail_sync.py` — client matching helpers; no live Gmail read yet
 
 ---
@@ -276,13 +280,13 @@ Do not call `full_clean()` from `check_in()` / `check_out()`. Do not pass `skip_
 | File | Contents |
 |------|----------|
 | `forms/scheduling.py` | `VisitForm` (parse + repeat + capacity in `clean()`), `VisitScheduleForm` alias |
-| `views/scheduling.py` | `dashboard`, `mobile_checkin`, `visit_*`, `visit_timeline*`, `pending_events`, `parse_datetime_field`, `ical_feed` |
+| `views/scheduling.py` | `dashboard`, `mobile_checkin`, `visit_*`, `visit_timeline*` (shared forward-target queryset on GET), `pending_events`, `parse_datetime_field`, `ical_feed` |
 
 ---
 
 ## 10. Tests
 
-`VisitFormTests`, `DatetimeParseTests`, `AgendaTests`, `PricingEngineTests`, `VisitCheckOutTests`, `VisitCheckInOutViewTests`, `VisitCapacitySaveTests`, `VisitIndexTests`, `VisitCloneToDateTests`, `VisitEmailTests`, `TimelineTests` in `operations/tests.py`.
+`VisitFormTests`, `DatetimeParseTests`, `AgendaTests`, `DashboardViewTests`, `PricingEngineTests`, `VisitCheckOutTests`, `VisitCheckInOutViewTests`, `VisitCapacitySaveTests`, `PendingEventApproveTests`, `VisitIndexTests`, `VisitCloneToDateTests`, `VisitEmailTests`, `TimelineTests` in `operations/tests.py`.
 
 ---
 

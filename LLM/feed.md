@@ -125,7 +125,8 @@ Without it, emails omit the absolute URL; dog detail still shows full URL when b
 - Camera photo, gallery photo, or gallery video — **one** source. `TimelineMomentForm.clean()` rejects camera+gallery together (do not `or` them so camera silently wins) and photo+video.
 - GPS via browser geolocation; fallback to `BUSINESS_FALLBACK_LATITUDE/LONGITUDE` from settings. Hidden lat/long may be blank (fallback). Non-empty values must parse as decimals in range (lat −90…90, lng −180…180); both set or both blank. `TimelineMomentForm.clean()` rejects junk so `resolve_timeline_coordinates` / `Decimal` never see invalid strings.
 - Multi-dog checkbox when multiple dogs checked in
-- Forward form per event → other checked-in dogs
+- Forward form per event → other checked-in dogs. GET `visit_timeline` loads that target set **once** (`eligible_visits.exclude(pk=visit.pk)`) and reuses it on every event — do not call `visits_available_for_forward` in a loop (N+1). POST forward still uses `visits_available_for_forward` so a dog who already has the asset is not a valid target.
+- Invalid `TimelineMomentForm` / `TimelineForwardForm`: flash `_form_error_message(form)` (field labels + sentences). Do **not** `form.errors.as_text()` (raw `* field` Django dump).
 
 ### Entry point
 Mobile check-in card → **Log Moment** → `/visits/<pk>/timeline/`
