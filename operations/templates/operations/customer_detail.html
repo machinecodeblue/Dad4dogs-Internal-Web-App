@@ -3,21 +3,85 @@
 {% block title %}{{ customer_owner.owner_name }} — Dad4dogs{% endblock %}
 {% block content %}
 <div class="card">
-    <h2>{{ customer_owner.owner_name }}</h2>
+    <div class="card-head">
+        <div>
+            <h2>{{ customer_owner.owner_name }}</h2>
+            {% if customer_owner.coi_status == 'received' %}
+            <details class="coi-mark">
+                <summary title="COI on file">✓</summary>
+                <div class="disclosure-body">
+                    <p class="muted">
+                        COI received{% if customer_owner.coi_confirmed_at %} {{ customer_owner.coi_confirmed_at|date:"M j, Y" }}{% endif %}
+                    </p>
+                    <form method="post" action="{% url 'operations:update_coi' customer_owner.pk %}" style="margin-top:0.5rem">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="reset_received">
+                        <button type="submit" class="btn btn-outline btn-sm">Clear COI confirmation</button>
+                    </form>
+                </div>
+            </details>
+            {% endif %}
+        </div>
+        <a href="{% url 'operations:customer_edit' customer_owner.pk %}" class="btn btn-outline btn-sm">Edit</a>
+    </div>
     {% if customer_owner.owner_phone %}
     <a href="{{ customer_owner.owner_phone|as_tel }}" class="btn btn-primary">Call {{ customer_owner.owner_phone|phone_display }}</a>
     {% endif %}
     {% if customer_owner.emergency_contact_phone %}
     <a href="{{ customer_owner.emergency_contact_phone|as_tel }}" class="btn btn-warn" style="margin-top:0.5rem">Emergency — {{ customer_owner.emergency_contact_phone|phone_display }}</a>
     {% endif %}
+    {% if customer_owner.owner_email %}
+    <p style="margin-top:0.75rem">
+        <a href="mailto:{{ customer_owner.owner_email }}" class="tap-call truncate">{{ customer_owner.owner_email }}</a>
+    </p>
+    {% endif %}
+    {% if customer_owner.formatted_address %}
+    <p class="muted" style="margin-top:0.75rem;white-space:pre-line">{{ customer_owner.formatted_address }}</p>
+    {% if customer_owner.address_maps_url %}
+    <p style="margin-top:0.35rem">
+        <a href="{{ customer_owner.address_maps_url }}" class="tap-call" target="_blank" rel="noopener">Open in Maps</a>
+    </p>
+    {% endif %}
+    {% endif %}
+    {% if customer_owner.emergency_contact_name %}
+    <p style="margin-top:0.75rem">
+        <strong>{{ customer_owner.emergency_contact_name }}</strong>
+        {% if customer_owner.emergency_contact_relationship %}
+        <span class="muted"> · {{ customer_owner.emergency_contact_relationship }}</span>
+        {% endif %}
+    </p>
+    {% endif %}
+    {% if customer_owner.authorized_pickup_list %}
+    <p style="margin-top:0.5rem"><span class="muted">Authorized pickup:</span></p>
+    <ul style="margin:0.25rem 0 0 1.1rem">
+        {% for name in customer_owner.authorized_pickup_list %}
+        <li>{{ name }}</li>
+        {% endfor %}
+    </ul>
+    {% endif %}
     {% if customer_owner.coi_status != 'received' %}
     <p style="margin-top:0.75rem">
         {% if customer_owner.coi_status == 'sent' %}
         <span class="badge badge-warn">COI awaiting confirmation</span>
+        {% if customer_owner.coi_sent_at %}<span class="muted"> · sent {{ customer_owner.coi_sent_at|date:"M j, Y" }}</span>{% endif %}
         {% else %}
         <span class="badge badge-danger">COI not sent</span>
         {% endif %}
     </p>
+    <div class="actions">
+        {% if customer_owner.coi_status == 'not_sent' %}
+        <form method="post" action="{% url 'operations:update_coi' customer_owner.pk %}">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="mark_sent">
+            <button type="submit" class="btn btn-outline btn-sm">Mark sent</button>
+        </form>
+        {% endif %}
+        <form method="post" action="{% url 'operations:update_coi' customer_owner.pk %}">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="mark_received">
+            <button type="submit" class="btn btn-success btn-sm">Confirm received</button>
+        </form>
+    </div>
     {% endif %}
 </div>
 
@@ -38,71 +102,6 @@
     {% endif %}
 </div>
 
-<details class="card disclosure">
-    <summary>Address &amp; contacts</summary>
-    <div class="disclosure-body">
-        {% if customer_owner.owner_email %}
-        <p class="muted"><a href="mailto:{{ customer_owner.owner_email }}">{{ customer_owner.owner_email }}</a></p>
-        {% endif %}
-        {% if customer_owner.formatted_address %}
-        <p class="muted" style="margin-top:0.5rem;white-space:pre-line">{{ customer_owner.formatted_address }}</p>
-        {% if customer_owner.address_maps_url %}
-        <p style="margin-top:0.35rem">
-            <a href="{{ customer_owner.address_maps_url }}" class="tap-call" target="_blank" rel="noopener">Open in Maps</a>
-        </p>
-        {% endif %}
-        {% endif %}
-        {% if customer_owner.emergency_contact_name or customer_owner.emergency_contact_phone %}
-        <p style="margin-top:0.75rem">
-            <strong>{{ customer_owner.emergency_contact_name|default:"Emergency contact" }}</strong>
-            {% if customer_owner.emergency_contact_relationship %}
-            <span class="muted"> · {{ customer_owner.emergency_contact_relationship }}</span>
-            {% endif %}
-        </p>
-        {% endif %}
-        {% if customer_owner.authorized_pickup_list %}
-        <p style="margin-top:0.5rem"><span class="muted">Authorized pickup:</span></p>
-        <ul style="margin:0.25rem 0 0 1.1rem">
-            {% for name in customer_owner.authorized_pickup_list %}
-            <li>{{ name }}</li>
-            {% endfor %}
-        </ul>
-        {% endif %}
-    </div>
-</details>
-
-<details class="card disclosure">
-    <summary>Certificate of insurance</summary>
-    <div class="disclosure-body">
-        <p>
-            {% if customer_owner.coi_status == 'received' %}
-            <span class="muted">Received{% if customer_owner.coi_confirmed_at %} {{ customer_owner.coi_confirmed_at|date:"M j, Y" }}{% endif %}</span>
-            {% elif customer_owner.coi_status == 'sent' %}
-            <span class="badge badge-warn">Awaiting confirmation</span>
-            {% if customer_owner.coi_sent_at %}<span class="muted"> · sent {{ customer_owner.coi_sent_at|date:"M j, Y" }}</span>{% endif %}
-            {% else %}
-            <span class="badge badge-danger">Not sent</span>
-            {% endif %}
-        </p>
-        {% if customer_owner.coi_status != 'received' %}
-        <div class="actions">
-            {% if customer_owner.coi_status == 'not_sent' %}
-            <form method="post" action="{% url 'operations:update_coi' customer_owner.pk %}">
-                {% csrf_token %}
-                <input type="hidden" name="action" value="mark_sent">
-                <button type="submit" class="btn btn-outline btn-sm">Mark sent</button>
-            </form>
-            {% endif %}
-            <form method="post" action="{% url 'operations:update_coi' customer_owner.pk %}">
-                {% csrf_token %}
-                <input type="hidden" name="action" value="mark_received">
-                <button type="submit" class="btn btn-success btn-sm">Confirm received</button>
-            </form>
-        </div>
-        {% endif %}
-    </div>
-</details>
-
 {% if hidden_dogs %}
 <details class="card disclosure">
     <summary>Hidden dogs ({{ hidden_dogs|length }})</summary>
@@ -122,19 +121,4 @@
     </div>
 </details>
 {% endif %}
-
-<details class="card disclosure admin-drawer">
-    <summary>More actions</summary>
-    <div class="disclosure-body">
-        <a href="{% url 'operations:customer_edit' customer_owner.pk %}" class="btn btn-outline btn-sm" style="margin-bottom:0.5rem">Edit customer</a>
-        {% if customer_owner.coi_status == 'received' %}
-        <form method="post" action="{% url 'operations:update_coi' customer_owner.pk %}">
-            {% csrf_token %}
-            <input type="hidden" name="action" value="reset_received">
-            <button type="submit" class="btn btn-outline btn-sm">Clear COI confirmation</button>
-        </form>
-        {% endif %}
-        <a href="{% url 'operations:client_list' %}" class="btn btn-outline btn-sm" style="margin-top:0.5rem">Back to Clients</a>
-    </div>
-</details>
 {% endblock %}

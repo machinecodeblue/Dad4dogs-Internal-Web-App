@@ -202,7 +202,7 @@ $env:PUBLIC_SITE_URL = "https://your-subdomain.ngrok.app"
 1. Identify the **domain** before editing (customers / scheduling / billing / admin / platform).
 2. Open the matching `LLM/<domain>.md` file.
 3. Keep **mobile-first, one-handed** UX — no desktop-only patterns, no dashboard sprawl. Standing rules in `platform.md` (accepted from Decisions; do not re-read Proposed work as spec):
-   - Detail screens: ≤5 primary fields above the fold (name, tap-to-call mobile, emergency call). Address, COI, pickup, feed admin, hide/vCard go in `<details>`.
+   - Detail screens: ≤5 primary fields above the fold (name, tap-to-call mobile, emergency call). Customer **Edit** beside the name (existing edit form). Customer address/email stay visible. Customer **COI:** warn if missing; **✓** beside the name if received. Dog feed/hide/vCard stay in `<details>`.
    - Client list: compact `Dog · Owner · badge · phone` rows. No nested cards. Filters in a disclosure if more than 2.
    - ≤2 primary CTAs per card. Dangerous/admin actions in **More actions**.
    - ≤2 badges, and only for work that still needs doing (no green OK / COMPLETED / OK VAX).

@@ -476,6 +476,25 @@ class CognitiveLoadUXTests(TestCase):
         self.assertContains(response, '0 / 8')
         self.assertContains(response, 'of 8 standard capacity')
 
+    def test_customer_detail_is_a_profile_not_an_action_drawer(self):
+        response = self.client.get(reverse('operations:customer_detail', args=[self.owner.pk]))
+        self.assertContains(response, reverse('operations:customer_edit', args=[self.owner.pk]))
+        self.assertContains(response, '>Edit<')
+        self.assertContains(response, 'jane-ux@example.com')
+        self.assertContains(response, 'COI not sent')
+        self.assertNotContains(response, '<h2>Certificate of insurance</h2>')
+        self.assertNotContains(response, '<summary>Address</summary>')
+        self.assertNotContains(response, '<summary>More actions</summary>')
+        self.assertNotContains(response, 'Back to Clients')
+
+    def test_customer_detail_received_coi_is_a_mark_beside_the_name(self):
+        self.owner.mark_coi_received()
+        response = self.client.get(reverse('operations:customer_detail', args=[self.owner.pk]))
+        self.assertContains(response, 'title="COI on file"')
+        self.assertContains(response, '✓')
+        self.assertNotContains(response, 'COI not sent')
+        self.assertNotContains(response, '<h2>Certificate of insurance</h2>')
+
 
 class IntakeWizardTests(TestCase):
     def _base(self, **overrides):

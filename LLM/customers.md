@@ -84,6 +84,8 @@ Property: `authorized_pickup_list` — parsed non-empty stripped lines for templ
 - `coi_sent_at`, `coi_confirmed_received`, `coi_confirmed_at`
 - Methods: `mark_coi_sent()`, `mark_coi_received()`, `for_client()` (read-only lookup), `ensure_for_client()` (create on write paths / form save only)
 
+**UI (customer summary only):** COI is proof that papers exist, not a section to study. If `coi_status` is `not_sent` or `sent`, show a warning plus Mark sent / Confirm received on the **profile card**. If `received`, show a **✓** beside the owner name (`details.coi-mark`; tap for date / Clear confirmation). Do **not** give COI its own card. Do **not** put a COI badge on the client list.
+
 ---
 
 ## 4. ClientProfile pipeline & feed
@@ -122,7 +124,7 @@ Method: `advance_pipeline()` on dog screen — returns `False` (no write) if alr
 | Create customer from dog | `POST /dogs/<id>/create-customer/` | `ensure_for_client()` for an orphan dog, then customer detail |
 | **New Client & Dog** | `/clients/intake/` | One POST: owner + first dog + vet + optional Meet & Greet (`IntakeWizardForm`). Atomic. M&G visit **skips** standard-stay Approved/vax/COI gate. Pipeline → Meet & Greet if times set, else Inquiry. |
 | Add customer | `/clients/add/` | Owner + emergency contacts — no dog |
-| Customer | `/customers/<id>/` | Name, Call, emergency call. Address/maps, pickup, COI timestamps, hide/edit sit in `<details>`. Dogs are compact rows. |
+| Customer | `/customers/<id>/` | Profile card: name + **Edit** (opens the existing edit form), Call, emergency, email, **address visible** (maps, pickup). **COI:** if missing, warn + mark sent/received on this card; if received, a **✓** beside the name (tap to clear). Dogs compact. No More actions, no dedicated COI card. |
 | Edit customer | `/customers/<id>/edit/` | Primary + structured address (street / unit / city / province / postal) + emergency |
 | Add dog | `/customers/<id>/add-dog/` | Dog profile + vet contacts; pipeline starts at Inquiry |
 | Dog | `/dogs/<id>/` | Name, Call owner, emergency-vet call (max two primary buttons). Visits compact + Schedule stay. Address, clinic, feed, Hide/vCard in `<details>`. |
@@ -215,6 +217,8 @@ Public feed view lives in `views/customer_feed.py` — not in this package.
 ## 9. Tests
 
 `CustomerOwnerFormTests`, `AddressHandlingTests`, `CognitiveLoadUXTests`, `DogProfileFormTests`, `IntakeWizardTests`, `ContactDataTests`, `CustomerEditTests`, `CustomerViewsHttpTests`, `ContactSyncTests`, `ComplianceTests`, `VaccinationExpiryViewTests`, `FeedSlugTests`, `CustomerFeedTests` in `operations/tests.py`.
+
+`CognitiveLoadUXTests` covers the customer **summary**: Edit beside the name, no More actions, address not in a disclosure, missing COI warning, received COI as **✓** (`title="COI on file"`). Keep those green if you touch `customer_detail.html`.
 
 ---
 
