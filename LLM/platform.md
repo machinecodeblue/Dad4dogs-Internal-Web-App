@@ -89,7 +89,7 @@ Messages appear in Gmail **Sent Mail** for audit trail.
 - List notes and free text: one line with ellipsis (`.truncate`).
 
 **Where this lands today**
-- Dashboard agenda: compact rows; vax tiles only if count > 0; capacity badge only when warning/over; iCal in a disclosure.
+- Dashboard agenda: compact rows; occupancy as `N / standard` from Settings (never a bare 0 for the ceiling); vax tiles only if count > 0; capacity **badge** only when warning/over; iCal in a disclosure.
 - Check-in: Check In, or Log Moment + Check Out; emergency (else clinic) as tap-to-call, not a third button.
 - Shared CSS in `base.html`: `.compact-row`, `.truncate`, `details.disclosure`, `.admin-drawer`. Shared badges: `_pipeline_badge.html`, `_vax_badge.html` (warn/danger only).
 

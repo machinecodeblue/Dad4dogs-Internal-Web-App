@@ -14,6 +14,8 @@ class BusinessProfileForm(forms.ModelForm):
             'main_phone',
             'secondary_phone',
             'emergency_phone',
+            'standard_capacity',
+            'insurance_ceiling',
         ]
         widgets = {
             'business_name': forms.TextInput(attrs={
@@ -49,4 +51,25 @@ class BusinessProfileForm(forms.ModelForm):
                 'autocomplete': 'tel',
                 'inputmode': 'tel',
             }),
+            'standard_capacity': forms.NumberInput(attrs={
+                'min': 1,
+                'max': 50,
+                'inputmode': 'numeric',
+            }),
+            'insurance_ceiling': forms.NumberInput(attrs={
+                'min': 1,
+                'max': 50,
+                'inputmode': 'numeric',
+            }),
         }
+
+    def clean(self):
+        cleaned = super().clean()
+        standard = cleaned.get('standard_capacity')
+        ceiling = cleaned.get('insurance_ceiling')
+        if standard is not None and ceiling is not None and ceiling < standard:
+            self.add_error(
+                'insurance_ceiling',
+                'Insurance maximum must be at least the standard daily capacity.',
+            )
+        return cleaned

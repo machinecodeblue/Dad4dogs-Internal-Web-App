@@ -3,9 +3,35 @@ from datetime import date, datetime, time, timedelta
 from django.db.models import Count, Q
 from django.utils import timezone
 
-STANDARD_CAPACITY = 8
-WARNING_THRESHOLD = 9
-INSURANCE_CEILING = 10
+from operations.models.business import (
+    DEFAULT_INSURANCE_CEILING,
+    DEFAULT_STANDARD_CAPACITY,
+)
+
+STANDARD_CAPACITY = DEFAULT_STANDARD_CAPACITY
+WARNING_THRESHOLD = DEFAULT_STANDARD_CAPACITY + 1
+INSURANCE_CEILING = DEFAULT_INSURANCE_CEILING
+
+
+def capacity_limits() -> tuple[int, int]:
+    """Standard daily capacity and insurance ceiling from Settings, else defaults."""
+    from operations.models import BusinessProfile
+
+    row = (
+        BusinessProfile.objects.filter(singleton_key='X')
+        .values_list('standard_capacity', 'insurance_ceiling')
+        .first()
+    )
+    if not row:
+        return STANDARD_CAPACITY, INSURANCE_CEILING
+    standard, ceiling = row
+    if not standard or standard < 1:
+        standard = STANDARD_CAPACITY
+    if not ceiling or ceiling < 1:
+        ceiling = INSURANCE_CEILING
+    if ceiling < standard:
+        ceiling = standard
+    return standard, ceiling
 
 
 def _day_bounds(day: date):
@@ -48,29 +74,42 @@ def count_dogs_on_day(
     return qs.aggregate(total=Count('client_id', distinct=True))['total'] or 0
 
 
-def _capacity_status(count: int, day: date) -> dict:
-    if count > INSURANCE_CEILING:
+def _capacity_status(
+    count: int,
+    day: date,
+    *,
+    standard: int | None = None,
+    ceiling: int | None = None,
+) -> dict:
+    if standard is None or ceiling is None:
+        standard, ceiling = capacity_limits()
+    base = {
+        'count': count,
+        'standard': standard,
+        'ceiling': ceiling,
+    }
+    if count > ceiling:
         return {
-            'count': count,
+            **base,
             'status': 'blocked',
             'message': (
                 f'Insurance ceiling reached: {count} dogs scheduled on {day}. '
-                f'Maximum {INSURANCE_CEILING} dogs allowed.'
+                f'Maximum {ceiling} dogs allowed.'
             ),
         }
-    if count >= WARNING_THRESHOLD:
+    if count > standard:
         return {
-            'count': count,
+            **base,
             'status': 'warning',
             'message': (
                 f'Capacity warning: {count} dogs on {day}. '
-                f'Standard capacity is {STANDARD_CAPACITY}; insurance allows up to {INSURANCE_CEILING}.'
+                f'Standard capacity is {standard}; insurance allows up to {ceiling}.'
             ),
         }
     return {
-        'count': count,
+        **base,
         'status': 'ok',
-        'message': f'{count} of {STANDARD_CAPACITY} standard capacity used on {day}.',
+        'message': f'{count} of {standard} standard capacity used on {day}.',
     }
 
 
@@ -82,16 +121,18 @@ def assess_capacity(
     """
     Return capacity status for a calendar day.
 
-    - 8 or fewer: ok
-    - 9–10: warning (insurance guard)
-    - >10: blocked
+    Limits come from Business Settings (defaults: 8 standard, 10 insurance).
+    - count <= standard: ok
+    - standard < count <= insurance: warning
+    - count > insurance: blocked
     """
+    standard, ceiling = capacity_limits()
     count = count_dogs_on_day(
         day,
         exclude_visit_id=exclude_visit_id,
         include_client_id=include_client_id,
     )
-    return _capacity_status(count, day)
+    return _capacity_status(count, day, standard=standard, ceiling=ceiling)
 
 
 def _as_local(dt: datetime) -> datetime:
@@ -157,17 +198,29 @@ def _daily_dog_counts(
 def check_visit_capacity(visit) -> dict:
     """Check capacity for every calendar day the visit spans."""
     start_day, end_day = _capacity_span_dates(visit)
+    standard, ceiling = capacity_limits()
     counts = _daily_dog_counts(
         start_day,
         end_day,
         exclude_visit_id=visit.pk,
         include_client_id=visit.client_id,
     )
-    worst = {'count': 0, 'status': 'ok', 'message': ''}
+    worst = {
+        'count': 0,
+        'standard': standard,
+        'ceiling': ceiling,
+        'status': 'ok',
+        'message': '',
+    }
     priority = {'ok': 0, 'warning': 1, 'blocked': 2}
     day = start_day
     while day <= end_day:
-        result = _capacity_status(counts.get(day, 0), day)
+        result = _capacity_status(
+            counts.get(day, 0),
+            day,
+            standard=standard,
+            ceiling=ceiling,
+        )
         if priority[result['status']] > priority[worst['status']]:
             worst = result
         day += timedelta(days=1)

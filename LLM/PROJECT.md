@@ -17,7 +17,7 @@ A **Django 5 monolith** for David's single-user dog boarding operation (~25 repe
 | **Persona** | David-only, mobile-first, **one-handed** (phone in one hand, dogs in the other) |
 | **Database** | SQLite |
 | **Timezone** | `America/Toronto` |
-| **Scale** | ~25 dogs; capacity warns at 9+, blocks above 10/day (insurance ceiling) |
+| **Scale** | ~25 dogs; capacity warns above **standard** (default 8) and blocks above **insurance max** (default 10) — both editable in Settings |
 | **Architecture** | One app (`operations`) split by **domain packages** — never monolithic 500-line files |
 
 **Core domains:**
@@ -43,7 +43,7 @@ A **Django 5 monolith** for David's single-user dog boarding operation (~25 repe
    - `feed.md` — timeline capture, customer photo feed, speakable URLs
 3. **`platform.md`** — dev server, HTTPS, ngrok, Gmail OAuth, PWA, **cognitive-load UX rules**, testing. Any list/detail/dashboard/check-in template change must follow those rules.
 
-Do **not** change pricing tiers, capacity ceilings, pipeline stages, or visit status guards unless David explicitly asks.
+Do **not** change pricing tiers, pipeline stages, or visit status guards unless David explicitly asks. Daily capacity (standard + insurance max) is edited on **Settings** — do not hardcode 8/10 in templates or `capacity.py` checks.
 
 ---
 
@@ -158,7 +158,7 @@ Overnight is evaluated **before** hour tiers. Multi-day: each full 24h = Overnig
 | Google Contacts selective import + vCard | Done |
 | iCal outbound `/ical/` | Done |
 | HTTPS dev server + ngrok | Done |
-| Business settings (`/settings/`) | Done — identity, address, hours, phones |
+| Business settings (`/settings/`) | Done — identity, address, hours, phones, daily capacity |
 | Booking iCal LOCATION + ORGANIZER from settings | Done — `BusinessProfile` → `visit_email.py` |
 | Contemporaneous timeline (staff capture) | Done — photo/video, GPS, multi-dog, forward |
 | Customer photo feed (secret link) | Done — `/feed/<secret>/<dog>/`, full history |
@@ -208,7 +208,7 @@ $env:PUBLIC_SITE_URL = "https://your-subdomain.ngrok.app"
 4. Visit booking stays **two free-text fields** (Start/End) — no multi-step pickers.
 5. No bulk Google contact import without preview + checkboxes.
 6. Extend `operations/services/` for new business logic.
-7. Add tests in `operations/tests.py` for pricing, capacity, forms, or imports you touch.
+7. Add tests in `operations/tests.py` for pricing, capacity, forms, or imports you touch. Capacity occupancy/blocks must follow Settings (`capacity_limits()`), not hardcoded 8/10.
 8. Do not bypass `Visit.check_in()` / `check_out()` status guards.
 9. Do not re-run `full_clean()` / capacity on check-in or check-out saves.
 10. Do not pass `skip_capacity=True` except from `VisitForm.save_all()`.
@@ -221,9 +221,9 @@ $env:PUBLIC_SITE_URL = "https://your-subdomain.ngrok.app"
 | File | Contents |
 |------|----------|
 | [`customers.md`](customers.md) | Owners, dogs, COI, vaccinations, contacts import |
-| [`scheduling.md`](scheduling.md) | Visits, repeat, dashboard, check-in/out status guards, pricing, calendar, booking email |
+| [`scheduling.md`](scheduling.md) | Visits, repeat, dashboard, check-in/out status guards, pricing, **capacity limits from Settings**, calendar, booking email |
 | [`billing.md`](billing.md) | Weekly statements, checkout totals |
-| [`admin.md`](admin.md) | Business settings, baseline contact info, documents |
+| [`admin.md`](admin.md) | Business settings, baseline contact info, **daily capacity** (standard + insurance max), documents |
 | [`feed.md`](feed.md) | Staff timeline, customer feed, speakable URLs, access logging |
 | [`platform.md`](platform.md) | Dev environment, HTTPS, ngrok, PWA, Gmail, **cognitive-load UX**, testing |
 | [`Proposed work/Gemini suggested UX cognitive overload guidelines.md`](Proposed%20work/Gemini%20suggested%20UX%20cognitive%20overload%20guidelines.md) | Original UX constraints — adopted into `platform.md`; keep in sync if the rules change |

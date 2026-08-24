@@ -4,7 +4,7 @@
 {% block content %}
 <div class="card">
     <h2>Live Check-In — {{ today }}</h2>
-    <p class="muted">{{ capacity.count }} dog{{ capacity.count|pluralize }} · {{ capacity.message }}</p>
+    <p class="muted">{{ capacity.count }} / {{ capacity.standard }} · {{ capacity.message }}</p>
     {% if capacity.status != 'ok' %}
     <p>
         <span class="badge badge-{% if capacity.status == 'warning' %}warn{% else %}danger{% endif %}">

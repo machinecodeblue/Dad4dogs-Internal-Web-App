@@ -1,4 +1,9 @@
+from django.core.exceptions import ValidationError
+from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
+
+DEFAULT_STANDARD_CAPACITY = 8
+DEFAULT_INSURANCE_CEILING = 10
 
 
 class BusinessProfile(models.Model):
@@ -39,6 +44,17 @@ class BusinessProfile(models.Model):
         help_text='Number clients should call if there is an urgent problem.',
     )
 
+    standard_capacity = models.PositiveSmallIntegerField(
+        default=DEFAULT_STANDARD_CAPACITY,
+        validators=[MinValueValidator(1), MaxValueValidator(50)],
+        help_text='Comfortable daily dog count. Days above this show a warning.',
+    )
+    insurance_ceiling = models.PositiveSmallIntegerField(
+        default=DEFAULT_INSURANCE_CEILING,
+        validators=[MinValueValidator(1), MaxValueValidator(50)],
+        help_text='Hard maximum for new bookings (insurance). Cannot schedule above this.',
+    )
+
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
@@ -47,6 +63,17 @@ class BusinessProfile(models.Model):
 
     def __str__(self):
         return self.business_name or 'Dad4dogs'
+
+    def clean(self):
+        super().clean()
+        if (
+            self.standard_capacity
+            and self.insurance_ceiling
+            and self.insurance_ceiling < self.standard_capacity
+        ):
+            raise ValidationError({
+                'insurance_ceiling': 'Insurance maximum must be at least the standard daily capacity.',
+            })
 
     def save(self, *args, **kwargs):
         self.singleton_key = 'X'

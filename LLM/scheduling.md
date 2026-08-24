@@ -174,7 +174,7 @@ Home screen (`/`) = David's daily operations view.
 - Checked-in: amber left border + **CHECKED IN** badge only
 - Scheduled: green left border, no status badge
 - Completed: muted grey, no green COMPLETED badge
-- Capacity counts always; **WARNING/OVER** badge only when not ok
+- Occupancy is `capacity.count` (distinct dogs that day). Denominator is Settings **standard** capacity (default 8); insurance max is the booking hard stop (default 10). Empty days show **0 / standard**, not a bare 0. Always show the `N of standard` line; **WARNING/OVER** badge only when not ok. Do not hide the denominator when status is ok.
 - **Open Check-In** on today
 - iCal link is in a **Calendar feed** disclosure (not a permanent Quick Links card)
 
@@ -258,10 +258,15 @@ Tests: `PricingEngineTests`, `VisitCheckOutTests`
 
 ## 7. Capacity (`capacity.py`)
 
+**Purpose:** Standard is the comfortable daily count (dashboard `N / standard`, warning when over). Insurance max is the policy hard stop (block **new** bookings when a day would go over). Both live on `BusinessProfile` and are edited on `/settings/` — see `admin.md` §2 Daily capacity.
+
+**How:** `capacity.capacity_limits()` reads `standard_capacity` / `insurance_ceiling` from the singleton (`values_list`, no `load()`). Missing row → module defaults 8 / 10. Do not hardcode 8/10 in templates or booking checks; use `capacity.standard` / `capacity.ceiling` from `assess_capacity`.
+
 | Count | Behaviour |
 |-------|-----------|
-| ≥ 9 dogs | Warning |
-| > 10 dogs | Block (insurance ceiling) |
+| ≤ standard | OK — dashboard shows `N / standard` |
+| standard < count ≤ insurance | Warning |
+| > insurance | Block (new bookings) |
 
 Counts distinct `client_id` with visits overlapping the calendar day (`scheduled`, `checked_in`, and `completed`). Filter uses `status`, `scheduled_start`, `scheduled_end` — keep the `Visit.Meta` indexes on those fields.
 
@@ -269,7 +274,7 @@ Counts distinct `client_id` with visits overlapping the calendar day (`scheduled
 
 Day windows use Django’s `timezone.get_current_timezone()` (`America/Toronto`) via `_day_bounds` — **not** `datetime.now().astimezone()` (that is the host OS zone; a UTC server would shift overnight counts). `check_visit_capacity` walks `_capacity_span_dates()` via `_as_local()`: `timezone.localtime()` after `make_aware` if naive. Do **not** use `visit.scheduled_start.tzinfo` / `.astimezone(tz)` — naive datetimes have `tzinfo is None` and crash. If `scheduled_end` is **exactly local midnight**, that instant belongs to the **prior** day only — SQL is `scheduled_end > day_start`, so `2026-04-12 00:00` does not occupy 12 April.
 
-`check_visit_capacity` loads overlapping visits for **`[start_day, end_day]` in one query** (`_daily_dog_counts`), then counts distinct `client_id` per day in memory. Do **not** call `assess_capacity()` once per day (N+1 on a 14-day stay). Dashboard/check-in still use `assess_capacity` for a **single** day.
+`check_visit_capacity` loads overlapping visits for **`[start_day, end_day]` in one query** (`_daily_dog_counts`), then counts distinct `client_id` per day in memory. Plus one query for Settings limits. Do **not** call `assess_capacity()` once per day (N+1 on a 14-day stay). Dashboard/check-in still use `assess_capacity` for a **single** day.
 
 Booking forms call `check_visit_capacity` in `VisitForm.clean()` (not in `save_all()`), so a full day is a form error and no `VisitSeries` / visits are created.
 
@@ -277,7 +282,7 @@ Capacity is a **booking** rule, not a day-of-ops lock:
 
 | Write | Runs `full_clean()` / `check_visit_capacity()`? |
 |-------|--------------------------------------------------|
-| `Visit.save()` with no `update_fields` (create, edit times, clone, admin) | Yes — block if any spanned day is over 10 |
+| `Visit.save()` with no `update_fields` (create, edit times, clone, admin) | Yes — block if any spanned day is over the insurance ceiling |
 | `VisitForm.save_all()` after a valid `clean()` | `full_clean()` **yes** (end-after-start); capacity query **no** (`skip_capacity=True`). Edits use `update_fields` for start/end/notes/`updated_at` only. |
 | `save(update_fields=…)` that includes `scheduled_start`, `scheduled_end`, or `client` | Yes |
 | `check_in()` / `check_out()` (status, timestamps, fee) | **No** — the visit is already on the books |
@@ -285,7 +290,7 @@ Capacity is a **booking** rule, not a day-of-ops lock:
 
 Do not call `full_clean()` from `check_in()` / `check_out()`. Do not pass `skip_capacity=True` from views, clone, or admin — only `VisitForm.save_all()`. If you change scheduled times outside the form, `save()` without `skip_capacity` so capacity still runs.
 
-**Tests:** `VisitCapacitySaveTests`, `CapacityTimezoneTests` in `operations/tests.py`.
+**Tests:** `VisitCapacitySaveTests` (includes `test_settings_ceiling_blocks_below_default`), `CapacityTimezoneTests`, `BusinessProfileTests` / `BusinessSettingsViewTests` (form + dashboard `0 / 6` after save) in `operations/tests.py`.
 
 ---
 

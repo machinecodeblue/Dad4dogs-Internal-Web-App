@@ -115,16 +115,16 @@
             <div class="label">Dogs</div>
         </div>
         <div class="stat">
-            <div class="number">{{ capacity.count }}</div>
+            <div class="number">{{ capacity.count }} / {{ capacity.standard }}</div>
             <div class="label">Capacity</div>
         </div>
     </div>
+    <p class="muted">{{ capacity.message }}</p>
     {% if capacity.status != 'ok' %}
     <p>
         <span class="badge badge-{% if capacity.status == 'warning' %}warn{% else %}danger{% endif %}">
             {{ capacity.status|upper }}
         </span>
-        <span class="muted" style="margin-left:0.5rem">{{ capacity.message }}</span>
     </p>
     {% endif %}
 

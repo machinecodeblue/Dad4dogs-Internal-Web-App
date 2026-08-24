@@ -471,6 +471,10 @@ class CognitiveLoadUXTests(TestCase):
         self.assertNotContains(response, 'Standard Max')
         self.assertNotContains(response, 'class="badge badge-ok"')
         self.assertContains(response, '<summary>Calendar feed</summary>')
+        self.assertEqual(response.context['capacity']['count'], 0)
+        self.assertEqual(response.context['capacity']['standard'], 8)
+        self.assertContains(response, '0 / 8')
+        self.assertContains(response, 'of 8 standard capacity')
 
 
 class IntakeWizardTests(TestCase):
@@ -2403,6 +2407,25 @@ class VisitCapacitySaveTests(TestCase):
         with self.assertRaises(ValidationError):
             self._visit()
 
+    def test_settings_ceiling_blocks_below_default(self):
+        profile = BusinessProfile.load()
+        profile.standard_capacity = 2
+        profile.insurance_ceiling = 2
+        profile.save(update_fields=['standard_capacity', 'insurance_ceiling', 'updated_at'])
+        for i in range(2):
+            dog = ClientProfile.objects.create(
+                dog_name=f'Low{i}',
+                owner_name=f'Owner{i}',
+                owner_email=f'low{i}@example.com',
+            )
+            Visit.objects.create(
+                client=dog,
+                scheduled_start=self.start,
+                scheduled_end=self.end,
+            )
+        with self.assertRaises(ValidationError):
+            self._visit()
+
     def test_check_out_succeeds_when_day_is_over_capacity(self):
         visit = self._visit(
             status=Visit.Status.CHECKED_IN,
@@ -2551,7 +2574,7 @@ class CapacityTimezoneTests(TestCase):
             scheduled_start=datetime(2026, 4, 1, 9, 0, tzinfo=TZ),
             scheduled_end=datetime(2026, 4, 15, 17, 0, tzinfo=TZ),
         )
-        with self.assertNumQueries(1):
+        with self.assertNumQueries(2):
             check_visit_capacity(visit)
 
     def test_multi_day_blocks_when_one_day_is_full(self):
@@ -2878,12 +2901,31 @@ class BusinessProfileTests(TestCase):
             'main_phone': '416-555-0100',
             'secondary_phone': '416-555-0101',
             'emergency_phone': '416-555-9999',
+            'standard_capacity': 8,
+            'insurance_ceiling': 10,
         }, instance=BusinessProfile.load())
         self.assertTrue(form.is_valid(), form.errors)
         profile = form.save()
         self.assertEqual(profile.main_phone, '416-555-0100')
         self.assertEqual(profile.emergency_phone, '416-555-9999')
+        self.assertEqual(profile.standard_capacity, 8)
+        self.assertEqual(profile.insurance_ceiling, 10)
         self.assertIn('Toronto', profile.formatted_address)
+
+    def test_insurance_ceiling_cannot_be_below_standard(self):
+        form = BusinessProfileForm(data={
+            'business_name': 'Dad4dogs',
+            'business_email': 'david@dad4dogs.ca',
+            'address': '',
+            'hours_of_operation': '',
+            'main_phone': '',
+            'secondary_phone': '',
+            'emergency_phone': '',
+            'standard_capacity': 8,
+            'insurance_ceiling': 5,
+        }, instance=BusinessProfile.load())
+        self.assertFalse(form.is_valid())
+        self.assertIn('insurance_ceiling', form.errors)
 
 
 class BusinessSettingsViewTests(TestCase):
@@ -2900,6 +2942,8 @@ class BusinessSettingsViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'Business Settings')
         self.assertContains(response, 'Emergency Contact Number')
+        self.assertContains(response, 'Daily capacity')
+        self.assertContains(response, 'Insurance max')
 
     def test_settings_page_saves(self):
         response = self.client.post(reverse('operations:business_settings'), {
@@ -2910,11 +2954,25 @@ class BusinessSettingsViewTests(TestCase):
             'main_phone': '416-555-0100',
             'secondary_phone': '',
             'emergency_phone': '416-555-9999',
+            'standard_capacity': '6',
+            'insurance_ceiling': '9',
         })
         self.assertEqual(response.status_code, 302)
         profile = BusinessProfile.load()
         self.assertEqual(profile.main_phone, '416-555-0100')
         self.assertEqual(profile.hours_of_operation, 'Daily 8 AM – 6 PM')
+        self.assertEqual(profile.standard_capacity, 6)
+        self.assertEqual(profile.insurance_ceiling, 9)
+
+    def test_dashboard_uses_saved_standard_capacity(self):
+        profile = BusinessProfile.load()
+        profile.standard_capacity = 6
+        profile.insurance_ceiling = 9
+        profile.save(update_fields=['standard_capacity', 'insurance_ceiling', 'updated_at'])
+        response = self.client.get(reverse('operations:dashboard'))
+        self.assertEqual(response.context['capacity']['standard'], 6)
+        self.assertEqual(response.context['capacity']['ceiling'], 9)
+        self.assertContains(response, '0 / 6')
 
 
 def _test_image_file(name='moment.jpg'):

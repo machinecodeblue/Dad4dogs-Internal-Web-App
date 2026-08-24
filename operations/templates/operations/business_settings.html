@@ -52,7 +52,23 @@
         <label for="{{ form.emergency_phone.id_for_label }}">Emergency Contact Number</label>
         {{ form.emergency_phone }}
         {% if form.emergency_phone.errors %}<p class="muted" style="color:var(--danger)">{{ form.emergency_phone.errors.0 }}</p>{% endif %}
+    </div>
 
+    <div class="card">
+        <h2>Daily capacity</h2>
+        <p class="muted" style="margin-bottom:0.75rem">Standard is the comfortable number of dogs. Insurance maximum is the hard stop for new bookings.</p>
+        <div class="field-pair">
+            <div>
+                <label for="{{ form.standard_capacity.id_for_label }}">Standard</label>
+                {{ form.standard_capacity }}
+                {% if form.standard_capacity.errors %}<p class="muted" style="color:var(--danger)">{{ form.standard_capacity.errors.0 }}</p>{% endif %}
+            </div>
+            <div>
+                <label for="{{ form.insurance_ceiling.id_for_label }}">Insurance max</label>
+                {{ form.insurance_ceiling }}
+                {% if form.insurance_ceiling.errors %}<p class="muted" style="color:var(--danger)">{{ form.insurance_ceiling.errors.0 }}</p>{% endif %}
+            </div>
+        </div>
         <button type="submit" class="btn btn-primary">Save Settings</button>
     </div>
 </form>
