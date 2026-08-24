@@ -86,8 +86,10 @@ def is_valid_dog_name(dog_name: str, owner_name: str) -> bool:
     """A dog record is only created when we have a real dog name."""
     if not dog_name or dog_name.strip().upper() in ('TBD', 'UNKNOWN'):
         return False
-    owner_first = owner_name.split()[0].lower() if owner_name else ''
-    return bool(dog_name.strip()) and dog_name.strip().lower() != owner_first
+    parts = (owner_name or '').split()
+    owner_first = parts[0].lower() if parts else ''
+    stripped = dog_name.strip()
+    return bool(stripped) and stripped.lower() != owner_first
 
 
 def _split_phones(raw: str) -> list[str]:

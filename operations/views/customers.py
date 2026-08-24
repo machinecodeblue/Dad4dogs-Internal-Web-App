@@ -5,6 +5,7 @@ from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ValidationError
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.utils import timezone
 from django.views.decorators.http import require_http_methods, require_POST
 
 from operations.forms import CustomerOwnerForm, DogProfileForm, VaccinationRecordForm
@@ -302,6 +303,12 @@ def add_vaccination(request, pk):
             request,
             f'Vaccination record added for {record.client.dog_name}.',
         )
+        if record.expires_at < timezone.localdate():
+            messages.warning(
+                request,
+                f'That expiry is already in the past. {record.client.dog_name} '
+                f'is not current until new papers are on file.',
+            )
     else:
         for error in form.non_field_errors():
             messages.error(request, error)

@@ -7,6 +7,7 @@ from operations.services.addresses import (
     normalize_postal_code,
     normalize_province,
 )
+from operations.services.contacts import is_valid_dog_name, normalize_email
 from operations.services.phones import validate_phone
 
 _PHONE_WIDGET = forms.TextInput(attrs={
@@ -129,6 +130,17 @@ class CustomerOwnerForm(NanpPhoneFormMixin, forms.ModelForm):
         ):
             self.initial.setdefault('address_street', instance.home_address)
 
+    def clean_owner_email(self):
+        email = normalize_email(self.cleaned_data.get('owner_email') or '')
+        if not email:
+            raise ValidationError('Email is required.')
+        qs = CustomerOwner.objects.filter(owner_email__iexact=email)
+        if self.instance.pk:
+            qs = qs.exclude(pk=self.instance.pk)
+        if qs.exists():
+            raise ValidationError('A customer with this email is already on file.')
+        return email
+
     def clean_address_postal_code(self):
         raw = (self.cleaned_data.get('address_postal_code') or '').strip()
         if not raw:
@@ -151,6 +163,32 @@ class CustomerOwnerForm(NanpPhoneFormMixin, forms.ModelForm):
         raw = self.cleaned_data.get('authorized_pickup_names') or ''
         names = [line.strip() for line in raw.splitlines() if line.strip()]
         return '\n'.join(names)
+
+    def clean(self):
+        cleaned = super().clean()
+        street = (cleaned.get('address_street') or '').strip()
+        unit = (cleaned.get('address_unit') or '').strip()
+        city = (cleaned.get('address_city') or '').strip()
+        province = (cleaned.get('address_province') or '').strip()
+        postal = (cleaned.get('address_postal_code') or '').strip()
+        cleaned['address_street'] = street
+        cleaned['address_unit'] = unit
+        cleaned['address_city'] = city
+        cleaned['address_province'] = province
+        cleaned['address_postal_code'] = postal
+        if any((street, unit, city, province, postal)):
+            if not street:
+                self.add_error('address_street', 'Enter the street, or clear the other address fields.')
+            if not city:
+                self.add_error('address_city', 'Enter the city, or clear the other address fields.')
+            if not province:
+                self.add_error('address_province', 'Choose a province, or clear the other address fields.')
+            if not postal:
+                self.add_error(
+                    'address_postal_code',
+                    'Enter the postal code, or clear the other address fields.',
+                )
+        return cleaned
 
 
 class DogProfileForm(NanpPhoneFormMixin, forms.ModelForm):
@@ -205,15 +243,11 @@ class DogProfileForm(NanpPhoneFormMixin, forms.ModelForm):
         dog_name = self.cleaned_data['dog_name'].strip()
         if not dog_name:
             raise ValidationError('Dog name is required.')
-        if self.customer_owner:
-            parts = self.customer_owner.owner_name.split()
-            owner_first = parts[0].lower() if parts else ''
-            if owner_first and dog_name.lower() == owner_first:
-                raise ValidationError(
-                    'Dog name cannot be the same as the owner\'s first name.',
-                )
-        if dog_name.upper() in ('TBD', 'UNKNOWN'):
-            raise ValidationError('Enter the dog\'s real name.')
+        owner_name = self.customer_owner.owner_name if self.customer_owner else ''
+        if not is_valid_dog_name(dog_name, owner_name):
+            raise ValidationError(
+                "Enter the dog's real name — not TBD, and not the owner's first name.",
+            )
         return dog_name
 
     def clean(self):
@@ -229,7 +263,10 @@ class DogProfileForm(NanpPhoneFormMixin, forms.ModelForm):
             if self.instance.pk:
                 qs = qs.exclude(pk=self.instance.pk)
             if qs.exists():
-                raise ValidationError(f'{dog_name} is already on file for this customer.')
+                self.add_error(
+                    'dog_name',
+                    f'{dog_name} is already on file for this customer.',
+                )
         return cleaned
 
     def save(self, commit=True):
@@ -244,6 +281,7 @@ class DogProfileForm(NanpPhoneFormMixin, forms.ModelForm):
             dog.owner_phone = owner.owner_phone
         if commit:
             dog.save()
+            dog.ensure_feed_credentials()
         return dog
 
 
@@ -263,6 +301,7 @@ class VaccinationRecordForm(forms.ModelForm):
             'client': forms.Select(attrs={'class': 'dog-select'}),
             'received_at': forms.DateInput(attrs={'type': 'date'}),
             'expires_at': forms.DateInput(attrs={'type': 'date'}),
+            'papers_received': forms.CheckboxInput(),
             'vet_clinic': forms.TextInput(attrs={'placeholder': 'Vet hospital name'}),
             'vaccination_details': forms.Textarea(attrs={
                 'rows': 2,
@@ -277,14 +316,27 @@ class VaccinationRecordForm(forms.ModelForm):
 
     def __init__(self, *args, fixed_client=None, **kwargs):
         super().__init__(*args, **kwargs)
+        self.fixed_client = fixed_client
         self.fields['client'].label = 'Dog (who these papers belong to)'
         self.fields['client'].queryset = ClientProfile.objects.all()
+        self.fields['papers_received'].required = False
+        if not self.is_bound and not (self.instance and self.instance.pk):
+            self.initial.setdefault('papers_received', True)
         if fixed_client:
+            self.instance.client = fixed_client
             self.fields['client'].initial = fixed_client
+            self.fields['client'].required = False
             self.fields['client'].widget = forms.HiddenInput()
+
+    def clean_client(self):
+        if self.fixed_client:
+            return self.fixed_client
+        return self.cleaned_data.get('client')
 
     def clean(self):
         cleaned = super().clean()
+        if self.fixed_client:
+            cleaned['client'] = self.fixed_client
         received = cleaned.get('received_at')
         expires = cleaned.get('expires_at')
         if received and expires and expires < received:
@@ -293,3 +345,11 @@ class VaccinationRecordForm(forms.ModelForm):
                 'Expiry date must be on or after the date papers were received.',
             )
         return cleaned
+
+    def save(self, commit=True):
+        record = super().save(commit=False)
+        if self.fixed_client:
+            record.client = self.fixed_client
+        if commit:
+            record.save()
+        return record

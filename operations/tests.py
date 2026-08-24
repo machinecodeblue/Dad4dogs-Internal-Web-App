@@ -126,7 +126,42 @@ class CustomerOwnerFormTests(TestCase):
         self.assertTrue(form.is_valid(), form.errors)
         owner = form.save()
         self.assertEqual(owner.owner_name, 'Jane Doe')
+        self.assertEqual(owner.owner_email, 'jane@example.com')
         self.assertEqual(ClientProfile.objects.filter(owner_email='jane@example.com').count(), 0)
+
+    def test_lowercases_and_rejects_duplicate_email(self):
+        CustomerOwner.objects.create(
+            owner_name='Jane Doe',
+            owner_email='jane@example.com',
+            owner_phone='4165550100',
+        )
+        form = CustomerOwnerForm(data={
+            'owner_name': 'Jane Two',
+            'owner_email': 'Jane@Example.com',
+            'owner_phone': '416-555-0100',
+        })
+        self.assertFalse(form.is_valid())
+        self.assertIn('owner_email', form.errors)
+
+        fresh = CustomerOwnerForm(data={
+            'owner_name': 'Alex Green',
+            'owner_email': 'Alex@Example.com',
+            'owner_phone': '416-555-0100',
+        })
+        self.assertTrue(fresh.is_valid(), fresh.errors)
+        self.assertEqual(fresh.save().owner_email, 'alex@example.com')
+
+    def test_partial_address_is_rejected(self):
+        form = CustomerOwnerForm(data={
+            'owner_name': 'Jane Doe',
+            'owner_email': 'jane-partial@example.com',
+            'owner_phone': '416-555-0100',
+            'address_postal_code': 'N6B 1G2',
+        })
+        self.assertFalse(form.is_valid())
+        self.assertIn('address_street', form.errors)
+        self.assertIn('address_city', form.errors)
+        self.assertIn('address_province', form.errors)
 
     def test_primary_phone_required(self):
         form = CustomerOwnerForm(data={
@@ -443,6 +478,7 @@ class DogProfileFormTests(TestCase):
         dog = form.save()
         self.assertEqual(dog.dog_name, 'Kobe')
         self.assertEqual(dog.owner_email, 'jane@example.com')
+        self.assertTrue(dog.feed_secret)
 
     def test_edit_without_customer_owner_copies_denormalized_fields(self):
         dog = ClientProfile.objects.create(
@@ -545,6 +581,7 @@ class DogProfileFormTests(TestCase):
             customer_owner=self.owner,
         )
         self.assertFalse(form.is_valid())
+        self.assertIn('dog_name', form.errors)
 
     def test_duplicate_dog_name_ignores_surrounding_whitespace(self):
         ClientProfile.objects.create(
@@ -910,6 +947,39 @@ class ComplianceTests(TestCase):
         )
         self.assertTrue(form.is_valid(), form.errors)
 
+    def test_fixed_client_ignores_posted_dog(self):
+        other = ClientProfile.objects.create(
+            dog_name='Max',
+            owner_name='Other Owner',
+            owner_email='other-vax@example.com',
+        )
+        today = timezone.localdate()
+        form = VaccinationRecordForm(
+            data={
+                'client': other.pk,
+                'papers_received': True,
+                'received_at': today,
+                'expires_at': today + timedelta(days=90),
+            },
+            fixed_client=self.client_profile,
+        )
+        self.assertTrue(form.is_valid(), form.errors)
+        record = form.save()
+        self.assertEqual(record.client_id, self.client_profile.pk)
+
+    def test_unchecked_papers_received_saves_false(self):
+        today = timezone.localdate()
+        form = VaccinationRecordForm(
+            data={
+                'client': self.client_profile.pk,
+                'received_at': today,
+                'expires_at': today + timedelta(days=90),
+            },
+            fixed_client=self.client_profile,
+        )
+        self.assertTrue(form.is_valid(), form.errors)
+        self.assertFalse(form.save().papers_received)
+
     def test_vaccination_status_expiring_within_warning_window(self):
         VaccinationRecord.objects.create(
             client=self.client_profile,
@@ -1065,6 +1135,20 @@ class VaccinationExpiryViewTests(TestCase):
         self.assertContains(response, 'Vax Expiring (30d)')
         self.assertContains(response, reverse('operations:client_list') + '?vax=expiring')
         self.assertContains(response, reverse('operations:client_list') + '?vax=expired')
+
+    def test_add_already_expired_vaccination_warns(self):
+        today = timezone.localdate()
+        response = self.client.post(
+            reverse('operations:add_vaccination', args=[self.expired.pk]),
+            {
+                'received_at': (today - timedelta(days=400)).isoformat(),
+                'expires_at': (today - timedelta(days=3)).isoformat(),
+                'papers_received': 'on',
+            },
+            follow=True,
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'already in the past')
 
 
 class AgendaTests(TestCase):

@@ -38,7 +38,7 @@ Operational contact data is split between **Owner Data** (`CustomerOwner`) and *
 |-------|---------|
 | `owner_name` | Full name — billing, statements, waivers |
 | `owner_salutation` | Pronouns or salutation (optional) |
-| `owner_email` | Unique database key — iCal invites, statements, booking email |
+| `owner_email` | Unique database key — stored lowercase; form rejects duplicates (`iexact`) instead of a 500 |
 | `owner_phone` | **Primary mobile — required on form** — stored as 10-digit NANP (`4165550100`); tap-to-call uses `tel:+1…` |
 | `address_street` | Street number and name (e.g. 191 Grey Street) |
 | `address_unit` | Optional unit / apt / suite |
@@ -47,7 +47,7 @@ Operational contact data is split between **Owner Data** (`CustomerOwner`) and *
 | `address_postal_code` | Canadian postal code, stored as `A1A 1A1` |
 | `home_address` | Formatted cache of the structured fields; also holds **legacy** free text until the record is re-saved |
 
-Display helpers on `CustomerOwner`: `formatted_address` (multiline), `address_oneline`, `address_maps_url` (Google Maps search). `save()` rebuilds `home_address` when any structured part is set. All address fields are optional.
+Display helpers on `CustomerOwner`: `formatted_address` (multiline), `address_oneline`, `address_maps_url` (Google Maps search). `save()` rebuilds `home_address` when any structured part is set. Address may be entirely blank; if any part is filled, street, city, province, and postal are required (unit stays optional).
 
 ### 2.2 Emergency & Secondary Contact (`CustomerOwner`)
 
@@ -100,6 +100,7 @@ Method: `advance_pipeline()` on dog screen.
 ### VaccinationRecord
 - `expires_at` is **required**
 - Form: `expires_at` must be on or after `received_at` (`VaccinationRecordForm.clean()`) — clerical swap of the two dates is rejected before save
+- Past `expires_at` (after received) is allowed so old papers can be logged; `add_vaccination` flashes a warning that the dog is not current
 - Current vax = `validated=True` AND `expires_at >= today` (`has_current_vaccination`) — this is the standard-stay gate
 - Latest validated expiry = `Max(expires_at)` among `validated=True` records (`current_vaccination_expires_at`)
 - `vaccination_status`: `ok` | `expiring` | `expired` | `missing`
@@ -152,9 +153,9 @@ Method: `advance_pipeline()` on dog screen.
 
 | Form | File | Purpose |
 |------|------|---------|
-| `CustomerOwnerForm` | `forms/customers.py` | Primary + **structured address** + emergency + pickup; **phone required** and NANP-validated; postal normalized; pickup names stripped of blank lines |
-| `DogProfileForm` | `forms/customers.py` | Dog name, pipeline, **vet contacts**, handling notes; vet phones NANP-validated. `clean_dog_name()` treats a blank/whitespace owner name as no first name (no `IndexError`). Duplicate check uses stripped `dog_name__iexact` so padded names cannot bypass uniqueness. `save()` copies owner name/email/phone onto the dog; if `customer_owner` was omitted on edit, `ensure_for_client()` resolves it so those fields are never blanked. |
-| `VaccinationRecordForm` | `forms/customers.py` | Per dog; `fixed_client` hides dog selector; `expires_at >= received_at` |
+| `CustomerOwnerForm` | `forms/customers.py` | Primary + **structured address** (all-or-nothing except unit) + emergency + pickup; **phone required** and NANP-validated; email lowercased and unique; pickup names stripped of blank lines |
+| `DogProfileForm` | `forms/customers.py` | Dog name via `is_valid_dog_name()`; duplicate `dog_name` error is on that field; vet phones NANP-validated. `save()` copies owner name/email/phone (resolves owner on edit if omitted) and calls `ensure_feed_credentials()`. |
+| `VaccinationRecordForm` | `forms/customers.py` | `fixed_client` pins the dog (POST cannot swap); `expires_at >= received_at`; `papers_received` checkbox `required=False` (unchecked = False); past expiry still saves with a warning |
 | `IntakeWizardForm` | `forms/intake.py` | Owner + dog + vet + optional M&G datetimes; `save()` returns `(owner, dog, visit)`; inherits owner phone rules + vet phones |
 
 ---
