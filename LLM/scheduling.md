@@ -22,11 +22,11 @@
 ### Visit statuses
 `scheduled` → `checked_in` → `completed` (or `cancelled`)
 
-Forward only via `Visit.check_in()` / `Visit.check_out()`. Do not assign `status`, `actual_arrival`, `actual_departure`, or `calculated_fee` in views to “fix” a transition.
+Forward status only via `Visit.check_in()` / `Visit.check_out()`. Correct late tap times via `Visit.update_actual_times()` (not by assigning timestamps in a view). Do not assign `status`, `actual_arrival`, `actual_departure`, or `calculated_fee` in views to “fix” a transition.
 
 ### Visit key fields
 - `scheduled_start`, `scheduled_end` — authoritative booking window
-- `actual_arrival`, `actual_departure` — set at check-in/out
+- `actual_arrival`, `actual_departure` — set at check-in/out; correctable afterward via `update_actual_times()`
 - `calculated_fee`, `fee_breakdown` — set at checkout (JSON-safe strings in breakdown)
 - `confirmation_email_sent_at` — when booking confirmation was emailed
 - `series`, `series_position` — link to repeat series
@@ -47,8 +47,9 @@ Migration: `0016_visit_hot_lookup_indexes`.
 ### Visit methods
 - `check_in()` — only from `scheduled`; sets `actual_arrival`
 - `check_out()` — only from `checked_in` with no `calculated_fee`; sets `actual_departure` and runs pricing once
+- `update_actual_times()` — from `checked_in` (arrival) or `completed` (arrival+departure + fee recalculate)
 - Illegal transitions raise `ValidationError` (mobile double-tap / stale POST must not overwrite times or fees)
-- `save()` — `full_clean()` (end-after-start + capacity) on booking writes; skipped for status-only `update_fields` (see §5 and §7)
+- `save()` — `full_clean()` (end-after-start + **same-dog overlap** + capacity) on booking writes; status-only `update_fields` skip `full_clean`. `skip_capacity` skips facility capacity only — overlap still runs.
 - `clone_to_date(new_date)` — same duration + **local** time-of-day on `new_date` (`datetime.combine`, not `datetime.replace`)
 - `schedule_display` — human-readable range property
 - `is_editable` — scheduled visits only
@@ -86,7 +87,8 @@ Clone (`clone_to_date`), calendar approve, and **intake Meet & Greet** (`IntakeW
 - **Every** N days/weeks/months
 - **Ends:** number (`5`) or date (`April 15, 2026`) — auto-detected
 - Max 52 occurrences (`MAX_OCCURRENCES`). Count “Ends” of 53+ is rejected in `parse_repeat_ends`. An **until date** that would produce more than 52 visits is a `repeat_ends` error in `VisitForm.clean()` — do not silently clip to 52. `len(occurrences) > 52` is also rejected there so a generator change cannot create a huge series.
-- Capacity runs in `VisitForm.clean()` — blocked days are **non-field form errors** (`visit_form.html` already shows them). `save_all()` only writes after `is_valid()` and calls `visit.save(skip_capacity=True)` so series creation does not query capacity a second time per occurrence. Direct `Visit.save()`, clone, and admin still run the check.
+- **Same-dog overlap:** a dog cannot have two scheduled/checked-in/completed visits whose windows overlap (`scheduled_start < other.end AND scheduled_end > other.start`). Checked in `Visit.clean()` **even when** `skip_capacity=True`, and in `VisitForm.clean()` so the booking form shows “already booked {schedule_display}”. Exact back-to-back (end == next start) is allowed. Cancelled visits do not count. Different dogs at the same time are a capacity concern, not this rule.
+- Capacity runs in `VisitForm.clean()` — blocked days are **non-field form errors** (`visit_form.html` already shows them). `save_all()` only writes after `is_valid()` and calls `visit.save(skip_capacity=True)` so series creation does not query capacity a second time per occurrence. Direct `Visit.save()`, clone, and admin still run the check. Same-dog overlap is **not** skipped.
 - `VisitForm.save_all()` creates series + visits in one transaction
 - **Edit** (`self.instance`): `save(update_fields=['scheduled_start', 'scheduled_end', 'notes', 'updated_at'], skip_capacity=True)` — do not write status, fees, series, or `confirmation_email_sent_at` from a stale in-memory instance. New visits still save the full row.
 - `VisitSeries` is created when **Repeat** is not “Does not repeat” — including a series of **one** visit (`Ends: 1`, or an until-date that yields a single occurrence). Skipping the series when `len(occurrences) == 1` used to drop frequency/interval. A non-repeating booking still has `series=None`.
@@ -106,8 +108,9 @@ Overnight stays keep the same length (end is start + duration, not a replaced en
 - Unchecked by default — David must opt in
 - Sends via Gmail OAuth (`visit_email.py` → `gmail_send.py`)
 - One email covers all visits in a repeat series
-- Success message + `Email sent` badge on dog detail
 - `confirmation_email_sent_at` stamped on each visit
+- Dog **Visits** list: muted **emailed M j** when set. If null (and not cancelled), a **Send email** text action (`POST /visits/<id>/send-confirmation/`) sends that one visit. Already-sent POSTs are a no-op. Gmail errors flash a warning — visit is unchanged.
+- Gmail OAuth failures (`RefreshError` / invalid_grant) become `GmailSendError` → `VisitEmailError`. The **visit stays booked**; never 500 the booking or send-confirmation POST. Fix tokens with `python oauth_setup.py`.
 
 ### Calendar invite layers (booking email)
 1. **Inline MIME** — `text/calendar; method=REQUEST` inside `multipart/alternative` (Gmail interactive banner)
@@ -147,10 +150,12 @@ Every view in `views/scheduling.py` declares allowed methods (`@require_GET`, `@
 | `/checkin/` | GET | Mobile check-in/out |
 | `/dogs/<id>/visits/add/` | GET, POST | Schedule visit (+ repeat + clone) |
 | `/visits/<id>/edit/` | GET, POST | Edit scheduled visit only |
+| `/visits/<id>/send-confirmation/` | POST — `send_booking_confirmation` for this visit if `confirmation_email_sent_at` is null |
 | `/visits/<id>/delete/` | POST | scheduled only |
 | `/visits/parse-datetime/` | GET | JSON parse preview |
 | `/visits/<id>/check-in/` | POST — `check_in()`; illegal status → error message, no write |
 | `/visits/<id>/check-out/` | POST — `check_out()` + fee; illegal status → error message, no write |
+| `/visits/<id>/actual-times/` | POST — `update_actual_times()`; correct arrival (checked-in) or arrival+departure (completed); recalculates fee when completed |
 | `/visits/<id>/timeline/` | Log moment (photo/video) while checked in |
 | `/visits/<id>/timeline/<event>/forward/` | POST — share moment to other checked-in dogs |
 | `/calendar/pending/` | Dense list of imported events (Approve/Reject as `btn-sm` on the row). Not one padded card per event. |
@@ -191,15 +196,28 @@ Home screen (`/`) = David's daily operations view.
 
 ## 5. Check-In / Check-Out
 
-- `/checkin/` lists today's overlapping scheduled + checked-in visits (`day_bounds`, not `__date__`)
+- `/checkin/` lists today's overlapping **scheduled + checked-in** visits (`day_bounds`, not `__date__`), plus a **Checked out today** section for overlapping **completed** visits so late tap times can be corrected after checkout
 - Each card: dog, owner, tap-to-call (emergency vet if present, else clinic). No green OK badges.
-- Scheduled: one CTA (**Check In**). Checked-in: **Log Moment** + **Check Out**.
+- Scheduled: one CTA (**Check In**). Checked-in: **Log Moment** + **Check Out** (still ≤2 primary CTAs). Time correction uses a compact `datetime-local` + **Update time(s)** outline button — not a third primary CTA
 - Capacity count always; WARNING/OVER badge only when not ok
 - Check-in sets `actual_arrival = now`, status `checked_in`
 - Check-out sets `actual_departure = now`, runs `calculate_fee()`, status `completed`
 - Capacity re-checked at check-in
 - Checked-in cards show **Log Moment** → staff timeline (`visit_timeline`)
 - **Owner feed activity** panel — polls `/checkin/feed-activity/` every 15s for owner/family reactions and comments on the customer feed (standard emoji labels in JSON)
+
+### Correcting actual arrival / departure
+
+When several dogs arrive at once, Check In / Check Out may be tapped later than the true door time. The tap still records `timezone.now()`; David then corrects the Visit row fields (not timeline events):
+
+| Status | Editable fields | Fee |
+|--------|-----------------|-----|
+| `checked_in` | `actual_arrival` only | unchanged (no fee yet) |
+| `completed` | `actual_arrival` and `actual_departure` | **recalculate** `calculated_fee` / `fee_breakdown` via `calculate_fee()` |
+
+Model method: `Visit.update_actual_times(arrival=…, departure=…)`. View: `POST /visits/<id>/actual-times/` (`visit_update_actual_times`). HTML `datetime-local` values are parsed as America/Toronto. Scheduled / cancelled visits are rejected. Saves use `update_fields` (no capacity re-check). Do **not** use this path to change status — still only `check_in()` / `check_out()` for transitions.
+
+Weekly statements read `calculated_fee` from completed visits when regenerated, so a corrected fee is picked up on the next `generate_weekly_statements` run.
 
 ### Status guards (idempotent transitions)
 
@@ -209,18 +227,19 @@ David’s phone can double-tap Check In / Check Out or replay a stale POST. A se
 |--------|--------------|------------|-----------|
 | `check_in()` | `scheduled` only | `actual_arrival = now`, status `checked_in` | `ValidationError` — no field writes |
 | `check_out()` | `checked_in` **and** `calculated_fee` is null | `actual_departure = now`, `calculate_fee()`, status `completed` | `ValidationError` — no field writes |
+| `update_actual_times()` | `checked_in` or `completed` | correct timestamps; recalculate fee if completed | `ValidationError` — no field writes |
 
-Cancelled and completed visits cannot enter either method.
+Cancelled and completed visits cannot enter `check_in()` / `check_out()`. Time correction is separate and intentional — it **does** overwrite arrival/departure (and fee when completed).
 
-**Views** (`visit_check_in`, `visit_check_out`): catch `ValidationError`, flash the message, redirect back to `/checkin/`. Do not 500 on a double-tap.
+**Views** (`visit_check_in`, `visit_check_out`, `visit_update_actual_times`): catch `ValidationError`, flash the message, redirect back to `/checkin/`. Do not 500 on a double-tap or bad datetime.
 
 Do **not** turn the already-correct status into a silent no-op unless David asks — a refused transition is an error, not a second success. The template already hides the wrong button; the guard is for stale POSTs and any future caller.
 
 `check_out()` re-reads the row (`refresh_from_db`) before pricing. A stale in-memory instance that still says `checked_in` must not re-run `calculate_fee()` or overwrite `calculated_fee` / `fee_breakdown`. If `calculated_fee` is already set, raise and skip pricing — even when status was left `checked_in`.
 
-`check_in()` / `check_out()` save with `update_fields` so capacity is **not** re-run. A day that is already at or over the insurance ceiling must not trap a dog that is already on site.
+`check_in()` / `check_out()` / `update_actual_times()` save with `update_fields` so capacity is **not** re-run. A day that is already at or over the insurance ceiling must not trap a dog that is already on site.
 
-**Tests:** `VisitCheckOutTests` (model refusals leave arrival/fee/status unchanged; stale instance does not re-run `calculate_fee`), `VisitCheckInOutViewTests` (double POST keeps the first arrival / fee), and `VisitCapacitySaveTests` (checkout/check-in still work when the day is over ceiling). Keep those green if you touch check-in, check-out, or `Visit.save()`.
+**Tests:** `VisitCheckOutTests` (model refusals leave arrival/fee/status unchanged; stale instance does not re-run `calculate_fee`; `update_actual_times` corrects arrival and recalculates completed fees), `VisitCheckInOutViewTests` (double POST keeps the first arrival / fee; POST actual-times from check-in), and `VisitCapacitySaveTests` (checkout/check-in still work when the day is over ceiling). Keep those green if you touch check-in, check-out, or `Visit.save()`.
 
 ---
 

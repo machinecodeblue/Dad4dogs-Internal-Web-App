@@ -5,7 +5,7 @@ from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.utils import timezone
 
-from operations.capacity import check_visit_capacity
+from operations.capacity import check_visit_capacity, overlapping_dog_visit
 from operations.models import ClientProfile, Visit, VisitSeries
 from operations.services.datetime_parse import format_datetime_display, format_datetime_input, parse_datetime_text
 from operations.services.visit_repeat import (
@@ -210,9 +210,23 @@ class VisitForm(forms.Form):
         if not self.client:
             self.add_error(None, 'Dog is required to schedule a visit.')
             return
+        exclude_id = getattr(self.instance, 'pk', None)
         for occ_start, occ_end in occurrences:
+            clash = overlapping_dog_visit(
+                self.client.pk,
+                occ_start,
+                occ_end,
+                exclude_visit_id=exclude_id,
+            )
+            if clash:
+                self.add_error(
+                    None,
+                    f'Cannot schedule {format_datetime_display(occ_start)}: '
+                    f'{self.client.dog_name} is already booked {clash.schedule_display}.',
+                )
+                return
             probe = Visit(
-                pk=getattr(self.instance, 'pk', None),
+                pk=exclude_id,
                 client=self.client,
                 scheduled_start=occ_start,
                 scheduled_end=occ_end,

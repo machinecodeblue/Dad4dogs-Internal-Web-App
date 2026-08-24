@@ -58,8 +58,10 @@ from operations.views.scheduling import (
     visit_create,
     visit_delete,
     visit_edit,
+    visit_send_confirmation,
     visit_timeline,
     visit_timeline_forward,
+    visit_update_actual_times,
 )
 
 __all__ = [
@@ -114,6 +116,8 @@ __all__ = [
     'visit_create',
     'visit_delete',
     'visit_edit',
+    'visit_send_confirmation',
     'visit_timeline',
     'visit_timeline_forward',
+    'visit_update_actual_times',
 ]

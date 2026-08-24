@@ -41,7 +41,15 @@
             <a href="{% url 'operations:dog_detail' dog.pk %}" class="title">{{ dog.dog_name }}</a>
             {% include "operations/_pipeline_badge.html" %}
             {% include "operations/_vax_badge.html" %}
+            {% if dog.pipeline_stage != 'approved' %}
+            <a href="{% url 'operations:dog_detail' dog.pk %}" class="book-link book-blocked">Needs approval</a>
+            {% elif dog.vaccination_status == 'missing' or dog.vaccination_status == 'expired' %}
+            <a href="{% url 'operations:dog_vaccinations' dog.pk %}" class="book-link book-blocked">Needs vax</a>
+            {% elif not group.owner.coi_confirmed_received %}
+            <a href="{% url 'operations:customer_detail' group.owner.pk %}" class="book-link book-blocked">Needs COI</a>
+            {% else %}
             <a href="{% url 'operations:visit_create' dog.pk %}" class="book-link">Book</a>
+            {% endif %}
         </div>
         {% empty %}
         <p class="muted" style="margin:0.25rem 0 0 0.85rem">No dogs on file.</p>

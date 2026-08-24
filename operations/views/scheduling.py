@@ -120,19 +120,45 @@ def dashboard(request):
     })
 
 
+def _parse_local_datetime_input(value: str):
+    """Parse an HTML datetime-local value as America/Toronto-aware."""
+    text = (value or '').strip()
+    if not text:
+        raise ValidationError('Enter a date and time.')
+    for fmt in ('%Y-%m-%dT%H:%M', '%Y-%m-%dT%H:%M:%S'):
+        try:
+            naive = datetime.strptime(text, fmt)
+            break
+        except ValueError:
+            naive = None
+    else:
+        raise ValidationError('Could not understand that date and time.')
+    if timezone.is_naive(naive):
+        return timezone.make_aware(naive, timezone.get_current_timezone())
+    return timezone.localtime(naive)
+
+
 @login_required
 @require_GET
 def mobile_checkin(request):
     today = timezone.localdate()
     day_start, day_end = day_bounds(today)
+    day_filter = {
+        'scheduled_start__lt': day_end,
+        'scheduled_end__gt': day_start,
+    }
     visits = Visit.objects.filter(
-        scheduled_start__lt=day_end,
-        scheduled_end__gt=day_start,
+        **day_filter,
         status__in=[Visit.Status.SCHEDULED, Visit.Status.CHECKED_IN],
     ).select_related('client').order_by('scheduled_start')
+    completed_visits = Visit.objects.filter(
+        **day_filter,
+        status=Visit.Status.COMPLETED,
+    ).select_related('client').order_by('-actual_departure', '-scheduled_end')
     capacity = assess_capacity(today)
     return render(request, 'operations/mobile_checkin.html', {
         'visits': visits,
+        'completed_visits': completed_visits,
         'capacity': capacity,
         'today': today,
     })
@@ -191,6 +217,37 @@ def visit_check_out(request, pk):
             request,
             f'{visit.client.dog_name} checked out. Fee: ${visit.calculated_fee} CAD',
         )
+    return redirect('operations:mobile_checkin')
+
+
+@login_required
+@require_POST
+def visit_update_actual_times(request, pk):
+    """Correct actual arrival/departure after a late tap; recalculate fee if completed."""
+    visit = get_object_or_404(Visit, pk=pk)
+    arrival_raw = (request.POST.get('actual_arrival') or '').strip()
+    departure_raw = (request.POST.get('actual_departure') or '').strip()
+    try:
+        arrival = _parse_local_datetime_input(arrival_raw) if arrival_raw else None
+        departure = None
+        if visit.status == Visit.Status.COMPLETED:
+            if not departure_raw:
+                raise ValidationError('Enter the actual departure time.')
+            departure = _parse_local_datetime_input(departure_raw)
+        elif departure_raw:
+            # Checked-in cards only post arrival; ignore stray departure.
+            departure = None
+        visit.update_actual_times(arrival=arrival, departure=departure)
+    except ValidationError as e:
+        messages.error(request, '; '.join(e.messages))
+    else:
+        if visit.status == Visit.Status.COMPLETED:
+            messages.success(
+                request,
+                f'{visit.client.dog_name} times updated. Fee: ${visit.calculated_fee} CAD',
+            )
+        else:
+            messages.success(request, f'{visit.client.dog_name} arrival time updated.')
     return redirect('operations:mobile_checkin')
 
 
@@ -335,6 +392,29 @@ def visit_edit(request, pk):
         'show_clone': False,
         'visit': visit,
     })
+
+
+@login_required
+@require_POST
+def visit_send_confirmation(request, pk):
+    """Email a booking confirmation for one visit that has not been sent yet."""
+    visit = get_object_or_404(Visit.objects.select_related('client'), pk=pk)
+    dog_pk = visit.client_id
+    if visit.status == Visit.Status.CANCELLED:
+        messages.error(request, 'Cancelled visits cannot be emailed.')
+        return redirect('operations:dog_detail', pk=dog_pk)
+    if visit.confirmation_email_sent_at:
+        messages.info(request, 'Confirmation email was already sent for this visit.')
+        return redirect('operations:dog_detail', pk=dog_pk)
+    try:
+        send_booking_confirmation(visit.client, [visit])
+        messages.success(
+            request,
+            f'Confirmation email sent to {visit.client.owner_email}.',
+        )
+    except VisitEmailError as exc:
+        messages.warning(request, f'Confirmation email was not sent: {exc}')
+    return redirect('operations:dog_detail', pk=dog_pk)
 
 
 @login_required

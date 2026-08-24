@@ -133,11 +133,12 @@ Overnight is evaluated **before** hour tiers. Multi-day: each full 24h = Overnig
 `scheduled` → `checked_in` → `completed` (or `cancelled`).
 
 - `check_in()` only from `scheduled`; `check_out()` only from `checked_in` with no existing `calculated_fee`
-- Illegal calls raise `ValidationError` and must not overwrite `actual_arrival`, `actual_departure`, or `calculated_fee`
+- Illegal transition calls raise `ValidationError` and must not overwrite `actual_arrival`, `actual_departure`, or `calculated_fee`
+- After a late tap, `update_actual_times()` may correct arrival (checked-in) or arrival+departure (completed) and **does** recalculate fee when completed — intentional overwrite, not a second check-out
 - `check_out()` refreshes from the DB first so a stale instance cannot re-price a finalized visit
 - Views catch that error and redirect — no 500 on a mobile double-tap
 - Do not set those fields (or `status`) in views to bypass the methods
-- Capacity is enforced on **booking** saves, not on check-in/out `update_fields` — a full day must not block checkout
+- Capacity is enforced on **booking** saves, not on check-in/out/time-correction `update_fields` — a full day must not block checkout
 - `VisitForm.save_all()` may pass `skip_capacity=True` after `clean()` already checked every occurrence; clone/admin/direct `save()` must not
 
 ---
@@ -155,7 +156,7 @@ Overnight is evaluated **before** hour tiers. Multi-day: each full 24h = Overnig
 | Visit booking (natural-language Start/End) | Done |
 | Repeat series (daily/weekly/weekdays/monthly) | Done |
 | Dashboard month calendar + daily agenda | Done |
-| Mobile check-in/out + auto pricing | Done — status guards on `check_in()` / `check_out()` |
+| Mobile check-in/out + auto pricing | Done — status guards; correct late tap times via `update_actual_times()` |
 | Booking confirmation email (Gmail OAuth) | Done |
 | Google Contacts selective import + vCard | Done |
 | iCal outbound `/ical/` | Done |
@@ -209,8 +210,8 @@ $env:PUBLIC_SITE_URL = "https://your-subdomain.ngrok.app"
 5. No bulk Google contact import without preview + checkboxes.
 6. Extend `operations/services/` for new business logic.
 7. Add tests in `operations/tests.py` for pricing, capacity, forms, or imports you touch. Capacity occupancy/blocks must follow Settings (`capacity_limits()`), not hardcoded 8/10.
-8. Do not bypass `Visit.check_in()` / `check_out()` status guards.
-9. Do not re-run `full_clean()` / capacity on check-in or check-out saves.
+8. Do not bypass `Visit.check_in()` / `check_out()` status guards. Correct late tap times only via `update_actual_times()` (not by assigning timestamps in a view).
+9. Do not re-run `full_clean()` / capacity on check-in, check-out, or actual-time correction saves.
 10. Do not pass `skip_capacity=True` except from `VisitForm.save_all()`.
 11. Never commit `O-Auth Key/`, `certs/`, or live client PII.
 

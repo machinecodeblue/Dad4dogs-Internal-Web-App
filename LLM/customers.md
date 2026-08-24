@@ -127,12 +127,12 @@ Method: `advance_pipeline()` on dog screen — returns `False` (no write) if alr
 | Customer | `/customers/<id>/` | Three labeled cards. **Primary owner contact:** name + Edit, phone + compact Call, email, address/maps, COI warn or **✓**. **Emergency & Pickups:** name labeled “Emergency contact”, yellow Call beside that phone, authorized pickup listed. **Dogs:** compact rows + Add dog. No More actions, no dedicated COI card, no SMS. |
 | Edit customer | `/customers/<id>/edit/` | Primary + structured address (street / unit / city / province / postal) + emergency |
 | Add dog | `/customers/<id>/add-dog/` | Dog profile + vet contacts; pipeline starts at Inquiry |
-| Dog | `/dogs/<id>/` | Labeled cards (same policy as customer). **Dog:** name + Edit, owner + compact Call, drop-off address. **Veterinary:** emergency vet as one unit (yellow Call), clinic compact Call. **Visits** + Schedule stay. Feed / hide / vCard in disclosures. |
+| Dog | `/dogs/<id>/` | Labeled cards. **Dog:** name + Edit, **Vaccinations** link (records page — not the Edit form), owner + Call, drop-off. **Veterinary:** emergency vet + clinic. **Visits** + Schedule stay only when the dog is bookable; each visit shows **emailed** date or **Send email**. Feed / hide / vCard in More actions. |
 | Hide / unhide dog | `POST /dogs/<id>/hide/` · `POST /dogs/<id>/unhide/` | Soft-hide from client list. Legacy `/dogs/<id>/delete/` aliases hide. |
-| Edit dog | `/dogs/<id>/edit/` | Dog profile + veterinary section |
+| Edit dog | `/dogs/<id>/edit/` | Dog profile + veterinary **contacts** only. Link to **Vaccinations** for papers/expiry. |
 | Regenerate feed | `POST /dogs/<id>/feed/regenerate/` | New `feed_secret` — old links stop working |
 | Vaccinations | `/dogs/<id>/vaccinations/` | List, add, validate — dog only |
-| Check-in | `/checkin/` | Per-visit owner phone + emergency (or clinic) tap-to-call. **Check In**, or **Log Moment** + **Check Out**. |
+| Check-in | `/checkin/` | Per-visit owner phone + emergency (or clinic) tap-to-call. **Check In**, or **Log Moment** + **Check Out**. Correct late tap arrival/departure via compact datetime fields (`update_actual_times`); completed visits stay listed under **Checked out today**. |
 | vCard export | `/clients/<id>/vcard/` | Per-dog `.vcf` for Google |
 | Contact sync | `/contacts/sync/` | CSV upload hub |
 | Import preview | `/contacts/import/` | Analysis before DB write |
@@ -147,10 +147,10 @@ Method: `advance_pipeline()` on dog screen — returns `False` (no write) if alr
 |-------|------------|
 | VAX + date (amber) | Current vax expires within 30 days |
 | VAX EXPIRED (red) | Latest validated record expired |
-| VAX (amber) | No validated record |
+| NO VAX (amber) | No validated record — do not label this `VAX` (that looks like papers are on file) |
 | Pipeline (amber) | Dog is not Approved |
 
-COI warnings live on the **customer** screen, not the compact list (keeps rows at ≤2 badges).
+**Book** on the client list only when the dog can take a standard stay (Approved + current validated vax + owner COI received). Otherwise a text hint replaces Book: **Needs approval** (dog summary), **Needs vax** (vaccination records), **Needs COI** (customer summary). Expiring-but-current vax still shows Book.
 
 ---
 

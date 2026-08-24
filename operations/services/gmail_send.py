@@ -7,6 +7,7 @@ from email.mime.text import MIMEText
 from pathlib import Path
 
 from django.conf import settings
+from google.auth.exceptions import RefreshError
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
@@ -56,7 +57,13 @@ def _load_credentials() -> Credentials:
                 'Delete O-Auth Key/token.json and run: python oauth_setup.py',
             )
     if creds.expired and creds.refresh_token:
-        creds.refresh(Request())
+        try:
+            creds.refresh(Request())
+        except RefreshError as exc:
+            raise GmailSendError(
+                'Gmail login expired or was revoked (invalid_grant). '
+                'The visit is still booked. Re-connect Gmail with: python oauth_setup.py',
+            ) from exc
         token_path.write_text(creds.to_json(), encoding='utf-8')
     if not creds.valid:
         raise GmailSendError(

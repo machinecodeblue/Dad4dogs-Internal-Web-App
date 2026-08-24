@@ -67,6 +67,10 @@
     <p class="muted"><a href="{% url 'operations:dog_detail' client.pk %}" style="color:var(--brand)">← {{ client.dog_name }}</a></p>
     <h2>{{ title }}</h2>
     <p class="muted">Type or dictate start and end — e.g. <em>April 11, 2026 5 pm</em>. Tap the formatted result to edit.</p>
+    <p class="muted" style="margin-top:0.35rem">
+        <a href="{% url 'operations:dog_vaccinations' client.pk %}" class="tap-call">Vaccinations</a>
+        for {{ client.dog_name }}
+    </p>
 </div>
 
 <div class="card">

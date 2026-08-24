@@ -5,7 +5,7 @@ from django.core.exceptions import ValidationError
 from django.db import models
 from django.utils import timezone
 
-from operations.capacity import check_visit_capacity
+from operations.capacity import check_visit_capacity, overlapping_dog_visit
 from operations.pricing import calculate_fee
 
 from .customers import ClientProfile
@@ -102,6 +102,18 @@ class Visit(models.Model):
         if self.scheduled_end <= self.scheduled_start:
             raise ValidationError('Scheduled end must be after scheduled start.')
 
+        client_id = self.client_id or getattr(self.client, 'pk', None)
+        clash = overlapping_dog_visit(
+            client_id,
+            self.scheduled_start,
+            self.scheduled_end,
+            exclude_visit_id=self.pk,
+        )
+        if clash:
+            raise ValidationError(
+                f'{clash.client.dog_name} is already booked {clash.schedule_display}.'
+            )
+
         if getattr(self, '_skip_capacity_check', False):
             return
 
@@ -147,6 +159,47 @@ class Visit(models.Model):
         self.save(update_fields=[
             'actual_departure', 'calculated_fee', 'fee_breakdown', 'status', 'updated_at',
         ])
+
+    def update_actual_times(self, *, arrival=None, departure=None):
+        """Correct recorded arrival/departure after a late tap on check-in or check-out.
+
+        Checked-in visits: arrival only. Completed visits: arrival and/or departure,
+        then recalculate ``calculated_fee`` / ``fee_breakdown`` from the corrected window.
+        Does not change status. Saves with ``update_fields`` so capacity is not re-run.
+        """
+        if self.status == self.Status.CHECKED_IN:
+            if arrival is None:
+                raise ValidationError('Enter the actual arrival time.')
+            if departure is not None:
+                raise ValidationError('Check out before setting a departure time.')
+            self.actual_arrival = arrival
+            self.save(update_fields=['actual_arrival', 'updated_at'])
+            return
+
+        if self.status == self.Status.COMPLETED:
+            new_arrival = arrival if arrival is not None else self.actual_arrival
+            new_departure = departure if departure is not None else self.actual_departure
+            if new_arrival is None:
+                raise ValidationError('Enter the actual arrival time.')
+            if new_departure is None:
+                raise ValidationError('Enter the actual departure time.')
+            if new_departure <= new_arrival:
+                raise ValidationError('Departure must be after arrival.')
+            self.actual_arrival = new_arrival
+            self.actual_departure = new_departure
+            fee, breakdown = calculate_fee(new_arrival, new_departure)
+            self.calculated_fee = fee
+            self.fee_breakdown = breakdown
+            self.save(update_fields=[
+                'actual_arrival',
+                'actual_departure',
+                'calculated_fee',
+                'fee_breakdown',
+                'updated_at',
+            ])
+            return
+
+        raise ValidationError('Only checked-in or completed visits can have times corrected.')
 
     def clone_to_date(self, new_date):
         """Clone duration and local time-of-day onto a new calendar date."""

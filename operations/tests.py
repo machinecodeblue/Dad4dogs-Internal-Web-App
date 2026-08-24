@@ -1,7 +1,7 @@
 from datetime import date, datetime, timedelta
 from decimal import Decimal
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 from zoneinfo import ZoneInfo
 
 from django.core.exceptions import ValidationError
@@ -71,6 +71,7 @@ from icalendar import Calendar
 from operations.services.gmail_send import (
     BOOKING_ICS_FILENAME,
     GmailSendError,
+    _load_credentials,
     build_booking_invite_message,
     send_gmail,
 )
@@ -445,11 +446,27 @@ class CognitiveLoadUXTests(TestCase):
         self.assertNotContains(response, '>View<')
         self.assertContains(response, 'class="title">Kobe<')
         self.assertContains(response, reverse('operations:dog_detail', args=[self.dog.pk]))
-        self.assertContains(response, reverse('operations:visit_create', args=[self.dog.pk]))
-        self.assertContains(response, 'class="book-link">Book<')
+        self.assertContains(response, 'NO VAX')
+        self.assertContains(response, 'Needs vax')
+        self.assertContains(response, reverse('operations:dog_vaccinations', args=[self.dog.pk]))
+        self.assertNotContains(response, 'class="book-link">Book<')
         self.assertContains(response, '(416) 555-0100')
         self.assertNotContains(response, 'class="badge badge-ok"')
-        self.assertNotContains(response, '>COI<')
+
+    def test_client_list_shows_book_when_stay_is_ready(self):
+        self.owner.mark_coi_received()
+        VaccinationRecord.objects.create(
+            client=self.dog,
+            received_at=timezone.localdate(),
+            expires_at=timezone.localdate() + timedelta(days=120),
+            validated=True,
+            papers_received=True,
+        )
+        response = self.client.get(reverse('operations:client_list'))
+        self.assertContains(response, 'class="book-link">Book<')
+        self.assertContains(response, reverse('operations:visit_create', args=[self.dog.pk]))
+        self.assertNotContains(response, 'Needs vax')
+        self.assertNotContains(response, 'NO VAX')
 
     def test_owner_list_name_is_last_comma_first(self):
         self.assertEqual(self.owner.list_name, 'Doe, Jane')
@@ -465,10 +482,13 @@ class CognitiveLoadUXTests(TestCase):
         self.assertContains(response, '<h2>Veterinary</h2>')
         self.assertContains(response, 'Emergency vet')
         self.assertContains(response, 'btn-warn')
-        self.assertContains(response, 'Schedule stay')
+        self.assertContains(response, reverse('operations:dog_vaccinations', args=[self.dog.pk]))
+        self.assertContains(response, 'Vaccinations')
+        self.assertNotContains(response, 'Schedule stay')
         self.assertContains(response, reverse('operations:dog_edit', args=[self.dog.pk]))
         self.assertContains(response, '<summary>More actions</summary>')
         self.assertContains(response, 'Hide dog')
+        self.assertNotContains(response, 'Vaccination records')
 
     def test_vaccination_page_omits_green_ok_badges(self):
         VaccinationRecord.objects.create(
@@ -537,6 +557,26 @@ class CognitiveLoadUXTests(TestCase):
         self.assertContains(response, '✓')
         self.assertNotContains(response, 'COI not sent')
         self.assertNotContains(response, '<h2>Certificate of insurance</h2>')
+
+    def test_staff_pages_use_top_nav_not_bottom_bar(self):
+        response = self.client.get(reverse('operations:dashboard'))
+        html = response.content.decode()
+        self.assertNotIn('bottom-nav', html)
+        self.assertIn('app-header', html)
+        self.assertIn('app-primary-nav', html)
+        self.assertIn('nav-drawer', html)
+        self.assertContains(response, reverse('operations:mobile_checkin'))
+        self.assertContains(response, reverse('operations:client_list'))
+        self.assertContains(response, reverse('operations:statements'))
+        self.assertContains(response, reverse('operations:business_settings'))
+        self.assertContains(response, reverse('operations:pending_events'))
+        self.assertContains(response, reverse('operations:contact_sync'))
+        # Billing / Settings live in the drawer, not as primary peers of Check-In
+        primary = html.split('app-primary-nav', 1)[1].split('</nav>', 1)[0]
+        self.assertIn('Check-In', primary)
+        self.assertIn('Clients', primary)
+        self.assertNotIn('Billing', primary)
+        self.assertNotIn('Settings', primary)
 
 
 class IntakeWizardTests(TestCase):
@@ -1881,6 +1921,58 @@ class VisitFormTests(TestCase):
         )
         self.assertFalse(form.is_valid())
 
+    def test_rejects_overlapping_stay_for_same_dog(self):
+        Visit.objects.create(
+            client=self.dog,
+            scheduled_start=datetime(2026, 4, 11, 8, 0, tzinfo=TZ),
+            scheduled_end=datetime(2026, 4, 11, 17, 0, tzinfo=TZ),
+        )
+        form = VisitForm(
+            data={
+                'start_at': 'April 11, 2026 8 am',
+                'end_at': 'April 11, 2026 5 pm',
+                'notes': '',
+            },
+            client=self.dog,
+        )
+        self.assertFalse(form.is_valid())
+        self.assertIn('already booked', str(form.non_field_errors()).lower())
+        self.assertEqual(Visit.objects.filter(client=self.dog).count(), 1)
+
+    def test_allows_back_to_back_stays_for_same_dog(self):
+        Visit.objects.create(
+            client=self.dog,
+            scheduled_start=datetime(2026, 4, 11, 8, 0, tzinfo=TZ),
+            scheduled_end=datetime(2026, 4, 11, 12, 0, tzinfo=TZ),
+        )
+        form = VisitForm(
+            data={
+                'start_at': 'April 11, 2026 12 pm',
+                'end_at': 'April 11, 2026 5 pm',
+                'notes': '',
+            },
+            client=self.dog,
+        )
+        self.assertTrue(form.is_valid(), form.errors)
+        form.save()
+        self.assertEqual(Visit.objects.filter(client=self.dog).count(), 2)
+
+    def test_edit_keeps_own_window(self):
+        visit = Visit.objects.create(
+            client=self.dog,
+            scheduled_start=datetime(2026, 4, 11, 8, 0, tzinfo=TZ),
+            scheduled_end=datetime(2026, 4, 11, 17, 0, tzinfo=TZ),
+        )
+        form = VisitForm(
+            data={
+                'start_at': 'April 11, 2026 8 am',
+                'end_at': 'April 11, 2026 5 pm',
+                'notes': 'Same window',
+            },
+            instance=visit,
+        )
+        self.assertTrue(form.is_valid(), form.errors)
+
     def test_edit_scheduled_visit(self):
         visit = Visit.objects.create(
             client=self.dog,
@@ -2256,12 +2348,91 @@ class VisitEmailTests(TestCase):
         form = VisitForm(instance=visit)
         self.assertNotIn('send_confirmation_email', form.fields)
 
+    def test_dog_detail_offers_send_email_when_unsent(self):
+        CustomerOwner.ensure_for_client(self.dog)
+        visit = Visit.objects.create(
+            client=self.dog,
+            scheduled_start=datetime(2026, 4, 11, 13, 0, tzinfo=TZ),
+            scheduled_end=datetime(2026, 4, 11, 18, 0, tzinfo=TZ),
+        )
+        user = get_user_model().objects.create_user('david-email', 'e@example.com', 'pass')
+        self.client.force_login(user)
+        response = self.client.get(reverse('operations:dog_detail', args=[self.dog.pk]))
+        self.assertContains(response, 'Send email')
+        self.assertContains(
+            response,
+            reverse('operations:visit_send_confirmation', args=[visit.pk]),
+        )
+        self.assertNotContains(response, 'emailed')
+
+    def test_dog_detail_shows_emailed_date_when_sent(self):
+        CustomerOwner.ensure_for_client(self.dog)
+        Visit.objects.create(
+            client=self.dog,
+            scheduled_start=datetime(2026, 4, 11, 13, 0, tzinfo=TZ),
+            scheduled_end=datetime(2026, 4, 11, 18, 0, tzinfo=TZ),
+            confirmation_email_sent_at=datetime(2026, 4, 10, 12, 0, tzinfo=TZ),
+        )
+        user = get_user_model().objects.create_user('david-emailed', 'e2@example.com', 'pass')
+        self.client.force_login(user)
+        response = self.client.get(reverse('operations:dog_detail', args=[self.dog.pk]))
+        self.assertContains(response, 'emailed Apr 10')
+        self.assertNotContains(response, 'Send email')
+
+    @patch('operations.views.scheduling.send_booking_confirmation')
+    def test_send_confirmation_view_calls_email(self, mock_send):
+        visit = Visit.objects.create(
+            client=self.dog,
+            scheduled_start=datetime(2026, 4, 11, 13, 0, tzinfo=TZ),
+            scheduled_end=datetime(2026, 4, 11, 18, 0, tzinfo=TZ),
+        )
+        user = get_user_model().objects.create_user('david-send', 'e3@example.com', 'pass')
+        self.client.force_login(user)
+        response = self.client.post(
+            reverse('operations:visit_send_confirmation', args=[visit.pk]),
+        )
+        self.assertEqual(response.status_code, 302)
+        mock_send.assert_called_once()
+        args = mock_send.call_args[0]
+        self.assertEqual(args[0], self.dog)
+        self.assertEqual(list(args[1]), [visit])
+
+    @patch('operations.views.scheduling.send_booking_confirmation')
+    def test_send_confirmation_view_skips_if_already_sent(self, mock_send):
+        visit = Visit.objects.create(
+            client=self.dog,
+            scheduled_start=datetime(2026, 4, 11, 13, 0, tzinfo=TZ),
+            scheduled_end=datetime(2026, 4, 11, 18, 0, tzinfo=TZ),
+            confirmation_email_sent_at=datetime(2026, 4, 10, 12, 0, tzinfo=TZ),
+        )
+        user = get_user_model().objects.create_user('david-skip', 'e4@example.com', 'pass')
+        self.client.force_login(user)
+        self.client.post(reverse('operations:visit_send_confirmation', args=[visit.pk]))
+        mock_send.assert_not_called()
+
 
 @override_settings(GMAIL_OAUTH_DIR=Path('/nonexistent/oauth-dir'))
 class GmailSendTests(TestCase):
     def test_send_gmail_requires_token(self):
         with self.assertRaises(GmailSendError) as ctx:
             send_gmail('Subject', 'Body', 'test@example.com')
+        self.assertIn('oauth_setup.py', str(ctx.exception))
+
+    @patch('operations.services.gmail_send._credentials_path')
+    @patch('operations.services.gmail_send._token_path')
+    @patch('operations.services.gmail_send.Credentials')
+    def test_refresh_error_becomes_gmail_send_error(self, mock_creds_cls, mock_token, mock_creds_path):
+        from google.auth.exceptions import RefreshError
+
+        mock_token.return_value.exists.return_value = True
+        mock_creds_path.return_value.exists.return_value = False
+        creds = MagicMock()
+        creds.expired = True
+        creds.refresh_token = 'rt'
+        creds.refresh.side_effect = RefreshError('invalid_grant: Bad Request')
+        mock_creds_cls.from_authorized_user_file.return_value = creds
+        with self.assertRaises(GmailSendError) as ctx:
+            _load_credentials()
         self.assertIn('oauth_setup.py', str(ctx.exception))
 
 
@@ -2415,6 +2586,54 @@ class VisitCheckOutTests(TestCase):
         self.assertEqual(visit.status, Visit.Status.CHECKED_IN)
         self.assertEqual(visit.calculated_fee, Decimal('15.00'))
         self.assertIsNone(visit.actual_departure)
+
+    def test_update_actual_times_checked_in_arrival(self):
+        late_tap = datetime(2026, 3, 10, 9, 40, tzinfo=TZ)
+        true_arrival = datetime(2026, 3, 10, 9, 5, tzinfo=TZ)
+        visit = self._make_visit(
+            status=Visit.Status.CHECKED_IN,
+            actual_arrival=late_tap,
+        )
+        visit.update_actual_times(arrival=true_arrival)
+        visit.refresh_from_db()
+        self.assertEqual(visit.actual_arrival, true_arrival)
+        self.assertEqual(visit.status, Visit.Status.CHECKED_IN)
+        self.assertIsNone(visit.actual_departure)
+
+    def test_update_actual_times_checked_in_rejects_departure(self):
+        visit = self._make_visit(
+            status=Visit.Status.CHECKED_IN,
+            actual_arrival=datetime(2026, 3, 10, 9, 5, tzinfo=TZ),
+        )
+        with self.assertRaises(ValidationError):
+            visit.update_actual_times(
+                arrival=datetime(2026, 3, 10, 9, 0, tzinfo=TZ),
+                departure=datetime(2026, 3, 10, 12, 0, tzinfo=TZ),
+            )
+
+    def test_update_actual_times_completed_recalculates_fee(self):
+        visit = self._make_visit(
+            status=Visit.Status.COMPLETED,
+            actual_arrival=datetime(2026, 3, 10, 9, 0, tzinfo=TZ),
+            actual_departure=datetime(2026, 3, 10, 12, 0, tzinfo=TZ),
+            calculated_fee=Decimal('15.00'),
+            fee_breakdown=[{'tier': 'Short Visit', 'amount': '15.00'}],
+        )
+        visit.update_actual_times(
+            arrival=datetime(2026, 3, 10, 8, 0, tzinfo=TZ),
+            departure=datetime(2026, 3, 10, 17, 0, tzinfo=TZ),
+        )
+        visit.refresh_from_db()
+        self.assertEqual(visit.actual_arrival, datetime(2026, 3, 10, 8, 0, tzinfo=TZ))
+        self.assertEqual(visit.actual_departure, datetime(2026, 3, 10, 17, 0, tzinfo=TZ))
+        self.assertEqual(visit.calculated_fee, Decimal('25.00'))
+        self.assertEqual(visit.fee_breakdown, [{'tier': 'Daytime Visit', 'amount': '25.00'}])
+        self.assertEqual(visit.status, Visit.Status.COMPLETED)
+
+    def test_update_actual_times_rejects_scheduled(self):
+        visit = self._make_visit()
+        with self.assertRaises(ValidationError):
+            visit.update_actual_times(arrival=datetime(2026, 3, 10, 9, 0, tzinfo=TZ))
 
 
 class VisitCapacitySaveTests(TestCase):
@@ -2825,6 +3044,50 @@ class VisitCheckInOutViewTests(TestCase):
             actual_arrival=datetime(2026, 4, 10, 20, 5, tzinfo=TZ),
         )
         self.assertEqual(active_checked_in_visits().count(), 1)
+
+    def test_update_arrival_from_checkin(self):
+        today = timezone.localdate()
+        late = datetime(today.year, today.month, today.day, 9, 40, tzinfo=TZ)
+        true_arrival = datetime(today.year, today.month, today.day, 9, 5, tzinfo=TZ)
+        visit = self._today_visit(
+            status=Visit.Status.CHECKED_IN,
+            actual_arrival=late,
+        )
+        response = self.client.post(
+            reverse('operations:visit_update_actual_times', args=[visit.pk]),
+            {'actual_arrival': true_arrival.strftime('%Y-%m-%dT%H:%M')},
+        )
+        self.assertEqual(response.status_code, 302)
+        visit.refresh_from_db()
+        self.assertEqual(timezone.localtime(visit.actual_arrival), true_arrival)
+
+    def test_update_completed_times_recalculates_fee_from_checkin(self):
+        today = timezone.localdate()
+        arrival = datetime(today.year, today.month, today.day, 9, 0, tzinfo=TZ)
+        old_departure = datetime(today.year, today.month, today.day, 12, 0, tzinfo=TZ)
+        new_departure = datetime(today.year, today.month, today.day, 17, 0, tzinfo=TZ)
+        visit = self._today_visit(
+            status=Visit.Status.COMPLETED,
+            actual_arrival=arrival,
+            actual_departure=old_departure,
+            calculated_fee=Decimal('15.00'),
+            fee_breakdown=[{'tier': 'Short Visit', 'amount': '15.00'}],
+        )
+        response = self.client.get(reverse('operations:mobile_checkin'))
+        self.assertContains(response, 'Checked out today')
+        self.assertContains(response, 'Rex')
+
+        response = self.client.post(
+            reverse('operations:visit_update_actual_times', args=[visit.pk]),
+            {
+                'actual_arrival': arrival.strftime('%Y-%m-%dT%H:%M'),
+                'actual_departure': new_departure.strftime('%Y-%m-%dT%H:%M'),
+            },
+        )
+        self.assertEqual(response.status_code, 302)
+        visit.refresh_from_db()
+        self.assertEqual(timezone.localtime(visit.actual_departure), new_departure)
+        self.assertEqual(visit.calculated_fee, Decimal('25.00'))
 
 
 class DashboardViewTests(TestCase):

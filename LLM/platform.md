@@ -66,9 +66,12 @@ Messages appear in Gmail **Sent Mail** for audit trail.
 ## 4. UI Conventions
 
 ### Layout
-- Sticky header: "Dad4dogs / David's Internal Operations"
-- Fixed bottom nav: **Home · Check-In · Clients · Billing · Settings**
-- **Settings** (`/settings/`) — business baseline (see `admin.md`)
+- Sticky **top** header (Android Chrome–first; no fixed bottom app nav — browser chrome already owns the bottom):
+  - **Dad4dogs** logo → Home (`/`)
+  - Primary links: **Check-In** · **Clients**
+  - **☰** drawer: **Billing** · **Settings** · **Calendar pending** · **Contacts**
+- PWA install remains optional; navigation must work in a normal browser tab without standalone mode
+- **Settings** (`/settings/`) — business baseline (see `admin.md`); reached from the drawer, not a primary tab
 - Cards, large touch targets, green brand (`#2d6a4f`)
 - Max content width ~600px centred
 
@@ -117,7 +120,7 @@ Each card has one job. A kicker (`.card-kicker`) or `h2` names that job so the p
 - **Dogs** — compact rows + Add dog.
 
 **Dog (`/dogs/<id>/`)**
-- **Dog** — name, Edit, pipeline/vax badges, owner name + owner Call in a phone-row, drop-off address if on file.
+- **Dog** — name, Edit, pipeline/vax badges, **Vaccinations** (always a link to `/dogs/<id>/vaccinations/` — papers are not on the Edit form). Owner + Call, drop-off address if on file.
 - **Veterinary** — own card when vet data exists. Emergency vet is one unit (name + yellow Call). Clinic phone is a compact Call, not a second full-width button under the dog’s name.
 - **Visits** — compact rows + Schedule stay.
 - Photo feed and hide/vCard stay in disclosures / More actions.
@@ -127,7 +130,7 @@ Each card has one job. A kicker (`.card-kicker`) or `h2` names that job so the p
 **Client list (`/clients/`) — dense, owner-first**
 - A listing screen is a **juncture**, not a stack of padded cards. One toolbar + one flat list with hairline dividers. ~25–50 clients: load the (filtered) list and **search in the browser** (owner name + dog name). Do not round-trip the server on every keystroke.
 - Toolbar: search, **+ New Client** (intake only — a client without a dog is not a Clients-list action). Stage and vax `<select>`s inline. **No More accordion. No Customer only. No Google Contact Sync here** — sync is on Settings.
-- Rows: `Last, First — phone` (name is the profile link). Dogs nest under the owner; **Book** is a small text link, not a button. Sort by last name.
+- Rows: `Last, First — phone` (name is the profile link). Dogs nest under the owner. **Book** is a small text link only when the dog is bookable (Approved + current vax + COI). If not, show **Needs approval** / **Needs vax** / **Needs COI** instead — never a Book that will bounce on the form. Missing papers use the **NO VAX** badge, not `VAX`.
 - Do not restore per-client white cards or full-width View/Book buttons on this page.
 
 **Action density**
@@ -141,7 +144,7 @@ Each card has one job. A kicker (`.card-kicker`) or `h2` names that job so the p
 **Where this lands today**
 - Dashboard agenda: compact rows; occupancy as `N / standard` from Settings (never a bare 0 for the ceiling); vax tiles only if count > 0; capacity **badge** only when warning/over; iCal in a disclosure.
 - Check-in: Check In, or Log Moment + Check Out; emergency (else clinic) as tap-to-call, not a third button.
-- Shared CSS in `base.html`: `.client-row` / `.compact-row` (dense lists), `.list-toolbar`, `.card-head`, `.card-kicker`, `.phone-row`, `.truncate`, `details.disclosure`, `details.coi-mark`, `.admin-drawer`. Shared badges: `_pipeline_badge.html`, `_vax_badge.html` (warn/danger only).
+- Shared CSS in `base.html`: `.app-header` / `.app-primary-nav` / `.nav-drawer` (top nav), `.client-row` / `.compact-row` (dense lists), `.list-toolbar`, `.card-head`, `.card-kicker`, `.phone-row`, `.truncate`, `details.disclosure`, `details.coi-mark`, `.admin-drawer`. Shared badges: `_pipeline_badge.html`, `_vax_badge.html` (warn/danger only).
 
 ### Progressive Web App (PWA) — David's admin app only
 Install to home screen for standalone mode (no browser address bar). Customer feed is a normal web page — they can bookmark or add to home screen manually.

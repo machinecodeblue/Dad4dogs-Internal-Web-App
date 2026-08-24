@@ -54,6 +54,23 @@ def _overlapping_visits(span_start, span_end, exclude_visit_id: int | None = Non
     return qs
 
 
+def overlapping_dog_visit(
+    client_id: int,
+    span_start,
+    span_end,
+    exclude_visit_id: int | None = None,
+):
+    """Another stay for the same dog whose window overlaps this one, or None."""
+    if not client_id:
+        return None
+    return (
+        _overlapping_visits(span_start, span_end, exclude_visit_id)
+        .filter(client_id=client_id)
+        .select_related('client')
+        .first()
+    )
+
+
 def count_dogs_on_day(
     day: date,
     exclude_visit_id: int | None = None,

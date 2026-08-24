@@ -12,13 +12,16 @@
         <div>
             <h2>{{ dog.dog_name }}</h2>
             {% include "operations/_pipeline_badge.html" %}
-            {% include "operations/_vax_badge.html" %}
+            <a href="{% url 'operations:dog_vaccinations' dog.pk %}" style="text-decoration:none">{% include "operations/_vax_badge.html" %}</a>
             {% if dog.is_hidden %}
             <span class="badge badge-warn">HIDDEN</span>
             {% endif %}
         </div>
         <a href="{% url 'operations:dog_edit' dog.pk %}" class="btn btn-outline btn-sm">Edit</a>
     </div>
+    <p style="margin-top:0.5rem">
+        <a href="{% url 'operations:dog_vaccinations' dog.pk %}" class="tap-call">Vaccinations</a>
+    </p>
     <p class="muted" style="margin-top:0.25rem">Owner · {{ customer_owner.owner_name }}</p>
     {% if customer_owner.owner_phone %}
     <div class="phone-row">
@@ -74,24 +77,30 @@
 <div class="card">
     <div class="card-head">
         <h2>Visits</h2>
+        {% if dog.pipeline_stage == 'approved' and dog.vaccination_status != 'missing' and dog.vaccination_status != 'expired' and customer_owner.coi_status == 'received' %}
         <a href="{% url 'operations:visit_create' dog.pk %}" class="btn btn-outline btn-sm">Schedule stay</a>
+        {% endif %}
     </div>
     {% for visit in visits %}
-    {% if visit.is_editable %}
-    <a href="{% url 'operations:visit_edit' visit.pk %}" class="compact-row">
-    {% else %}
-    <div class="compact-row">
-    {% endif %}
+    <div class="compact-row split">
+        {% if visit.is_editable %}
+        <a href="{% url 'operations:visit_edit' visit.pk %}" class="title truncate">{{ visit.schedule_display }}</a>
+        {% else %}
         <span class="title truncate">{{ visit.schedule_display }}</span>
+        {% endif %}
         {% if visit.status == 'checked_in' %}
         <span class="badge badge-warn">CHECKED IN</span>
         {% endif %}
         {% if visit.calculated_fee %}<span class="muted"> · ${{ visit.calculated_fee }} CAD</span>{% endif %}
-    {% if visit.is_editable %}
-    </a>
-    {% else %}
+        {% if visit.confirmation_email_sent_at %}
+        <span class="muted"> · emailed {{ visit.confirmation_email_sent_at|date:"M j" }}</span>
+        {% elif visit.status != 'cancelled' and dog.owner_email %}
+        <form method="post" action="{% url 'operations:visit_send_confirmation' visit.pk %}">
+            {% csrf_token %}
+            <button type="submit" class="book-link" style="background:none;border:none;padding:0;cursor:pointer;width:auto">Send email</button>
+        </form>
+        {% endif %}
     </div>
-    {% endif %}
     {% empty %}
     <p class="muted">No visits yet.</p>
     {% endfor %}
@@ -119,7 +128,6 @@
 <details class="card disclosure admin-drawer">
     <summary>More actions</summary>
     <div class="disclosure-body">
-        <a href="{% url 'operations:dog_vaccinations' dog.pk %}" class="btn btn-outline btn-sm" style="margin-bottom:0.5rem">Vaccination records</a>
         <a href="{% url 'operations:client_vcard' dog.pk %}" class="btn btn-outline btn-sm" style="margin-bottom:0.5rem">Export vCard</a>
         {% if dog.pipeline_stage != 'approved' %}
         <form method="post" action="{% url 'operations:advance_pipeline' dog.pk %}" style="margin-bottom:0.5rem">

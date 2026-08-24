@@ -10,6 +10,11 @@ urlpatterns = [
     path('checkin/feed-activity/', views.checkin_feed_activity, name='checkin_feed_activity'),
     path('visits/<int:pk>/check-in/', views.visit_check_in, name='visit_check_in'),
     path('visits/<int:pk>/check-out/', views.visit_check_out, name='visit_check_out'),
+    path(
+        'visits/<int:pk>/actual-times/',
+        views.visit_update_actual_times,
+        name='visit_update_actual_times',
+    ),
     path('visits/<int:pk>/timeline/', views.visit_timeline, name='visit_timeline'),
     path(
         'visits/<int:pk>/timeline/<int:event_pk>/forward/',
@@ -29,6 +34,7 @@ urlpatterns = [
     path('visits/parse-datetime/', views.parse_datetime_field, name='parse_datetime'),
     path('dogs/<int:pk>/visits/add/', views.visit_create, name='visit_create'),
     path('visits/<int:pk>/edit/', views.visit_edit, name='visit_edit'),
+    path('visits/<int:pk>/send-confirmation/', views.visit_send_confirmation, name='visit_send_confirmation'),
     path('visits/<int:pk>/delete/', views.visit_delete, name='visit_delete'),
     path('customers/<int:pk>/', views.customer_detail, name='customer_detail'),
     path('customers/<int:pk>/add-dog/', views.customer_add_dog, name='customer_add_dog'),

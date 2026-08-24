@@ -34,13 +34,6 @@
     {% endif %}
     <p>Scheduled: {{ visit.scheduled_start|time:"g:i A" }} – {{ visit.scheduled_end|time:"g:i A" }}</p>
 
-    {% if visit.actual_arrival %}
-    <p class="muted">Arrived: {{ visit.actual_arrival|time:"g:i A" }}</p>
-    {% endif %}
-    {% if visit.actual_departure %}
-    <p class="muted">Departed: {{ visit.actual_departure|time:"g:i A" }} · ${{ visit.calculated_fee }} CAD</p>
-    {% endif %}
-
     {% if visit.status == 'checked_in' %}
     <div class="feed-activity-panel" id="feed-activity-{{ visit.client_id }}" hidden>
         <p style="font-size:0.8rem;font-weight:600;color:var(--brand);margin:0.5rem 0 0.25rem">Owner feed activity</p>
@@ -64,12 +57,73 @@
         {% endif %}
     </div>
     {% endif %}
+
+    {% if visit.status == 'checked_in' and visit.actual_arrival %}
+    <form method="post" action="{% url 'operations:visit_update_actual_times' visit.pk %}" class="actual-times-form">
+        {% csrf_token %}
+        <div class="time-row">
+            <div class="time-field">
+                <label for="arrival-{{ visit.pk }}">Arrived</label>
+                <input
+                    id="arrival-{{ visit.pk }}"
+                    type="datetime-local"
+                    name="actual_arrival"
+                    value="{{ visit.actual_arrival|date:'Y-m-d\TH:i' }}"
+                    required
+                >
+            </div>
+            <button type="submit" class="btn btn-outline btn-sm">Update time</button>
+        </div>
+        <p class="muted" style="margin:0">Correct if you tapped Check In after they arrived.</p>
+    </form>
+    {% endif %}
 </div>
 {% empty %}
 <div class="card">
     <p class="muted">No active visits for today.</p>
 </div>
 {% endfor %}
+
+{% if completed_visits %}
+<div class="card">
+    <h2>Checked out today</h2>
+    <p class="muted">Fix arrival or departure if the tap time was late — fee recalculates.</p>
+</div>
+{% for visit in completed_visits %}
+<div class="visit-card card completed">
+    <h2>{{ visit.client.dog_name }}</h2>
+    <p class="muted">{{ visit.client.owner_name }}</p>
+    <p>Scheduled: {{ visit.scheduled_start|time:"g:i A" }} – {{ visit.scheduled_end|time:"g:i A" }}</p>
+    <p class="muted">${{ visit.calculated_fee }} CAD</p>
+    <form method="post" action="{% url 'operations:visit_update_actual_times' visit.pk %}" class="actual-times-form">
+        {% csrf_token %}
+        <div class="time-row">
+            <div class="time-field">
+                <label for="completed-arrival-{{ visit.pk }}">Arrived</label>
+                <input
+                    id="completed-arrival-{{ visit.pk }}"
+                    type="datetime-local"
+                    name="actual_arrival"
+                    value="{% if visit.actual_arrival %}{{ visit.actual_arrival|date:'Y-m-d\TH:i' }}{% endif %}"
+                    required
+                >
+            </div>
+            <div class="time-field">
+                <label for="completed-departure-{{ visit.pk }}">Departed</label>
+                <input
+                    id="completed-departure-{{ visit.pk }}"
+                    type="datetime-local"
+                    name="actual_departure"
+                    value="{% if visit.actual_departure %}{{ visit.actual_departure|date:'Y-m-d\TH:i' }}{% endif %}"
+                    required
+                >
+            </div>
+            <button type="submit" class="btn btn-outline btn-sm">Update times</button>
+        </div>
+    </form>
+</div>
+{% endfor %}
+{% endif %}
 
 <script>
 (function () {

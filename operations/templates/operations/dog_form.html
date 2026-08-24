@@ -4,7 +4,12 @@
 <div class="card">
     <h2>{{ title }}</h2>
     <p class="muted">Customer: <strong>{{ customer_owner.owner_name }}</strong> · {{ customer_owner.owner_email }}</p>
-    <p class="muted">Pipeline and veterinary contacts apply to this dog only.</p>
+    <p class="muted">Pipeline and veterinary contacts apply to this dog only. Vaccination papers live on a separate records screen.</p>
+    {% if cancel_url == 'operations:dog_detail' %}
+    <p style="margin-top:0.5rem">
+        <a href="{% url 'operations:dog_vaccinations' cancel_pk %}" class="tap-call">Vaccinations</a>
+    </p>
+    {% endif %}
 </div>
 
 <form method="post">

@@ -32,39 +32,128 @@
             background: var(--bg);
             color: var(--text);
             line-height: 1.5;
-            padding-bottom: calc(80px + env(safe-area-inset-bottom, 0px));
         }
-        header {
+        header.app-header {
             background: var(--brand);
             color: white;
-            padding: 1rem;
-            padding-top: calc(1rem + env(safe-area-inset-top, 0px));
+            padding: 0.65rem 0.75rem;
+            padding-top: calc(0.65rem + env(safe-area-inset-top, 0px));
             position: sticky;
             top: 0;
             z-index: 100;
         }
-        header h1 { font-size: 1.25rem; font-weight: 600; }
-        header p { font-size: 0.85rem; opacity: 0.85; }
-        nav.bottom-nav {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            background: var(--card);
-            border-top: 1px solid #dee2e6;
+        .app-header-row {
             display: flex;
-            justify-content: space-around;
-            padding: 0.5rem 0 calc(0.5rem + env(safe-area-inset-bottom, 0px));
-            z-index: 100;
+            align-items: center;
+            gap: 0.5rem;
+            max-width: 600px;
+            margin: 0 auto;
         }
-        nav.bottom-nav a {
+        a.app-brand {
+            color: white;
             text-decoration: none;
-            color: var(--muted);
-            font-size: 0.75rem;
-            text-align: center;
-            padding: 0.25rem 0.5rem;
+            font-size: 1.1rem;
+            font-weight: 700;
+            flex-shrink: 0;
+            padding: 0.35rem 0.25rem;
         }
-        nav.bottom-nav a.active { color: var(--brand); font-weight: 600; }
+        a.app-brand:hover { opacity: 0.92; }
+        a.app-brand.active { text-decoration: underline; text-underline-offset: 0.2em; }
+        nav.app-primary-nav {
+            display: flex;
+            align-items: center;
+            gap: 0.15rem;
+            flex: 1;
+            min-width: 0;
+            justify-content: flex-end;
+        }
+        nav.app-primary-nav a {
+            color: rgba(255, 255, 255, 0.85);
+            text-decoration: none;
+            font-size: 0.9rem;
+            font-weight: 600;
+            padding: 0.45rem 0.55rem;
+            border-radius: 8px;
+            white-space: nowrap;
+        }
+        nav.app-primary-nav a.active,
+        nav.app-primary-nav a:hover {
+            color: white;
+            background: rgba(255, 255, 255, 0.16);
+        }
+        .nav-menu-toggle {
+            flex-shrink: 0;
+            width: 2.5rem;
+            height: 2.5rem;
+            border: 1px solid rgba(255, 255, 255, 0.35);
+            border-radius: 8px;
+            background: transparent;
+            color: white;
+            font-size: 1.25rem;
+            line-height: 1;
+            cursor: pointer;
+            padding: 0;
+        }
+        .nav-menu-toggle[aria-expanded="true"] {
+            background: rgba(255, 255, 255, 0.16);
+        }
+        .nav-drawer-backdrop {
+            position: fixed;
+            inset: 0;
+            z-index: 150;
+            background: rgba(0, 0, 0, 0.4);
+        }
+        .nav-drawer {
+            position: fixed;
+            top: 0;
+            right: 0;
+            bottom: 0;
+            z-index: 160;
+            width: min(18rem, 86vw);
+            background: var(--card);
+            color: var(--text);
+            box-shadow: -4px 0 24px rgba(0, 0, 0, 0.18);
+            padding: calc(1rem + env(safe-area-inset-top, 0px)) 0 calc(1rem + env(safe-area-inset-bottom, 0px));
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+        .nav-drawer-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 1rem 0.75rem;
+            border-bottom: 1px solid #eee;
+            margin-bottom: 0.35rem;
+        }
+        .nav-drawer-head strong {
+            font-size: 0.85rem;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+        .nav-drawer-close {
+            border: none;
+            background: transparent;
+            font-size: 1.4rem;
+            line-height: 1;
+            color: var(--muted);
+            cursor: pointer;
+            padding: 0.25rem 0.4rem;
+        }
+        .nav-drawer a {
+            display: block;
+            padding: 0.85rem 1rem;
+            color: var(--text);
+            text-decoration: none;
+            font-size: 1rem;
+            font-weight: 600;
+        }
+        .nav-drawer a.active {
+            color: var(--brand);
+            background: #edf7f1;
+        }
+        .nav-drawer a:hover { background: #f1f3f5; }
         main { padding: 1rem; max-width: 600px; margin: 0 auto; }
         .card {
             background: var(--card);
@@ -126,9 +215,44 @@
         .stat .label { font-size: 0.8rem; color: var(--muted); }
         .visit-card { border-left: 4px solid var(--brand-light); }
         .visit-card.checked-in { border-left-color: var(--warn); }
+        .visit-card.completed { border-left-color: #adb5bd; opacity: 0.95; }
         .muted { color: var(--muted); font-size: 0.85rem; }
         .actions { display: flex; gap: 0.5rem; margin-top: 0.75rem; }
         .actions form { flex: 1; }
+        .actual-times-form {
+            margin-top: 0.5rem;
+            padding-top: 0.5rem;
+            border-top: 1px solid var(--border, #e9ecef);
+        }
+        .actual-times-form .time-row {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: flex-end;
+            gap: 0.5rem;
+            margin-bottom: 0.35rem;
+        }
+        .actual-times-form .time-field {
+            flex: 1 1 10rem;
+            min-width: 0;
+        }
+        .actual-times-form .time-field label {
+            margin-bottom: 0.15rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+        }
+        .actual-times-form .time-field input {
+            margin-bottom: 0;
+            padding: 0.45rem 0.5rem;
+            font-size: 0.9rem;
+        }
+        .actual-times-form .btn-sm {
+            flex: 0 0 auto;
+            margin-bottom: 0;
+            align-self: flex-end;
+        }
         input, textarea, select {
             width: 100%;
             padding: 0.75rem;
@@ -204,6 +328,7 @@
             color: inherit;
         }
         .compact-row.split .btn { width: auto; margin-left: auto; }
+        .compact-row.split .book-link { margin-left: auto; }
         .list-toolbar .btn { width: auto; }
         .list-toolbar input[type="search"] { margin-bottom: 0.5rem; }
         .filter-row {
@@ -238,6 +363,9 @@
             color: var(--brand);
             text-decoration: none;
             margin-left: 0.4rem;
+        }
+        .client-dog a.book-blocked {
+            color: #856404;
         }
         .truncate {
             overflow: hidden;
@@ -442,10 +570,58 @@
         </div>
     </div>
 
-    <header>
-        <h1>Dad4dogs</h1>
-        <p>David's Internal Operations</p>
+    {% with url_name=request.resolver_match.url_name|default:'' %}
+    <header class="app-header">
+        <div class="app-header-row">
+            <a
+                href="{% url 'operations:dashboard' %}"
+                class="app-brand{% if url_name == 'dashboard' %} active{% endif %}"
+            >Dad4dogs</a>
+            <nav class="app-primary-nav" aria-label="Primary">
+                <a
+                    href="{% url 'operations:mobile_checkin' %}"
+                    class="{% if url_name == 'mobile_checkin' or 'timeline' in url_name %}active{% endif %}"
+                >Check-In</a>
+                <a
+                    href="{% url 'operations:client_list' %}"
+                    class="{% if 'client' in url_name or 'customer' in url_name or url_name == 'dog_detail' or url_name == 'dog_edit' or url_name == 'dog_vaccinations' or url_name == 'visit_create' or url_name == 'visit_edit' or 'vaccination' in url_name %}active{% endif %}"
+                >Clients</a>
+            </nav>
+            <button
+                type="button"
+                class="nav-menu-toggle"
+                id="nav-menu-toggle"
+                aria-expanded="false"
+                aria-controls="nav-drawer"
+                aria-label="Open menu"
+            >☰</button>
+        </div>
     </header>
+
+    <div id="nav-drawer-backdrop" class="nav-drawer-backdrop hidden" hidden></div>
+    <nav id="nav-drawer" class="nav-drawer hidden" hidden aria-label="More">
+        <div class="nav-drawer-head">
+            <strong>More</strong>
+            <button type="button" class="nav-drawer-close" id="nav-drawer-close" aria-label="Close menu">×</button>
+        </div>
+        <a
+            href="{% url 'operations:statements' %}"
+            class="{% if 'statement' in url_name %}active{% endif %}"
+        >Billing</a>
+        <a
+            href="{% url 'operations:business_settings' %}"
+            class="{% if url_name == 'business_settings' %}active{% endif %}"
+        >Settings</a>
+        <a
+            href="{% url 'operations:pending_events' %}"
+            class="{% if 'pending' in url_name or url_name == 'approve_pending_event' or url_name == 'reject_pending_event' %}active{% endif %}"
+        >Calendar pending</a>
+        <a
+            href="{% url 'operations:contact_sync' %}"
+            class="{% if 'contact' in url_name %}active{% endif %}"
+        >Contacts</a>
+    </nav>
+    {% endwith %}
 
     <main>
         {% if messages %}
@@ -458,15 +634,37 @@
         {% block content %}{% endblock %}
     </main>
 
-    <nav class="bottom-nav">
-        <a href="{% url 'operations:dashboard' %}" class="{% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">Home</a>
-        <a href="{% url 'operations:mobile_checkin' %}" class="{% if request.resolver_match.url_name == 'mobile_checkin' %}active{% endif %}">Check-In</a>
-        <a href="{% url 'operations:client_list' %}" class="{% if 'client' in request.resolver_match.url_name %}active{% endif %}">Clients</a>
-        <a href="{% url 'operations:statements' %}" class="{% if 'statement' in request.resolver_match.url_name %}active{% endif %}">Billing</a>
-        <a href="{% url 'operations:business_settings' %}" class="{% if request.resolver_match.url_name == 'business_settings' %}active{% endif %}">Settings</a>
-    </nav>
-
     <script>
+    (function () {
+        var toggle = document.getElementById('nav-menu-toggle');
+        var drawer = document.getElementById('nav-drawer');
+        var backdrop = document.getElementById('nav-drawer-backdrop');
+        var closeBtn = document.getElementById('nav-drawer-close');
+        if (!toggle || !drawer || !backdrop) return;
+
+        function setOpen(open) {
+            toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+            toggle.setAttribute('aria-label', open ? 'Close menu' : 'Open menu');
+            drawer.classList.toggle('hidden', !open);
+            backdrop.classList.toggle('hidden', !open);
+            if (open) {
+                drawer.removeAttribute('hidden');
+                backdrop.removeAttribute('hidden');
+            } else {
+                drawer.setAttribute('hidden', '');
+                backdrop.setAttribute('hidden', '');
+            }
+        }
+
+        toggle.addEventListener('click', function () {
+            setOpen(toggle.getAttribute('aria-expanded') !== 'true');
+        });
+        closeBtn && closeBtn.addEventListener('click', function () { setOpen(false); });
+        backdrop.addEventListener('click', function () { setOpen(false); });
+        document.addEventListener('keydown', function (event) {
+            if (event.key === 'Escape') setOpen(false);
+        });
+    })();
     if ('serviceWorker' in navigator) {
         window.addEventListener('load', function () {
             navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch(function () {});
