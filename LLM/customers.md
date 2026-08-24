@@ -3,7 +3,7 @@
 **Covers:** owners, dogs, COI, vaccinations, emergency contacts, veterinary contacts, Google Contacts import, pipeline per dog.
 
 **Code packages:** `operations/models/customers.py`, `forms/customers.py`, `views/customers.py`  
-**Services:** `operations/services/contacts.py`, `feed_slugs.py`, `feed_access.py`  
+**Services:** `operations/services/contacts.py`, `addresses.py`, `feed_slugs.py`, `feed_access.py`  
 **Customer feed & social:** see [`feed.md`](feed.md) — private feed (react, comment, share) and public `/feed/share/<token>/` (re-share, download)
 
 ---
@@ -40,7 +40,14 @@ Operational contact data is split between **Owner Data** (`CustomerOwner`) and *
 | `owner_salutation` | Pronouns or salutation (optional) |
 | `owner_email` | Unique database key — iCal invites, statements, booking email |
 | `owner_phone` | **Primary mobile — required on form** — real-time text/PWA alerts |
-| `home_address` | Records, liability insurance, emergency home drop-off |
+| `address_street` | Street number and name (e.g. 191 Grey Street) |
+| `address_unit` | Optional unit / apt / suite |
+| `address_city` | City |
+| `address_province` | Two-letter code (`ON` … `YT`); blank allowed |
+| `address_postal_code` | Canadian postal code, stored as `A1A 1A1` |
+| `home_address` | Formatted cache of the structured fields; also holds **legacy** free text until the record is re-saved |
+
+Display helpers on `CustomerOwner`: `formatted_address` (multiline), `address_oneline`, `address_maps_url` (Google Maps search). `save()` rebuilds `home_address` when any structured part is set. All address fields are optional.
 
 ### 2.2 Emergency & Secondary Contact (`CustomerOwner`)
 
@@ -92,8 +99,15 @@ Method: `advance_pipeline()` on dog screen.
 
 ### VaccinationRecord
 - `expires_at` is **required**
-- Current vax = `validated=True` AND `expires_at >= today`
-- Method: `mark_validated()`
+- Current vax = `validated=True` AND `expires_at >= today` (`has_current_vaccination`) — this is the standard-stay gate
+- Latest validated expiry = `Max(expires_at)` among `validated=True` records (`current_vaccination_expires_at`)
+- `vaccination_status`: `ok` | `expiring` | `expired` | `missing`
+  - `expiring` = current (`expires_at >= today`) **and** `expires_at <= today + 30` (`VAX_EXPIRY_WARNING_DAYS`)
+  - `expired` = latest validated `expires_at < today`
+  - `missing` = no validated record
+  - `ok` = current and more than 30 days out
+- QuerySet: `with_vaccination_expiry()`, `filter_vaccination_status(status)`, `vaccination_status_counts()`
+- Methods: `mark_validated()`; `is_expired`; `is_expiring_soon` (not expired, within 30 days)
 
 ---
 
@@ -101,10 +115,11 @@ Method: `advance_pipeline()` on dog screen.
 
 | Screen | URL | Contents |
 |--------|-----|----------|
-| Client list | `/clients/` | All customers + nested dogs; pipeline filter per dog |
+| Client list | `/clients/` | All customers + nested dogs; `?stage=` pipeline filter; `?vax=` vaccination filter (`expiring` / `expired` / `missing` / `ok`) |
+| **New Client & Dog** | `/clients/intake/` | One POST: owner + first dog + vet + optional Meet & Greet (`IntakeWizardForm`). Atomic. M&G visit **skips** standard-stay Approved/vax/COI gate. Pipeline → Meet & Greet if times set, else Inquiry. |
 | Add customer | `/clients/add/` | Owner + emergency contacts — no dog |
-| Customer | `/customers/<id>/` | Primary contact, emergency/pickup, COI, dog list |
-| Edit customer | `/customers/<id>/edit/` | Three-section form: primary, emergency, save |
+| Customer | `/customers/<id>/` | Primary contact, formatted address + **Open in Maps**, emergency/pickup, COI, dog list |
+| Edit customer | `/customers/<id>/edit/` | Primary + structured address (street / unit / city / province / postal) + emergency |
 | Add dog | `/customers/<id>/add-dog/` | Dog profile + vet contacts; pipeline starts at Inquiry |
 | Dog | `/dogs/<id>/` | Owner/emergency summary, **vet tap-to-call**, feed, visits |
 | Edit dog | `/dogs/<id>/edit/` | Dog profile + veterinary section |
@@ -124,7 +139,10 @@ Method: `advance_pipeline()` on dog screen.
 | Badge | Scope |
 |-------|-------|
 | COI | Customer (`CustomerOwner`) |
-| VAX | Dog — current validated non-expired record |
+| VAX (green) | Dog — current validated, more than 30 days left |
+| VAX + date (amber) | Dog — current but expires within 30 days |
+| VAX EXPIRED (red) | Dog — latest validated record already expired |
+| VAX (amber, no date) | Dog — no validated record |
 | Pipeline | Dog stage |
 
 ---
@@ -133,9 +151,10 @@ Method: `advance_pipeline()` on dog screen.
 
 | Form | File | Purpose |
 |------|------|---------|
-| `CustomerOwnerForm` | `forms/customers.py` | Primary + emergency + pickup contacts; **phone required** |
+| `CustomerOwnerForm` | `forms/customers.py` | Primary + **structured address** + emergency + pickup; **phone required**; postal normalized/validated |
 | `DogProfileForm` | `forms/customers.py` | Dog name, pipeline, **vet contacts**, handling notes |
 | `VaccinationRecordForm` | `forms/customers.py` | Per dog; `fixed_client` hides dog selector |
+| `IntakeWizardForm` | `forms/intake.py` | Owner + dog + vet + optional M&G datetimes; `save()` returns `(owner, dog, visit)` |
 
 ---
 
@@ -160,9 +179,13 @@ Method: `advance_pipeline()` on dog screen.
 ### Export (Dad4dogs → Google)
 - Per dog vCard at `/clients/<id>/vcard/`
 - Includes `NOTE: Dog: <name>`
+- Includes `ADR;TYPE=HOME` from the owner's structured address when present
 
 ### Key service functions (`contacts.py`)
 `parse_google_csv`, `analyze_import`, `import_selected_contacts`, `build_vcard`, `is_valid_dog_name`, `assess_name_quality`
+
+### Address helpers (`addresses.py`)
+`format_address`, `normalize_postal_code`, `normalize_province`, `parse_legacy_address`, `maps_search_url` — Canadian postal + province only.
 
 ---
 
@@ -176,7 +199,7 @@ Public feed view lives in `views/customer_feed.py` — not in this package.
 
 ## 9. Tests
 
-`CustomerOwnerFormTests`, `DogProfileFormTests`, `ContactDataTests`, `CustomerEditTests`, `ContactSyncTests`, `ComplianceTests`, `FeedSlugTests`, `CustomerFeedTests` in `operations/tests.py`.
+`CustomerOwnerFormTests`, `AddressHandlingTests`, `DogProfileFormTests`, `IntakeWizardTests`, `ContactDataTests`, `CustomerEditTests`, `ContactSyncTests`, `ComplianceTests`, `VaccinationExpiryViewTests`, `FeedSlugTests`, `CustomerFeedTests` in `operations/tests.py`.
 
 ---
 
@@ -186,15 +209,15 @@ Public feed view lives in `views/customer_feed.py` — not in this package.
 |-----------|----------|
 | `0003_owner_coi_and_vax_expiry` | `CustomerOwner` + COI migration |
 | `0014_owner_emergency_and_vet_contacts` | Owner emergency/pickup + per-dog vet fields |
+| `0017_structured_home_address` | `address_street` / `unit` / `city` / `province` / `postal_code`; copies legacy `home_address` via `parse_legacy_address()` |
 
 ---
 
 ## 11. Not Yet Built
 
 - PDF/image upload for vet papers
-- Expiry reminders before `expires_at`
-- Hard block scheduling until compliance + contact completeness
+- Email/SMS reminders before `expires_at` — dashboard counts + `/clients/?vax=expiring` are done; outbound notify is not
+- Hard block scheduling until compliance + contact completeness — **partially done**: `VisitForm` create requires Approved + current vax + COI received (`standard_stay_blockers()`). Clone and calendar import still ungated. No emergency-phone / contact-completeness gate yet. Expiring (still current) dogs are **not** blocked — chase papers via the 30-day list.
 - Live Google People API sync (file-based CSV only today)
-- Structured address fields (city/province/postal) — single `home_address` text today
 - Multiple emergency contacts per owner (single fallback contact today)
 - PWA push to `owner_phone` on new photos (phone field is the hook)

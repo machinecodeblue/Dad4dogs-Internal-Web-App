@@ -4,6 +4,9 @@
 <div class="card">
     <h2>Statement of Account</h2>
     <p><strong>{{ statement.client.owner_name }}</strong> — {{ statement.client.dog_name }}</p>
+    {% if statement.client.customer_owner.formatted_address %}
+    <p class="muted" style="white-space:pre-line">{{ statement.client.customer_owner.formatted_address }}</p>
+    {% endif %}
     <p class="muted">Week of {{ statement.week_start }} to {{ statement.week_end }}</p>
     <p style="font-size:1.5rem;font-weight:700;color:var(--brand)">${{ statement.total_amount }} CAD</p>
 </div>

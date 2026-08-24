@@ -71,6 +71,15 @@ David books per **dog**. Two free-text fields only — **no multi-step date/time
 3. Tap preview to edit raw text
 4. Server parse on submit is authoritative (`datetime_parse.py`)
 
+### Standard-stay readiness (create only)
+`VisitForm.clean()` calls `ClientProfile.standard_stay_blockers()` on **create** (not edit). Hard form errors (non-field) if any of:
+
+- Pipeline is not **Approved** (Inquiry / Meet & Greet / Evaluation cannot book a standard stay)
+- No current validated vaccination (`has_current_vaccination`)
+- Owner COI not confirmed (`CustomerOwner.coi_confirmed_received`)
+
+Clone (`clone_to_date`), calendar approve, and **intake Meet & Greet** (`IntakeWizardForm`) still bypass the form gate. Do not put this gate on `Visit.save()` — that would block check-in `update_fields` if we ever full_clean those rows.
+
 ### Repeat (create only — not on edit)
 - **Repeat:** none | daily | weekly | weekdays | monthly
 - **Every** N days/weeks/months
@@ -165,6 +174,11 @@ Home screen (`/`) = David's daily operations view.
 - Scheduled: green left border
 - Completed: muted grey
 - Capacity stats for **selected** day
+
+### Vaccination compliance cards
+- **Vax Expiring (30d)** — count of dogs whose latest validated `expires_at` is today through today+30; links to `/clients/?vax=expiring`
+- **Vax Expired** — latest validated `expires_at` already past; links to `/clients/?vax=expired`
+- Counts come from `ClientProfile.objects.vaccination_status_counts()` (one annotated aggregate). Do not N+1 `has_current_vaccination` on the dashboard.
 
 ### Overlap query (same as capacity, check-in, feed activity, timeline eligibility)
 `scheduled_start < day_end` AND `scheduled_end > day_start` where bounds are **local** midnight from `agenda.day_bounds()`. Do **not** use `scheduled_start__date` / `scheduled_end__date` — SQLite `__date__` on aware datetimes is UTC-ish and drops overnight stays that cross midnight.

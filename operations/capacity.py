@@ -36,7 +36,7 @@ def count_dogs_on_day(
     """Count distinct dogs with an active visit overlapping the given calendar day."""
     day_start, day_end = _day_bounds(day)
     qs = _overlapping_visits(day_start, day_end, exclude_visit_id)
-    if include_client_id:
+    if include_client_id is not None:
         agg = qs.aggregate(
             total=Count('client_id', distinct=True),
             already=Count('pk', filter=Q(client_id=include_client_id)),
@@ -136,7 +136,7 @@ def _daily_dog_counts(
         day_windows.append((day, *_day_bounds(day)))
         day += timedelta(days=1)
 
-    if include_client_id:
+    if include_client_id is not None:
         for client_ids in dogs_by_day.values():
             client_ids.add(include_client_id)
 

@@ -26,6 +26,12 @@
         · <a href="tel:{{ customer_owner.owner_phone }}">{{ customer_owner.owner_phone }}</a>
         {% endif %}
     </p>
+    {% if customer_owner.formatted_address %}
+    <p class="muted" style="margin-top:0.5rem;white-space:pre-line">{{ customer_owner.formatted_address }}</p>
+    {% if customer_owner.address_maps_url %}
+    <p style="margin-top:0.25rem"><a href="{{ customer_owner.address_maps_url }}" target="_blank" rel="noopener">Open in Maps</a></p>
+    {% endif %}
+    {% endif %}
     {% if customer_owner.emergency_contact_name or customer_owner.emergency_contact_phone %}
     <p class="muted" style="margin-top:0.5rem">
         Emergency: <strong>{{ customer_owner.emergency_contact_name|default:"—" }}</strong>

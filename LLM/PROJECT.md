@@ -55,13 +55,14 @@ Code is organized by domain in **models**, **forms**, and **views**:
 operations/
 ├── models/
 │   ├── __init__.py       # re-exports all models
-│   ├── customers.py      # CustomerOwner, ClientProfile, VaccinationRecord
+│   ├── customers.py      # CustomerOwner (incl. structured address), ClientProfile, VaccinationRecord
 │   ├── scheduling.py     # VisitSeries, Visit, TimelineMediaAsset, VisitTimelineEvent, PendingCalendarEvent
 │   ├── billing.py        # AccountStatement
 │   └── business.py       # BusinessProfile (singleton)
 ├── forms/
 │   ├── __init__.py
-│   ├── customers.py      # CustomerOwnerForm, DogProfileForm, VaccinationRecordForm
+│   ├── customers.py      # CustomerOwnerForm (structured address), DogProfileForm, VaccinationRecordForm
+│   ├── intake.py         # IntakeWizardForm (new client & dog)
 │   ├── scheduling.py     # VisitForm, TimelineMomentForm, TimelineForwardForm
 │   └── business.py       # BusinessProfileForm
 ├── views/
@@ -74,7 +75,7 @@ operations/
 │   └── pwa.py            # manifest.webmanifest, sw.js
 ├── services/             # business logic — prefer adding here over bloating views
 │   ├── timeline_media.py, timeline_visits.py, geolocation.py
-│   ├── feed_slugs.py, feed_access.py
+│   ├── addresses.py, feed_slugs.py, feed_access.py
 │   └── visit_email.py, gmail_send.py, …
 ├── pricing.py            # tiered fee engine (scheduling domain)
 ├── capacity.py           # daily dog count guards (scheduling domain)
@@ -124,6 +125,7 @@ Overnight is evaluated **before** hour tiers. Multi-day: each full 24h = Overnig
 - **Dog** (`ClientProfile`) = `owner_email` + `dog_name`; owns pipeline, visits, vaccinations
 - A customer may have **zero dogs** until David adds one
 - Never invent a dog from the owner's first name on import
+- **Standard stays (VisitForm create):** dog must be Approved, have current validated vaccination, and owner COI received — see `customers.md` / `scheduling.md`
 
 ### Visit status transitions (critical)
 `scheduled` → `checked_in` → `completed` (or `cancelled`).
@@ -143,6 +145,9 @@ Overnight is evaluated **before** hour tiers. Multi-day: each full 24h = Overnig
 | Feature | Status |
 |---------|--------|
 | Customer/dog split UI | Done |
+| New Client & Dog intake | Done — `/clients/intake/`, optional Meet & Greet visit |
+| Vaccination expiry tracking | Done — dashboard 30-day / expired cards; `/clients/?vax=` |
+| Structured owner address | Done — street / unit / city / province / postal; Maps + statements + vCard |
 | Pipeline per dog, COI per customer | Done |
 | Visit booking (natural-language Start/End) | Done |
 | Repeat series (daily/weekly/weekdays/monthly) | Done |

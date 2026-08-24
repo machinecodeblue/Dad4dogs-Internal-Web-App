@@ -3,7 +3,7 @@ from decimal import Decimal
 
 from django.utils import timezone
 
-from operations.models import AccountStatement, Visit
+from operations.models import AccountStatement, CustomerOwner, Visit
 
 
 def week_bounds(reference: date | None = None) -> tuple[date, date]:
@@ -63,6 +63,7 @@ def generate_weekly_statements(week_start: date | None = None) -> list[AccountSt
 
 def format_statement_email(statement: AccountStatement) -> str:
     client = statement.client
+    owner = CustomerOwner.objects.filter(owner_email__iexact=client.owner_email).first()
     lines = [
         f'Statement of Account — Dad4dogs',
         f'Week of {statement.week_start} to {statement.week_end}',
@@ -70,9 +71,13 @@ def format_statement_email(statement: AccountStatement) -> str:
         f'Client: {client.owner_name}',
         f'Dog: {client.dog_name}',
         f'Email: {client.owner_email}',
+    ]
+    if owner and owner.address_oneline:
+        lines.append(f'Address: {owner.address_oneline}')
+    lines.extend([
         f'',
         f'Visits:',
-    ]
+    ])
     for item in statement.line_items:
         lines.append(f"  {item['date']}: ${item['fee']} CAD")
     lines.extend([

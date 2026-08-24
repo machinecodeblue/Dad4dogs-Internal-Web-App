@@ -445,8 +445,20 @@ def analyze_import(contacts: list[ParsedContact], skipped: int = 0) -> ImportAna
     )
 
 
+def _vcard_escape(value: str) -> str:
+    return (
+        (value or '')
+        .replace('\\', '\\\\')
+        .replace(';', '\\;')
+        .replace(',', '\\,')
+        .replace('\n', '\\n')
+    )
+
+
 def build_vcard(client: ClientProfile) -> str:
     """Build a vCard 3.0 file for double-click import into Google Contacts."""
+    from operations.services.addresses import format_unit
+
     name_parts = client.owner_name.split(None, 1)
     first = name_parts[0] if name_parts else client.owner_name
     last = name_parts[1] if len(name_parts) > 1 else ''
@@ -463,6 +475,22 @@ def build_vcard(client: ClientProfile) -> str:
         lines.append(f'EMAIL;TYPE=INTERNET:{client.owner_email}')
     if client.owner_phone:
         lines.append(f'TEL;TYPE=CELL:{client.owner_phone}')
+
+    owner = CustomerOwner.objects.filter(owner_email__iexact=client.owner_email).first()
+    if owner and (owner.address_street or owner.address_postal_code or owner.formatted_address):
+        if owner.address_street or owner.address_city or owner.address_postal_code:
+            lines.append(
+                'ADR;TYPE=HOME:'
+                f';{_vcard_escape(format_unit(owner.address_unit))}'
+                f';{_vcard_escape(owner.address_street)}'
+                f';{_vcard_escape(owner.address_city)}'
+                f';{_vcard_escape(owner.address_province)}'
+                f';{_vcard_escape(owner.address_postal_code)}'
+                ';Canada'
+            )
+        else:
+            lines.append(f'ADR;TYPE=HOME:;;{_vcard_escape(owner.address_oneline)};;;;')
+
     if client.notes:
         note = client.notes.replace('\n', '\\n')
         lines.append(f'NOTE:Dog: {client.dog_name}. {note}')

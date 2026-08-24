@@ -1,0 +1,31 @@
+<p class="muted" style="margin-bottom:0.5rem">Home address — routing, emergency drop-off, and statements.</p>
+
+<label for="{{ form.address_street.id_for_label }}">Street</label>
+{{ form.address_street }}
+{% if form.address_street.errors %}<p class="muted" style="color:var(--danger)">{{ form.address_street.errors.0 }}</p>{% endif %}
+
+<div class="field-pair">
+    <div>
+        <label for="{{ form.address_unit.id_for_label }}">Unit / Apt</label>
+        {{ form.address_unit }}
+        {% if form.address_unit.errors %}<p class="muted" style="color:var(--danger)">{{ form.address_unit.errors.0 }}</p>{% endif %}
+    </div>
+    <div>
+        <label for="{{ form.address_postal_code.id_for_label }}">Postal code</label>
+        {{ form.address_postal_code }}
+        {% if form.address_postal_code.errors %}<p class="muted" style="color:var(--danger)">{{ form.address_postal_code.errors.0 }}</p>{% endif %}
+    </div>
+</div>
+
+<div class="field-pair">
+    <div>
+        <label for="{{ form.address_city.id_for_label }}">City</label>
+        {{ form.address_city }}
+        {% if form.address_city.errors %}<p class="muted" style="color:var(--danger)">{{ form.address_city.errors.0 }}</p>{% endif %}
+    </div>
+    <div>
+        <label for="{{ form.address_province.id_for_label }}">Province</label>
+        {{ form.address_province }}
+        {% if form.address_province.errors %}<p class="muted" style="color:var(--danger)">{{ form.address_province.errors.0 }}</p>{% endif %}
+    </div>
+</div>

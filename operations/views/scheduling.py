@@ -96,6 +96,8 @@ def dashboard(request):
         review_status=PendingCalendarEvent.ReviewStatus.PENDING,
     )[:5]
 
+    vax_counts = ClientProfile.objects.vaccination_status_counts()
+
     return render(request, 'operations/dashboard.html', {
         'today': today,
         'selected_date': selected_date,
@@ -113,6 +115,8 @@ def dashboard(request):
         'approved_clients': ClientProfile.objects.filter(
             pipeline_stage=ClientProfile.PipelineStage.APPROVED,
         ).count(),
+        'vax_expiring_count': vax_counts['expiring'],
+        'vax_expired_count': vax_counts['expired'],
     })
 
 

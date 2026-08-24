@@ -1,0 +1,196 @@
+{% extends "operations/base.html" %}
+{% block title %}{{ title }} — Dad4dogs{% endblock %}
+{% block content %}
+<style>
+    .datetime-text-input { font-size: 1.1rem; padding: 0.85rem 1rem; }
+    .datetime-preview {
+        display: none; width: 100%; text-align: left; padding: 0.85rem 1rem;
+        font-size: 1.1rem; border: 2px solid var(--brand-light); border-radius: var(--radius);
+        background: #f0faf4; color: var(--text); cursor: pointer; margin-top: 0.35rem;
+    }
+    .datetime-preview.visible { display: block; }
+    .datetime-preview .label { font-size: 0.75rem; color: var(--muted); display: block; }
+    .datetime-field.editing .datetime-preview { display: none; }
+    .datetime-field.confirmed .datetime-text-input { display: none; }
+    .datetime-field.confirmed .datetime-preview { display: block; }
+</style>
+
+<div class="card">
+    <h2>{{ title }}</h2>
+    <p class="muted">Phone or in-person intake — owner, first dog, vet, and optional Meet &amp; Greet in one save. Vaccinations can be added on the dog screen after.</p>
+</div>
+
+<form method="post">
+    {% csrf_token %}
+    {% if form.non_field_errors %}
+    <div class="card" style="color:var(--danger)">
+        {% for error in form.non_field_errors %}{{ error }}{% endfor %}
+    </div>
+    {% endif %}
+
+    <div class="card">
+        <h2>1. Owner</h2>
+        <label for="{{ form.owner_name.id_for_label }}">Full Name</label>
+        {{ form.owner_name }}
+        {% if form.owner_name.errors %}<p style="color:var(--danger);font-size:0.85rem">{{ form.owner_name.errors.0 }}</p>{% endif %}
+
+        <label for="{{ form.owner_email.id_for_label }}">Primary Email</label>
+        {{ form.owner_email }}
+        {% if form.owner_email.errors %}<p style="color:var(--danger);font-size:0.85rem">{{ form.owner_email.errors.0 }}</p>{% endif %}
+
+        <label for="{{ form.owner_phone.id_for_label }}">Primary Mobile</label>
+        {{ form.owner_phone }}
+        {% if form.owner_phone.errors %}<p style="color:var(--danger);font-size:0.85rem">{{ form.owner_phone.errors.0 }}</p>{% endif %}
+
+        <label for="{{ form.owner_salutation.id_for_label }}">Pronouns / Salutation (optional)</label>
+        {{ form.owner_salutation }}
+
+        {% include "operations/_address_fields.html" %}
+
+        <label for="{{ form.emergency_contact_name.id_for_label }}">Emergency Contact Name</label>
+        {{ form.emergency_contact_name }}
+
+        <label for="{{ form.emergency_contact_phone.id_for_label }}">Emergency Contact Phone</label>
+        {{ form.emergency_contact_phone }}
+
+        <label for="{{ form.emergency_contact_relationship.id_for_label }}">Relationship</label>
+        {{ form.emergency_contact_relationship }}
+
+        <label for="{{ form.authorized_pickup_names.id_for_label }}">Authorized Pickup (one name per line)</label>
+        {{ form.authorized_pickup_names }}
+    </div>
+
+    <div class="card">
+        <h2>2. Dog &amp; vet</h2>
+        <label for="{{ form.dog_name.id_for_label }}">Dog name</label>
+        {{ form.dog_name }}
+        {% if form.dog_name.errors %}<p style="color:var(--danger);font-size:0.85rem">{{ form.dog_name.errors.0 }}</p>{% endif %}
+
+        <label for="{{ form.dog_notes.id_for_label }}">Handling notes</label>
+        {{ form.dog_notes }}
+
+        <label for="{{ form.vet_clinic_name.id_for_label }}">Vet clinic</label>
+        {{ form.vet_clinic_name }}
+
+        <label for="{{ form.vet_name.id_for_label }}">Veterinarian</label>
+        {{ form.vet_name }}
+
+        <label for="{{ form.vet_clinic_phone.id_for_label }}">Clinic phone</label>
+        {{ form.vet_clinic_phone }}
+
+        <label for="{{ form.emergency_vet_clinic.id_for_label }}">Emergency vet</label>
+        {{ form.emergency_vet_clinic }}
+
+        <label for="{{ form.emergency_vet_phone.id_for_label }}">Emergency vet phone</label>
+        {{ form.emergency_vet_phone }}
+
+        <label for="{{ form.vet_care_authorization.id_for_label }}">Care authorization</label>
+        {{ form.vet_care_authorization }}
+    </div>
+
+    <div class="card">
+        <h2>3. Meet &amp; Greet (optional)</h2>
+        <p class="muted">Type or dictate — e.g. <em>April 11, 2026 5 pm</em>. Leave blank to add the visit later. This does not require Approved / vax / COI.</p>
+
+        <div class="datetime-field editing" id="mg-start-field">
+            <label for="{{ form.meet_greet_start.id_for_label }}">Start</label>
+            {{ form.meet_greet_start }}
+            <button type="button" class="datetime-preview" id="mg-start-preview" tabindex="0">
+                <span class="label">Start · tap to edit</span>
+                <span class="value"></span>
+            </button>
+            {% if form.meet_greet_start.errors %}
+            <p style="color:var(--danger);font-size:0.85rem">{{ form.meet_greet_start.errors.0 }}</p>
+            {% endif %}
+            <p class="parse-error muted" id="mg-start-parse-error" style="color:var(--danger);font-size:0.85rem;display:none"></p>
+        </div>
+
+        <div class="datetime-field editing" id="mg-end-field" style="margin-top:0.75rem">
+            <label for="{{ form.meet_greet_end.id_for_label }}">End</label>
+            {{ form.meet_greet_end }}
+            <button type="button" class="datetime-preview" id="mg-end-preview" tabindex="0">
+                <span class="label">End · tap to edit</span>
+                <span class="value"></span>
+            </button>
+            {% if form.meet_greet_end.errors %}
+            <p style="color:var(--danger);font-size:0.85rem">{{ form.meet_greet_end.errors.0 }}</p>
+            {% endif %}
+            <p class="parse-error muted" id="mg-end-parse-error" style="color:var(--danger);font-size:0.85rem;display:none"></p>
+        </div>
+    </div>
+
+    <div class="card">
+        <button type="submit" class="btn btn-primary">Save client &amp; dog</button>
+        <a href="{% url 'operations:client_list' %}" class="btn btn-outline" style="margin-top:0.5rem">Cancel</a>
+        <p class="muted" style="margin-top:0.75rem"><a href="{% url 'operations:client_create' %}">Customer only — no dog yet</a></p>
+    </div>
+</form>
+
+<script>
+(function () {
+    const parseUrl = '{% url "operations:parse_datetime" %}';
+    function wireDatetimeField(fieldEl, input, previewBtn, errorEl, getDefault) {
+        if (!fieldEl || !input || !previewBtn) return;
+        const valueSpan = previewBtn.querySelector('.value');
+        async function tryParse() {
+            const text = input.value.trim();
+            if (!text) {
+                fieldEl.classList.remove('confirmed');
+                fieldEl.classList.add('editing');
+                if (errorEl) errorEl.style.display = 'none';
+                return false;
+            }
+            let url = parseUrl + '?q=' + encodeURIComponent(text);
+            const def = getDefault ? getDefault() : '';
+            if (def) url += '&default=' + encodeURIComponent(def);
+            try {
+                const resp = await fetch(url);
+                const data = await resp.json();
+                if (data.ok) {
+                    valueSpan.textContent = data.display;
+                    input.dataset.iso = data.iso;
+                    fieldEl.classList.remove('editing');
+                    fieldEl.classList.add('confirmed');
+                    if (errorEl) errorEl.style.display = 'none';
+                    return true;
+                }
+                if (errorEl) {
+                    errorEl.textContent = data.error;
+                    errorEl.style.display = 'block';
+                }
+                fieldEl.classList.remove('confirmed');
+                fieldEl.classList.add('editing');
+                return false;
+            } catch (e) { return false; }
+        }
+        function openEditor() {
+            fieldEl.classList.remove('confirmed');
+            fieldEl.classList.add('editing');
+            input.focus();
+            input.select();
+        }
+        input.addEventListener('blur', function () {
+            setTimeout(function () { tryParse(); }, 150);
+        });
+        previewBtn.addEventListener('click', openEditor);
+        if (input.value.trim()) tryParse();
+    }
+    const startInput = document.getElementById('id_meet_greet_start');
+    const endInput = document.getElementById('id_meet_greet_end');
+    wireDatetimeField(
+        document.getElementById('mg-start-field'),
+        startInput,
+        document.getElementById('mg-start-preview'),
+        document.getElementById('mg-start-parse-error'),
+        null
+    );
+    wireDatetimeField(
+        document.getElementById('mg-end-field'),
+        endInput,
+        document.getElementById('mg-end-preview'),
+        document.getElementById('mg-end-parse-error'),
+        function () { return startInput && startInput.dataset.iso ? startInput.dataset.iso : ''; }
+    );
+})();
+</script>
+{% endblock %}

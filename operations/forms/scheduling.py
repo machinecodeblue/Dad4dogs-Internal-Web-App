@@ -135,6 +135,9 @@ class VisitForm(forms.Form):
         cleaned['scheduled_end'] = scheduled_end
 
         if not self.instance:
+            self._validate_standard_stay_readiness()
+            if self.errors:
+                return cleaned
             frequency = cleaned.get('repeat_frequency') or FREQUENCY_NONE
             if frequency != FREQUENCY_NONE:
                 ends_text = (cleaned.get('repeat_ends') or '').strip()
@@ -152,6 +155,12 @@ class VisitForm(forms.Form):
             return cleaned
         self._validate_occurrence_capacity(cleaned['occurrences'])
         return cleaned
+
+    def _validate_standard_stay_readiness(self) -> None:
+        if not self.client:
+            return
+        for message in self.client.standard_stay_blockers():
+            self.add_error(None, message)
 
     def _build_occurrences(self, cleaned) -> list[tuple]:
         start = cleaned['scheduled_start']

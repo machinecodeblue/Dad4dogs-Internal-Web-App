@@ -17,6 +17,7 @@ urlpatterns = [
         name='visit_timeline_forward',
     ),
     path('clients/', views.client_list, name='client_list'),
+    path('clients/intake/', views.client_intake, name='client_intake'),
     path('clients/add/', views.client_create, name='client_create'),
     path('clients/<int:pk>/', views.client_detail, name='client_detail'),
     path('clients/<int:pk>/edit/', views.client_edit, name='client_edit'),

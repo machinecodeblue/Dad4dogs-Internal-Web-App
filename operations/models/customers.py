@@ -1,8 +1,30 @@
+from datetime import timedelta
+
 from django.db import models
+from django.db.models import Count, Max, Q
 from django.urls import reverse
 from django.utils import timezone
 
+from operations.services.addresses import (
+    CANADIAN_PROVINCES,
+    format_address,
+    maps_search_url,
+)
 from operations.services.feed_slugs import dog_slug_from_name, generate_unique_feed_secret
+
+VAX_EXPIRY_WARNING_DAYS = 30
+
+VAX_STATUS_OK = 'ok'
+VAX_STATUS_EXPIRING = 'expiring'
+VAX_STATUS_EXPIRED = 'expired'
+VAX_STATUS_MISSING = 'missing'
+
+VAX_FILTER_CHOICES = (
+    (VAX_STATUS_EXPIRING, 'Expiring (30 days)'),
+    (VAX_STATUS_EXPIRED, 'Expired'),
+    (VAX_STATUS_MISSING, 'No validated record'),
+    (VAX_STATUS_OK, 'Current (30+ days)'),
+)
 
 
 class CustomerOwner(models.Model):
@@ -22,9 +44,31 @@ class CustomerOwner(models.Model):
         blank=True,
         help_text='Primary mobile — required for real-time alerts.',
     )
+    address_street = models.CharField(
+        max_length=200,
+        blank=True,
+        help_text='Street number and name.',
+    )
+    address_unit = models.CharField(
+        max_length=40,
+        blank=True,
+        help_text='Unit, apartment, or suite — optional.',
+    )
+    address_city = models.CharField(max_length=100, blank=True)
+    address_province = models.CharField(
+        max_length=2,
+        blank=True,
+        choices=CANADIAN_PROVINCES,
+        help_text='Two-letter province or territory code.',
+    )
+    address_postal_code = models.CharField(
+        max_length=7,
+        blank=True,
+        help_text='Canadian postal code (e.g. N6B 1G2).',
+    )
     home_address = models.TextField(
         blank=True,
-        help_text='Physical home address for records, insurance, and emergency drop-off.',
+        help_text='Formatted or legacy free-text home address. Rebuilt from structured fields on save.',
     )
     emergency_contact_name = models.CharField(max_length=200, blank=True)
     emergency_contact_phone = models.CharField(max_length=30, blank=True)
@@ -50,6 +94,46 @@ class CustomerOwner(models.Model):
 
     def __str__(self):
         return f'{self.owner_name} ({self.owner_email})'
+
+    def build_home_address(self, *, oneline: bool = False) -> str:
+        return format_address(
+            street=self.address_street,
+            unit=self.address_unit,
+            city=self.address_city,
+            province=self.address_province,
+            postal=self.address_postal_code,
+            oneline=oneline,
+        )
+
+    @property
+    def formatted_address(self) -> str:
+        structured = self.build_home_address()
+        if structured:
+            return structured
+        return (self.home_address or '').strip()
+
+    @property
+    def address_oneline(self) -> str:
+        structured = self.build_home_address(oneline=True)
+        if structured:
+            return structured
+        blob = (self.home_address or '').strip()
+        if not blob:
+            return ''
+        return ', '.join(line.strip() for line in blob.splitlines() if line.strip())
+
+    @property
+    def address_maps_url(self) -> str:
+        return maps_search_url(self.address_oneline)
+
+    def save(self, *args, **kwargs):
+        formatted = self.build_home_address()
+        if formatted:
+            self.home_address = formatted
+            update_fields = kwargs.get('update_fields')
+            if update_fields is not None and 'home_address' not in update_fields:
+                kwargs = {**kwargs, 'update_fields': [*update_fields, 'home_address']}
+        super().save(*args, **kwargs)
 
     @property
     def authorized_pickup_list(self) -> list[str]:
@@ -90,6 +174,52 @@ class CustomerOwner(models.Model):
             },
         )
         return owner
+
+
+class ClientProfileQuerySet(models.QuerySet):
+    def with_vaccination_expiry(self):
+        """Annotate `current_vax_expires` = latest validated `expires_at` (or NULL)."""
+        if 'current_vax_expires' in self.query.annotations:
+            return self
+        return self.annotate(
+            current_vax_expires=Max(
+                'vaccination_records__expires_at',
+                filter=Q(vaccination_records__validated=True),
+            ),
+        )
+
+    def filter_vaccination_status(self, status, *, today=None):
+        today = today or timezone.localdate()
+        warning_end = today + timedelta(days=VAX_EXPIRY_WARNING_DAYS)
+        qs = self.with_vaccination_expiry()
+        if status == VAX_STATUS_EXPIRING:
+            return qs.filter(
+                current_vax_expires__gte=today,
+                current_vax_expires__lte=warning_end,
+            )
+        if status == VAX_STATUS_EXPIRED:
+            return qs.filter(current_vax_expires__lt=today)
+        if status == VAX_STATUS_MISSING:
+            return qs.filter(current_vax_expires__isnull=True)
+        if status == VAX_STATUS_OK:
+            return qs.filter(current_vax_expires__gt=warning_end)
+        return qs
+
+    def vaccination_status_counts(self, *, today=None):
+        today = today or timezone.localdate()
+        warning_end = today + timedelta(days=VAX_EXPIRY_WARNING_DAYS)
+        return self.with_vaccination_expiry().aggregate(
+            expiring=Count(
+                'pk',
+                filter=Q(
+                    current_vax_expires__gte=today,
+                    current_vax_expires__lte=warning_end,
+                ),
+            ),
+            expired=Count('pk', filter=Q(current_vax_expires__lt=today)),
+            missing=Count('pk', filter=Q(current_vax_expires__isnull=True)),
+            ok=Count('pk', filter=Q(current_vax_expires__gt=warning_end)),
+        )
 
 
 class ClientProfile(models.Model):
@@ -138,6 +268,8 @@ class ClientProfile(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    objects = ClientProfileQuerySet.as_manager()
+
     class Meta:
         constraints = [
             models.UniqueConstraint(
@@ -173,6 +305,57 @@ class ClientProfile(models.Model):
             validated=True,
             expires_at__gte=today,
         ).exists()
+
+    @property
+    def current_vaccination_expires_at(self):
+        """Latest validated expiry. Uses `current_vax_expires` when annotated."""
+        if hasattr(self, 'current_vax_expires'):
+            return self.current_vax_expires
+        rec = (
+            self.vaccination_records.filter(validated=True)
+            .order_by('-expires_at')
+            .only('expires_at')
+            .first()
+        )
+        return rec.expires_at if rec else None
+
+    @property
+    def vaccination_status(self) -> str:
+        """ok | expiring | expired | missing — latest validated record vs today."""
+        cached = getattr(self, '_vaccination_status', None)
+        if cached is not None:
+            return cached
+        today = timezone.localdate()
+        expires = self.current_vaccination_expires_at
+        if expires is None:
+            status = VAX_STATUS_MISSING
+        elif expires < today:
+            status = VAX_STATUS_EXPIRED
+        elif expires <= today + timedelta(days=VAX_EXPIRY_WARNING_DAYS):
+            status = VAX_STATUS_EXPIRING
+        else:
+            status = VAX_STATUS_OK
+        self._vaccination_status = status
+        return status
+
+    def standard_stay_blockers(self) -> list[str]:
+        """Reasons this dog cannot be booked for a standard stay (VisitForm create)."""
+        blockers = []
+        if self.pipeline_stage != self.PipelineStage.APPROVED:
+            blockers.append(
+                f'{self.dog_name} is still in {self.get_pipeline_stage_display()}. '
+                f'Standard stays require Approved.'
+            )
+        if not self.has_current_vaccination:
+            blockers.append(
+                f'{self.dog_name} has no current validated vaccination.'
+            )
+        owner = self.customer_owner
+        if not owner.coi_confirmed_received:
+            blockers.append(
+                f'COI has not been confirmed for {owner.owner_name}.'
+            )
+        return blockers
 
     def advance_pipeline(self):
         order = [
@@ -295,6 +478,14 @@ class VaccinationRecord(models.Model):
     @property
     def is_expired(self) -> bool:
         return self.expires_at < timezone.localdate()
+
+    @property
+    def is_expiring_soon(self) -> bool:
+        """Validated coverage that ends within the 30-day warning window."""
+        if not self.validated or self.is_expired:
+            return False
+        today = timezone.localdate()
+        return self.expires_at <= today + timedelta(days=VAX_EXPIRY_WARNING_DAYS)
 
     def mark_validated(self):
         self.validated = True

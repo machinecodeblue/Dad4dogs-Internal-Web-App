@@ -1,0 +1,9 @@
+{% if dog.vaccination_status == 'ok' %}
+<span class="badge badge-ok">VAX</span>
+{% elif dog.vaccination_status == 'expiring' %}
+<span class="badge badge-warn">VAX {{ dog.current_vaccination_expires_at|date:"M j" }}</span>
+{% elif dog.vaccination_status == 'expired' %}
+<span class="badge badge-danger">VAX EXPIRED</span>
+{% else %}
+<span class="badge badge-warn">VAX</span>
+{% endif %}

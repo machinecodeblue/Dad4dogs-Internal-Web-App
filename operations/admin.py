@@ -32,7 +32,10 @@ class CustomerOwnerAdmin(admin.ModelAdmin):
         'owner_name', 'owner_email', 'coi_confirmed_received', 'coi_sent_at',
     )
     list_filter = ('coi_confirmed_received',)
-    search_fields = ('owner_name', 'owner_email')
+    search_fields = (
+        'owner_name', 'owner_email',
+        'address_street', 'address_city', 'address_postal_code',
+    )
     readonly_fields = ('coi_sent_at', 'coi_confirmed_at')
 
 

@@ -1,11 +1,16 @@
+from collections import defaultdict
+
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.core.exceptions import ValidationError
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
-from django.views.decorators.http import require_POST
+from django.views.decorators.http import require_http_methods, require_POST
 
 from operations.forms import CustomerOwnerForm, DogProfileForm, VaccinationRecordForm
+from operations.forms.intake import IntakeWizardForm
 from operations.models import ClientProfile, CustomerOwner, VaccinationRecord
+from operations.models.customers import VAX_FILTER_CHOICES
 from operations.services.feed_access import feed_access_stats
 from operations.services.contacts import (
     analysis_to_session,
@@ -18,20 +23,67 @@ from operations.services.contacts import (
 
 @login_required
 def client_list(request):
-    stage_filter = request.GET.get('stage')
+    stage_filter = (request.GET.get('stage') or '').strip()
+    vax_filter = (request.GET.get('vax') or '').strip()
+    valid_vax = {value for value, _label in VAX_FILTER_CHOICES}
+    if vax_filter not in valid_vax:
+        vax_filter = ''
+
+    dogs_qs = ClientProfile.objects.with_vaccination_expiry().order_by('dog_name')
+    if stage_filter:
+        dogs_qs = dogs_qs.filter(pipeline_stage=stage_filter)
+    if vax_filter:
+        dogs_qs = dogs_qs.filter_vaccination_status(vax_filter)
+
+    dogs_by_email = defaultdict(list)
+    for dog in dogs_qs:
+        dogs_by_email[dog.owner_email.lower()].append(dog)
+
     customers = []
     for owner in CustomerOwner.objects.all().order_by('owner_name'):
-        dogs = ClientProfile.objects.filter(owner_email__iexact=owner.owner_email)
-        if stage_filter:
-            dogs = dogs.filter(pipeline_stage=stage_filter)
-            if not dogs.exists():
-                continue
+        dogs = dogs_by_email.get(owner.owner_email.lower(), [])
+        if (stage_filter or vax_filter) and not dogs:
+            continue
         customers.append({'owner': owner, 'dogs': dogs})
 
     return render(request, 'operations/client_list.html', {
         'customers': customers,
         'stages': ClientProfile.PipelineStage.choices,
         'current_stage': stage_filter,
+        'vax_filters': VAX_FILTER_CHOICES,
+        'current_vax': vax_filter,
+    })
+
+
+@login_required
+@require_http_methods(['GET', 'POST'])
+def client_intake(request):
+    """Owner + first dog + optional Meet & Greet in one save."""
+    if request.method == 'POST':
+        form = IntakeWizardForm(request.POST)
+        if form.is_valid():
+            try:
+                owner, dog, visit = form.save()
+            except ValidationError as e:
+                form.add_error(None, '; '.join(e.messages))
+            else:
+                if visit:
+                    messages.success(
+                        request,
+                        f'Added {owner.owner_name} and {dog.dog_name}. '
+                        f'Meet & Greet: {visit.schedule_display}.',
+                    )
+                else:
+                    messages.success(
+                        request,
+                        f'Added {owner.owner_name} and {dog.dog_name}.',
+                    )
+                return redirect('operations:dog_detail', pk=dog.pk)
+    else:
+        form = IntakeWizardForm()
+    return render(request, 'operations/intake_form.html', {
+        'form': form,
+        'title': 'New Client & Dog',
     })
 
 
@@ -152,7 +204,9 @@ def customer_add_dog(request, pk):
 def customer_detail(request, pk):
     """Customer (owner) front — COI and dog list only. No vaccinations."""
     customer_owner = get_object_or_404(CustomerOwner, pk=pk)
-    dogs = ClientProfile.objects.filter(owner_email__iexact=customer_owner.owner_email)
+    dogs = ClientProfile.objects.filter(
+        owner_email__iexact=customer_owner.owner_email,
+    ).with_vaccination_expiry()
     return render(request, 'operations/customer_detail.html', {
         'customer_owner': customer_owner,
         'dogs': dogs,

@@ -56,6 +56,7 @@ python manage.py generate_statements
 - Groups by dog (`client_id`) for the week
 - Sets `send_status = queued` on create/update
 - Email body includes visit lines + total + e-Transfer reminder text
+- Includes owner `Address:` (one-line structured address) when on file — from `CustomerOwner`, not the dog row
 
 ---
 

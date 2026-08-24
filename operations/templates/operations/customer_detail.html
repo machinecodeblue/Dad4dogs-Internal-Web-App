@@ -9,8 +9,13 @@
         · <a href="tel:{{ customer_owner.owner_phone }}">{{ customer_owner.owner_phone }}</a>
         {% endif %}
     </p>
-    {% if customer_owner.home_address %}
-    <p class="muted" style="margin-top:0.5rem;white-space:pre-line">{{ customer_owner.home_address }}</p>
+    {% if customer_owner.formatted_address %}
+    <p class="muted" style="margin-top:0.5rem;white-space:pre-line">{{ customer_owner.formatted_address }}</p>
+    {% if customer_owner.address_maps_url %}
+    <p style="margin-top:0.35rem">
+        <a href="{{ customer_owner.address_maps_url }}" class="btn btn-outline btn-sm" target="_blank" rel="noopener">Open in Maps</a>
+    </p>
+    {% endif %}
     {% endif %}
     <div class="actions" style="margin-top:0.75rem">
         <a href="{% url 'operations:customer_edit' customer_owner.pk %}" class="btn btn-primary btn-sm">Edit Customer</a>
@@ -91,11 +96,7 @@
             <span class="muted" style="font-size:0.8rem">DOG</span><br>
             <strong>{{ dog.dog_name }}</strong>
             <span class="badge badge-ok">{{ dog.get_pipeline_stage_display }}</span>
-            {% if dog.has_current_vaccination %}
-            <span class="badge badge-ok">VAX</span>
-            {% else %}
-            <span class="badge badge-warn">VAX</span>
-            {% endif %}
+            {% include "operations/_vax_badge.html" %}
         </div>
     </a>
     {% endfor %}

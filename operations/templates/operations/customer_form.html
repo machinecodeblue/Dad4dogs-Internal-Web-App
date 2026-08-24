@@ -33,8 +33,7 @@
         {{ form.owner_phone }}
         {% if form.owner_phone.errors %}<p class="muted" style="color:var(--danger)">{{ form.owner_phone.errors.0 }}</p>{% endif %}
 
-        <label for="{{ form.home_address.id_for_label }}">Home Address</label>
-        {{ form.home_address }}
+        {% include "operations/_address_fields.html" %}
     </div>
 
     <div class="card">

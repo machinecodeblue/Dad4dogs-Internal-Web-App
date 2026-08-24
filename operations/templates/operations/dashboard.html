@@ -168,6 +168,14 @@
         <div class="number">8</div>
         <div class="label">Standard Max</div>
     </div>
+    <a href="{% url 'operations:client_list' %}?vax=expiring" class="card stat" style="text-decoration:none;color:inherit">
+        <div class="number"{% if vax_expiring_count %} style="color:#856404"{% endif %}>{{ vax_expiring_count }}</div>
+        <div class="label">Vax Expiring (30d)</div>
+    </a>
+    <a href="{% url 'operations:client_list' %}?vax=expired" class="card stat" style="text-decoration:none;color:inherit">
+        <div class="number"{% if vax_expired_count %} style="color:#721c24"{% endif %}>{{ vax_expired_count }}</div>
+        <div class="label">Vax Expired</div>
+    </a>
 </div>
 
 {% if pending_events %}

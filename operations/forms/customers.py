@@ -2,6 +2,11 @@ from django import forms
 from django.core.exceptions import ValidationError
 
 from operations.models import ClientProfile, CustomerOwner, VaccinationRecord
+from operations.services.addresses import (
+    CANADIAN_PROVINCES,
+    normalize_postal_code,
+    normalize_province,
+)
 
 _PHONE_WIDGET = forms.TextInput(attrs={
     'placeholder': 'Mobile number',
@@ -18,7 +23,11 @@ class CustomerOwnerForm(forms.ModelForm):
             'owner_salutation',
             'owner_email',
             'owner_phone',
-            'home_address',
+            'address_street',
+            'address_unit',
+            'address_city',
+            'address_province',
+            'address_postal_code',
             'emergency_contact_name',
             'emergency_contact_phone',
             'emergency_contact_relationship',
@@ -38,10 +47,26 @@ class CustomerOwnerForm(forms.ModelForm):
                 'inputmode': 'email',
             }),
             'owner_phone': _PHONE_WIDGET,
-            'home_address': forms.Textarea(attrs={
-                'rows': 3,
-                'placeholder': 'Street, city, postal code',
-                'autocomplete': 'street-address',
+            'address_street': forms.TextInput(attrs={
+                'placeholder': '191 Grey Street',
+                'autocomplete': 'address-line1',
+            }),
+            'address_unit': forms.TextInput(attrs={
+                'placeholder': 'Optional — 2B',
+                'autocomplete': 'address-line2',
+            }),
+            'address_city': forms.TextInput(attrs={
+                'placeholder': 'London',
+                'autocomplete': 'address-level2',
+            }),
+            'address_province': forms.Select(attrs={
+                'autocomplete': 'address-level1',
+            }),
+            'address_postal_code': forms.TextInput(attrs={
+                'placeholder': 'N6B 1G2',
+                'autocomplete': 'postal-code',
+                'inputmode': 'text',
+                'autocapitalize': 'characters',
             }),
             'emergency_contact_name': forms.TextInput(attrs={
                 'placeholder': 'Trusted friend, neighbor, or family member',
@@ -55,12 +80,50 @@ class CustomerOwnerForm(forms.ModelForm):
                 'placeholder': 'One authorized pickup name per line',
             }),
         }
+        labels = {
+            'address_street': 'Street',
+            'address_unit': 'Unit / Apt',
+            'address_city': 'City',
+            'address_province': 'Province',
+            'address_postal_code': 'Postal code',
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['address_province'].required = False
+        self.fields['address_province'].choices = [('', 'Province')] + list(CANADIAN_PROVINCES)
+        instance = getattr(self, 'instance', None)
+        if (
+            instance
+            and instance.pk
+            and not instance.address_street
+            and instance.home_address
+        ):
+            self.initial.setdefault('address_street', instance.home_address)
 
     def clean_owner_phone(self):
         phone = (self.cleaned_data.get('owner_phone') or '').strip()
         if not phone:
             raise ValidationError('Primary mobile phone is required.')
         return phone
+
+    def clean_address_postal_code(self):
+        raw = (self.cleaned_data.get('address_postal_code') or '').strip()
+        if not raw:
+            return ''
+        try:
+            return normalize_postal_code(raw)
+        except ValueError as exc:
+            raise ValidationError(str(exc)) from exc
+
+    def clean_address_province(self):
+        raw = (self.cleaned_data.get('address_province') or '').strip()
+        if not raw:
+            return ''
+        try:
+            return normalize_province(raw)
+        except ValueError as exc:
+            raise ValidationError(str(exc)) from exc
 
 
 class DogProfileForm(forms.ModelForm):

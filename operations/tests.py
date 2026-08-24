@@ -16,7 +16,14 @@ from io import BytesIO
 
 from PIL import Image
 
-from operations.forms import BusinessProfileForm, CustomerOwnerForm, DogProfileForm, TimelineMomentForm, VisitForm
+from operations.forms import (
+    BusinessProfileForm,
+    CustomerOwnerForm,
+    DogProfileForm,
+    IntakeWizardForm,
+    TimelineMomentForm,
+    VisitForm,
+)
 from operations.models import (
     BusinessProfile,
     ClientProfile,
@@ -31,6 +38,7 @@ from operations.models import (
     VisitSeries,
     VisitTimelineEvent,
 )
+from operations.models.customers import VAX_EXPIRY_WARNING_DAYS
 from operations.models.scheduling import timeline_asset_upload_path
 from operations.services.feed_interactions import set_reaction, add_comment, get_or_create_share_link
 from operations.services.geolocation import resolve_timeline_coordinates
@@ -73,6 +81,12 @@ from operations.services.visit_email import (
     generate_booking_ics,
     send_booking_confirmation,
 )
+from operations.services.addresses import (
+    format_address,
+    maps_search_url,
+    normalize_postal_code,
+    parse_legacy_address,
+)
 from operations.services.contacts import (
     ParsedContact,
     analyze_import,
@@ -84,8 +98,21 @@ from operations.services.contacts import (
     parse_google_csv,
     suggest_client_fields,
 )
+from operations.services.statements import format_statement_email
 
 TZ = ZoneInfo('America/Toronto')
+
+
+def _ready_for_standard_stay(dog: ClientProfile) -> ClientProfile:
+    dog.pipeline_stage = ClientProfile.PipelineStage.APPROVED
+    dog.save(update_fields=['pipeline_stage', 'updated_at'])
+    CustomerOwner.ensure_for_client(dog).mark_coi_received()
+    VaccinationRecord.objects.create(
+        client=dog,
+        expires_at=timezone.localdate() + timedelta(days=180),
+        validated=True,
+    )
+    return dog
 
 
 class CustomerOwnerFormTests(TestCase):
@@ -108,6 +135,247 @@ class CustomerOwnerFormTests(TestCase):
         })
         self.assertFalse(form.is_valid())
         self.assertIn('owner_phone', form.errors)
+
+    def test_saves_structured_address_and_rebuilds_home_address(self):
+        form = CustomerOwnerForm(data={
+            'owner_name': 'Jane Doe',
+            'owner_email': 'jane-addr@example.com',
+            'owner_phone': '416-555-0100',
+            'address_street': '191 Grey Street',
+            'address_unit': '2B',
+            'address_city': 'London',
+            'address_province': 'ON',
+            'address_postal_code': 'n6b1g2',
+        })
+        self.assertTrue(form.is_valid(), form.errors)
+        owner = form.save()
+        self.assertEqual(owner.address_postal_code, 'N6B 1G2')
+        self.assertEqual(
+            owner.home_address,
+            '191 Grey Street, Unit 2B\nLondon, ON N6B 1G2',
+        )
+        self.assertEqual(
+            owner.address_oneline,
+            '191 Grey Street, Unit 2B, London, ON N6B 1G2',
+        )
+        self.assertIn('191+Grey+Street', owner.address_maps_url)
+
+    def test_rejects_invalid_postal_code(self):
+        form = CustomerOwnerForm(data={
+            'owner_name': 'Jane Doe',
+            'owner_email': 'jane-badpostal@example.com',
+            'owner_phone': '416-555-0100',
+            'address_postal_code': '12345',
+        })
+        self.assertFalse(form.is_valid())
+        self.assertIn('address_postal_code', form.errors)
+
+
+class AddressHandlingTests(TestCase):
+    def test_normalize_and_format(self):
+        self.assertEqual(normalize_postal_code('n6b-1g2'), 'N6B 1G2')
+        self.assertEqual(
+            format_address(
+                street='191 Grey Street',
+                unit='2B',
+                city='London',
+                province='ON',
+                postal='N6B 1G2',
+            ),
+            '191 Grey Street, Unit 2B\nLondon, ON N6B 1G2',
+        )
+
+    def test_legacy_home_address_still_displays(self):
+        owner = CustomerOwner.objects.create(
+            owner_name='Jane Doe',
+            owner_email='jane-legacy@example.com',
+            home_address='123 Main St\nToronto ON',
+        )
+        self.assertEqual(owner.formatted_address, '123 Main St\nToronto ON')
+        self.assertEqual(owner.address_oneline, '123 Main St, Toronto ON')
+        self.assertTrue(owner.address_maps_url.startswith('https://www.google.com/maps/search/'))
+
+    def test_parse_legacy_extracts_postal_city_unit(self):
+        parsed = parse_legacy_address(
+            '191 Grey Street Unit 2, London, Ontario, N6B 1G2',
+        )
+        self.assertEqual(parsed['street'], '191 Grey Street')
+        self.assertEqual(parsed['unit'], '2')
+        self.assertEqual(parsed['city'], 'London')
+        self.assertEqual(parsed['province'], 'ON')
+        self.assertEqual(parsed['postal'], 'N6B 1G2')
+
+    def test_vcard_includes_adr(self):
+        owner = CustomerOwner.objects.create(
+            owner_name='Jane Doe',
+            owner_email='jane-vcard@example.com',
+            owner_phone='+15195551234',
+            address_street='191 Grey Street',
+            address_unit='2B',
+            address_city='London',
+            address_province='ON',
+            address_postal_code='N6B 1G2',
+        )
+        dog = ClientProfile.objects.create(
+            dog_name='Kobe',
+            owner_name=owner.owner_name,
+            owner_email=owner.owner_email,
+            owner_phone=owner.owner_phone,
+        )
+        vcard = build_vcard(dog)
+        self.assertIn('ADR;TYPE=HOME:;Unit 2B;191 Grey Street;London;ON;N6B 1G2;Canada', vcard)
+
+    def test_statement_email_includes_address(self):
+        from operations.models import AccountStatement
+
+        owner = CustomerOwner.objects.create(
+            owner_name='Jane Doe',
+            owner_email='jane-stmt@example.com',
+            address_street='191 Grey Street',
+            address_city='London',
+            address_province='ON',
+            address_postal_code='N6B 1G2',
+        )
+        dog = ClientProfile.objects.create(
+            dog_name='Kobe',
+            owner_name=owner.owner_name,
+            owner_email=owner.owner_email,
+        )
+        statement = AccountStatement.objects.create(
+            client=dog,
+            week_start=date(2026, 8, 17),
+            week_end=date(2026, 8, 23),
+            line_items=[{'date': '2026-08-18', 'fee': '25.00'}],
+            total_amount='25.00',
+        )
+        body = format_statement_email(statement)
+        self.assertIn('Address: 191 Grey Street, London, ON N6B 1G2', body)
+
+    def test_maps_url_encodes_query(self):
+        url = maps_search_url('191 Grey Street, London, ON N6B 1G2')
+        self.assertIn('query=191+Grey+Street', url)
+
+    def test_customer_detail_shows_maps_link(self):
+        owner = CustomerOwner.objects.create(
+            owner_name='Jane Doe',
+            owner_email='jane-maps@example.com',
+            address_street='191 Grey Street',
+            address_city='London',
+            address_province='ON',
+            address_postal_code='N6B 1G2',
+        )
+        user = get_user_model().objects.create_user('david', 'd@example.com', 'pass')
+        self.client.force_login(user)
+        response = self.client.get(reverse('operations:customer_detail', kwargs={'pk': owner.pk}))
+        self.assertContains(response, 'Open in Maps')
+        self.assertContains(response, '191 Grey Street')
+        self.assertContains(response, 'google.com/maps/search')
+
+    def test_dog_detail_shows_address_for_dropoff(self):
+        owner = CustomerOwner.objects.create(
+            owner_name='Jane Doe',
+            owner_email='jane-dropoff@example.com',
+            address_street='191 Grey Street',
+            address_city='London',
+            address_province='ON',
+            address_postal_code='N6B 1G2',
+        )
+        dog = ClientProfile.objects.create(
+            dog_name='Lulu',
+            owner_name=owner.owner_name,
+            owner_email=owner.owner_email,
+        )
+        user = get_user_model().objects.create_user('david', 'd@example.com', 'pass')
+        self.client.force_login(user)
+        response = self.client.get(reverse('operations:dog_detail', kwargs={'pk': dog.pk}))
+        self.assertContains(response, '191 Grey Street')
+        self.assertContains(response, 'Open in Maps')
+
+
+class IntakeWizardTests(TestCase):
+    def _base(self, **overrides):
+        data = {
+            'owner_name': 'Jane Doe',
+            'owner_email': 'jane-intake@example.com',
+            'owner_phone': '416-555-0100',
+            'dog_name': 'Kobe',
+            'dog_notes': 'Loves zoomies',
+            'vet_clinic_name': 'Grey Street Animal Hospital',
+            'vet_clinic_phone': '519-555-0100',
+        }
+        data.update(overrides)
+        return data
+
+    def test_saves_owner_and_dog_without_meet_greet(self):
+        form = IntakeWizardForm(data=self._base())
+        self.assertTrue(form.is_valid(), form.errors)
+        owner, dog, visit = form.save()
+        self.assertEqual(owner.owner_name, 'Jane Doe')
+        self.assertEqual(dog.dog_name, 'Kobe')
+        self.assertEqual(dog.pipeline_stage, ClientProfile.PipelineStage.INQUIRY)
+        self.assertEqual(dog.vet_clinic_name, 'Grey Street Animal Hospital')
+        self.assertIsNone(visit)
+        self.assertTrue(dog.feed_secret)
+
+    def test_meet_greet_sets_pipeline_and_visit(self):
+        form = IntakeWizardForm(data=self._base(
+            meet_greet_start='April 11, 2026 2 pm',
+            meet_greet_end='April 11, 2026 3 pm',
+        ))
+        self.assertTrue(form.is_valid(), form.errors)
+        owner, dog, visit = form.save()
+        self.assertEqual(dog.pipeline_stage, ClientProfile.PipelineStage.MEET_GREET)
+        self.assertIsNotNone(visit)
+        self.assertEqual(visit.client_id, dog.pk)
+        self.assertIn('Meet & Greet', visit.notes)
+        self.assertEqual(timezone.localtime(visit.scheduled_start).hour, 14)
+
+    def test_rejects_dog_name_same_as_owner_first(self):
+        form = IntakeWizardForm(data=self._base(dog_name='Jane'))
+        self.assertFalse(form.is_valid())
+        self.assertIn('dog_name', form.errors)
+
+    def test_rejects_partial_meet_greet(self):
+        form = IntakeWizardForm(data=self._base(meet_greet_start='April 11, 2026 2 pm'))
+        self.assertFalse(form.is_valid())
+
+    def test_intake_page_loads(self):
+        user = get_user_model().objects.create_user(username='david', password='testpass123')
+        client = DjangoTestClient()
+        client.login(username='david', password='testpass123')
+        response = client.get(reverse('operations:client_intake'))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'New Client')
+        self.assertContains(response, 'Meet &amp; Greet')
+        self.assertContains(response, 'Postal code')
+        self.assertContains(response, 'Street')
+
+    def test_capacity_block_creates_nothing(self):
+        now = timezone.now()
+        start = datetime(2026, 4, 11, 14, 0, tzinfo=TZ)
+        end = datetime(2026, 4, 11, 15, 0, tzinfo=TZ)
+        extra = []
+        for i in range(INSURANCE_CEILING):
+            dog = ClientProfile.objects.create(
+                dog_name=f'Cap{i}',
+                owner_name=f'Owner{i}',
+                owner_email=f'intake-cap{i}@example.com',
+            )
+            extra.append(Visit(
+                client=dog,
+                scheduled_start=start,
+                scheduled_end=end,
+                created_at=now,
+                updated_at=now,
+            ))
+        Visit.objects.bulk_create(extra)
+        form = IntakeWizardForm(data=self._base(
+            meet_greet_start='April 11, 2026 2 pm',
+            meet_greet_end='April 11, 2026 3 pm',
+        ))
+        self.assertFalse(form.is_valid())
+        self.assertFalse(CustomerOwner.objects.filter(owner_email='jane-intake@example.com').exists())
+        self.assertFalse(ClientProfile.objects.filter(owner_email='jane-intake@example.com').exists())
 
 
 class DogProfileFormTests(TestCase):
@@ -487,6 +755,162 @@ class ComplianceTests(TestCase):
         self.assertTrue(self.client_profile.has_current_vaccination)
         self.assertFalse(other_dog.has_current_vaccination)
 
+    def test_vaccination_status_expiring_within_warning_window(self):
+        VaccinationRecord.objects.create(
+            client=self.client_profile,
+            expires_at=timezone.localdate() + timedelta(days=VAX_EXPIRY_WARNING_DAYS),
+            validated=True,
+        )
+        self.assertTrue(self.client_profile.has_current_vaccination)
+        self.assertEqual(self.client_profile.vaccination_status, 'expiring')
+
+    def test_vaccination_status_ok_beyond_warning_window(self):
+        VaccinationRecord.objects.create(
+            client=self.client_profile,
+            expires_at=timezone.localdate() + timedelta(days=VAX_EXPIRY_WARNING_DAYS + 1),
+            validated=True,
+        )
+        self.assertEqual(self.client_profile.vaccination_status, 'ok')
+
+    def test_vaccination_status_today_is_expiring_not_expired(self):
+        VaccinationRecord.objects.create(
+            client=self.client_profile,
+            expires_at=timezone.localdate(),
+            validated=True,
+        )
+        self.assertTrue(self.client_profile.has_current_vaccination)
+        self.assertEqual(self.client_profile.vaccination_status, 'expiring')
+
+    def test_vaccination_status_expired_and_missing(self):
+        self.assertEqual(self.client_profile.vaccination_status, 'missing')
+        record = VaccinationRecord.objects.create(
+            client=self.client_profile,
+            expires_at=timezone.localdate() - timedelta(days=1),
+            validated=True,
+        )
+        self.assertTrue(record.is_expired)
+        self.assertFalse(record.is_expiring_soon)
+        dog = ClientProfile.objects.get(pk=self.client_profile.pk)
+        self.assertEqual(dog.vaccination_status, 'expired')
+
+    def test_queryset_vaccination_status_counts_and_filter(self):
+        today = timezone.localdate()
+        expiring = ClientProfile.objects.create(
+            dog_name='Soon',
+            owner_name='Cassia Lewis',
+            owner_email='cassia@example.com',
+        )
+        ok = ClientProfile.objects.create(
+            dog_name='Fine',
+            owner_name='Cassia Lewis',
+            owner_email='cassia@example.com',
+        )
+        expired = self.client_profile
+        VaccinationRecord.objects.create(
+            client=expiring, expires_at=today + timedelta(days=10), validated=True,
+        )
+        VaccinationRecord.objects.create(
+            client=ok, expires_at=today + timedelta(days=90), validated=True,
+        )
+        VaccinationRecord.objects.create(
+            client=expired, expires_at=today - timedelta(days=2), validated=True,
+        )
+        missing = ClientProfile.objects.create(
+            dog_name='None',
+            owner_name='Cassia Lewis',
+            owner_email='cassia@example.com',
+        )
+        counts = ClientProfile.objects.vaccination_status_counts()
+        self.assertEqual(counts['expiring'], 1)
+        self.assertEqual(counts['expired'], 1)
+        self.assertEqual(counts['missing'], 1)
+        self.assertEqual(counts['ok'], 1)
+        self.assertEqual(
+            list(
+                ClientProfile.objects.filter_vaccination_status('expiring')
+                .values_list('dog_name', flat=True)
+            ),
+            ['Soon'],
+        )
+        self.assertEqual(
+            ClientProfile.objects.filter_vaccination_status('missing').get().pk,
+            missing.pk,
+        )
+
+
+class VaccinationExpiryViewTests(TestCase):
+    def setUp(self):
+        self.user = get_user_model().objects.create_user(
+            username='david',
+            password='testpass123',
+        )
+        self.client = DjangoTestClient()
+        self.client.login(username='david', password='testpass123')
+        self.owner = CustomerOwner.objects.create(
+            owner_name='Cassia Lewis',
+            owner_email='cassia@example.com',
+        )
+        today = timezone.localdate()
+        self.expiring = ClientProfile.objects.create(
+            dog_name='Soon',
+            owner_name=self.owner.owner_name,
+            owner_email=self.owner.owner_email,
+        )
+        self.ok = ClientProfile.objects.create(
+            dog_name='Fine',
+            owner_name=self.owner.owner_name,
+            owner_email=self.owner.owner_email,
+        )
+        self.expired = ClientProfile.objects.create(
+            dog_name='Lapsed',
+            owner_name=self.owner.owner_name,
+            owner_email=self.owner.owner_email,
+        )
+        VaccinationRecord.objects.create(
+            client=self.expiring,
+            expires_at=today + timedelta(days=7),
+            validated=True,
+        )
+        VaccinationRecord.objects.create(
+            client=self.ok,
+            expires_at=today + timedelta(days=120),
+            validated=True,
+        )
+        VaccinationRecord.objects.create(
+            client=self.expired,
+            expires_at=today - timedelta(days=3),
+            validated=True,
+        )
+
+    def test_client_list_vax_expiring_filter(self):
+        response = self.client.get(
+            reverse('operations:client_list'),
+            {'vax': 'expiring'},
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Soon')
+        self.assertNotContains(response, 'Fine')
+        self.assertNotContains(response, 'Lapsed')
+        self.assertContains(response, 'expire within 30 days')
+
+    def test_client_list_vax_expired_filter(self):
+        response = self.client.get(
+            reverse('operations:client_list'),
+            {'vax': 'expired'},
+        )
+        self.assertContains(response, 'Lapsed')
+        self.assertContains(response, 'VAX EXPIRED')
+        self.assertNotContains(response, 'Soon')
+
+    def test_dashboard_vax_cards_link_to_filters(self):
+        response = self.client.get(reverse('operations:dashboard'))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context['vax_expiring_count'], 1)
+        self.assertEqual(response.context['vax_expired_count'], 1)
+        self.assertContains(response, 'Vax Expiring (30d)')
+        self.assertContains(response, reverse('operations:client_list') + '?vax=expiring')
+        self.assertContains(response, reverse('operations:client_list') + '?vax=expired')
+
 
 class AgendaTests(TestCase):
     def setUp(self):
@@ -571,11 +995,11 @@ class VisitRepeatTests(TestCase):
         self.assertEqual(timezone.localtime(occ[4][0]).day, 14)
 
     def test_form_creates_daily_series(self):
-        dog = ClientProfile.objects.create(
+        dog = _ready_for_standard_stay(ClientProfile.objects.create(
             dog_name='Winston',
             owner_name='Alexa Green',
             owner_email='alexagreen4@outlook.com',
-        )
+        ))
         form = VisitForm(
             data={
                 'start_at': 'April 10, 2026 9 am',
@@ -598,11 +1022,11 @@ class VisitRepeatTests(TestCase):
         self.assertEqual(visits[0].series_position, 1)
 
     def test_single_occurrence_repeat_still_creates_series(self):
-        dog = ClientProfile.objects.create(
+        dog = _ready_for_standard_stay(ClientProfile.objects.create(
             dog_name='Winston',
             owner_name='Alexa Green',
             owner_email='alexagreen4@outlook.com',
-        )
+        ))
         form = VisitForm(
             data={
                 'start_at': 'April 10, 2026 9 am',
@@ -626,11 +1050,11 @@ class VisitRepeatTests(TestCase):
         self.assertEqual(visits[0].series_position, 1)
 
     def test_non_repeat_does_not_create_series(self):
-        dog = ClientProfile.objects.create(
+        dog = _ready_for_standard_stay(ClientProfile.objects.create(
             dog_name='Winston',
             owner_name='Alexa Green',
             owner_email='alexagreen4@outlook.com',
-        )
+        ))
         form = VisitForm(
             data={
                 'start_at': 'April 10, 2026 9 am',
@@ -648,11 +1072,11 @@ class VisitRepeatTests(TestCase):
         self.assertFalse(VisitSeries.objects.filter(client=dog).exists())
 
     def test_until_date_beyond_max_occurrences_is_rejected(self):
-        dog = ClientProfile.objects.create(
+        dog = _ready_for_standard_stay(ClientProfile.objects.create(
             dog_name='Winston',
             owner_name='Alexa Green',
             owner_email='alexagreen4@outlook.com',
-        )
+        ))
         form = VisitForm(
             data={
                 'start_at': 'April 10, 2026 9 am',
@@ -670,11 +1094,11 @@ class VisitRepeatTests(TestCase):
         self.assertFalse(Visit.objects.filter(client=dog).exists())
 
     def test_exactly_max_occurrences_by_count_is_allowed(self):
-        dog = ClientProfile.objects.create(
+        dog = _ready_for_standard_stay(ClientProfile.objects.create(
             dog_name='Winston',
             owner_name='Alexa Green',
             owner_email='alexagreen4@outlook.com',
-        )
+        ))
         form = VisitForm(
             data={
                 'start_at': 'April 10, 2026 9 am',
@@ -693,11 +1117,11 @@ class VisitRepeatTests(TestCase):
 
 class VisitFormTests(TestCase):
     def setUp(self):
-        self.dog = ClientProfile.objects.create(
+        self.dog = _ready_for_standard_stay(ClientProfile.objects.create(
             dog_name='Winston',
             owner_name='Alexa Green',
             owner_email='alexagreen4@outlook.com',
-        )
+        ))
 
     def test_create_visit_from_natural_language(self):
         form = VisitForm(
@@ -713,6 +1137,64 @@ class VisitFormTests(TestCase):
         self.assertEqual(visit.client, self.dog)
         self.assertEqual(visit.status, Visit.Status.SCHEDULED)
         self.assertEqual(visit.notes, 'First visit')
+
+    def test_inquiry_dog_cannot_book_standard_stay(self):
+        dog = ClientProfile.objects.create(
+            dog_name='Bo',
+            owner_name='Cassia Lewis',
+            owner_email='cassia-book@example.com',
+        )
+        form = VisitForm(
+            data={
+                'start_at': 'April 11, 2026 1 pm',
+                'end_at': 'April 11, 2026 6 pm',
+                'notes': '',
+            },
+            client=dog,
+        )
+        self.assertFalse(form.is_valid())
+        text = str(form.non_field_errors()).lower()
+        self.assertIn('approved', text)
+        self.assertIn('vaccination', text)
+        self.assertIn('coi', text)
+        self.assertFalse(Visit.objects.filter(client=dog).exists())
+
+    def test_approved_dog_without_vax_cannot_book(self):
+        dog = ClientProfile.objects.create(
+            dog_name='Bo',
+            owner_name='Cassia Lewis',
+            owner_email='cassia-vax@example.com',
+            pipeline_stage=ClientProfile.PipelineStage.APPROVED,
+        )
+        CustomerOwner.ensure_for_client(dog).mark_coi_received()
+        form = VisitForm(
+            data={
+                'start_at': 'April 11, 2026 1 pm',
+                'end_at': 'April 11, 2026 6 pm',
+                'notes': '',
+            },
+            client=dog,
+        )
+        self.assertFalse(form.is_valid())
+        self.assertIn('vaccination', str(form.non_field_errors()).lower())
+
+    def test_edit_skips_standard_stay_gate(self):
+        visit = Visit.objects.create(
+            client=self.dog,
+            scheduled_start=datetime(2026, 4, 10, 9, 0, tzinfo=TZ),
+            scheduled_end=datetime(2026, 4, 10, 17, 0, tzinfo=TZ),
+        )
+        self.dog.pipeline_stage = ClientProfile.PipelineStage.INQUIRY
+        self.dog.save(update_fields=['pipeline_stage', 'updated_at'])
+        form = VisitForm(
+            data={
+                'start_at': 'April 11, 2026 10 am',
+                'end_at': 'April 11, 2026 6 pm',
+                'notes': 'Moved',
+            },
+            instance=visit,
+        )
+        self.assertTrue(form.is_valid(), form.errors)
 
     def test_overnight_visit_natural_language(self):
         form = VisitForm(
