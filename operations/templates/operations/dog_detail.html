@@ -2,25 +2,78 @@
 {% load phone_tags %}
 {% block title %}{{ dog.dog_name }} — Dad4dogs{% endblock %}
 {% block content %}
+<p class="muted" style="margin-bottom:0.75rem">
+    <a href="{% url 'operations:customer_detail' customer_owner.pk %}" class="tap-call">← {{ customer_owner.owner_name }}</a>
+</p>
+
 <div class="card">
-    <p class="muted"><a href="{% url 'operations:customer_detail' customer_owner.pk %}" class="tap-call">← {{ customer_owner.owner_name }}</a></p>
-    <h2>{{ dog.dog_name }}</h2>
-    {% include "operations/_pipeline_badge.html" %}
-    {% include "operations/_vax_badge.html" %}
-    {% if dog.is_hidden %}
-    <span class="badge badge-warn">HIDDEN</span>
-    {% endif %}
+    <p class="card-kicker">Dog</p>
+    <div class="card-head">
+        <div>
+            <h2>{{ dog.dog_name }}</h2>
+            {% include "operations/_pipeline_badge.html" %}
+            {% include "operations/_vax_badge.html" %}
+            {% if dog.is_hidden %}
+            <span class="badge badge-warn">HIDDEN</span>
+            {% endif %}
+        </div>
+        <a href="{% url 'operations:dog_edit' dog.pk %}" class="btn btn-outline btn-sm">Edit</a>
+    </div>
+    <p class="muted" style="margin-top:0.25rem">Owner · {{ customer_owner.owner_name }}</p>
     {% if customer_owner.owner_phone %}
-    <a href="{{ customer_owner.owner_phone|as_tel }}" class="btn btn-primary" style="margin-top:0.75rem">Call {{ customer_owner.owner_phone|phone_display }}</a>
+    <div class="phone-row">
+        <span>{{ customer_owner.owner_phone|phone_display }}</span>
+        <a href="{{ customer_owner.owner_phone|as_tel }}" class="btn btn-primary btn-sm">Call</a>
+    </div>
     {% endif %}
-    {% if dog.emergency_vet_phone %}
-    <a href="{{ dog.emergency_vet_phone|as_tel }}" class="btn btn-warn" style="margin-top:0.5rem">Emergency vet — {{ dog.emergency_vet_phone|phone_display }}</a>
+    {% if customer_owner.formatted_address %}
+    <p class="muted" style="margin-top:0.75rem">Drop-off address</p>
+    <p class="muted" style="white-space:pre-line">{{ customer_owner.formatted_address }}</p>
+    {% if customer_owner.address_maps_url %}
+    <p style="margin-top:0.35rem">
+        <a href="{{ customer_owner.address_maps_url }}" class="tap-call" target="_blank" rel="noopener">Open in Maps</a>
+    </p>
+    {% endif %}
     {% endif %}
 </div>
 
+{% if dog.emergency_vet_phone or dog.emergency_vet_clinic or dog.vet_clinic_name or dog.vet_clinic_phone or dog.vet_name or dog.vet_care_authorization %}
 <div class="card">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem;gap:0.5rem">
-        <h2 style="margin:0">Visits</h2>
+    <h2>Veterinary</h2>
+    {% if dog.emergency_vet_phone or dog.emergency_vet_clinic %}
+    <p>
+        <strong>{{ dog.emergency_vet_clinic|default:"Emergency vet" }}</strong>
+        <span class="muted"> · Emergency vet</span>
+    </p>
+    {% if dog.emergency_vet_phone %}
+    <div class="phone-row">
+        <span>{{ dog.emergency_vet_phone|phone_display }}</span>
+        <a href="{{ dog.emergency_vet_phone|as_tel }}" class="btn btn-warn btn-sm">Call</a>
+    </div>
+    {% endif %}
+    {% endif %}
+    {% if dog.vet_clinic_name or dog.vet_clinic_phone or dog.vet_name %}
+    <p style="margin-top:0.75rem">
+        <strong>{{ dog.vet_clinic_name|default:"Clinic" }}</strong>
+        {% if dog.vet_name %}<span class="muted"> · {{ dog.vet_name }}</span>{% endif %}
+        <span class="muted"> · Clinic</span>
+    </p>
+    {% if dog.vet_clinic_phone %}
+    <div class="phone-row">
+        <span>{{ dog.vet_clinic_phone|phone_display }}</span>
+        <a href="{{ dog.vet_clinic_phone|as_tel }}" class="btn btn-primary btn-sm">Call</a>
+    </div>
+    {% endif %}
+    {% endif %}
+    {% if dog.vet_care_authorization %}
+    <p class="muted" style="margin-top:0.75rem;white-space:pre-line">{{ dog.vet_care_authorization }}</p>
+    {% endif %}
+</div>
+{% endif %}
+
+<div class="card">
+    <div class="card-head">
+        <h2>Visits</h2>
         <a href="{% url 'operations:visit_create' dog.pk %}" class="btn btn-outline btn-sm">Schedule stay</a>
     </div>
     {% for visit in visits %}
@@ -44,42 +97,6 @@
     {% endfor %}
 </div>
 
-{% if customer_owner.formatted_address %}
-<details class="card disclosure">
-    <summary>Address</summary>
-    <div class="disclosure-body">
-        <p class="muted" style="white-space:pre-line">{{ customer_owner.formatted_address }}</p>
-        {% if customer_owner.address_maps_url %}
-        <p style="margin-top:0.35rem">
-            <a href="{{ customer_owner.address_maps_url }}" class="tap-call" target="_blank" rel="noopener">Open in Maps</a>
-        </p>
-        {% endif %}
-    </div>
-</details>
-{% endif %}
-
-<details class="card disclosure">
-    <summary>Veterinary</summary>
-    <div class="disclosure-body">
-        {% if dog.vet_clinic_name or dog.vet_clinic_phone or dog.emergency_vet_clinic %}
-        {% if dog.vet_clinic_name %}
-        <p><strong>{{ dog.vet_clinic_name }}</strong>{% if dog.vet_name %} · {{ dog.vet_name }}{% endif %}</p>
-        {% endif %}
-        {% if dog.vet_clinic_phone %}
-        <p style="margin-top:0.5rem"><a href="{{ dog.vet_clinic_phone|as_tel }}" class="tap-call">Call clinic — {{ dog.vet_clinic_phone|phone_display }}</a></p>
-        {% endif %}
-        {% if dog.emergency_vet_clinic %}
-        <p class="muted" style="margin-top:0.5rem">After hours: {{ dog.emergency_vet_clinic }}</p>
-        {% endif %}
-        {% if dog.vet_care_authorization %}
-        <p class="muted" style="margin-top:0.5rem;white-space:pre-line">{{ dog.vet_care_authorization }}</p>
-        {% endif %}
-        {% else %}
-        <p class="muted">No veterinary contacts on file.</p>
-        {% endif %}
-    </div>
-</details>
-
 <details class="card disclosure">
     <summary>Photo feed</summary>
     <div class="disclosure-body">
@@ -102,7 +119,6 @@
 <details class="card disclosure admin-drawer">
     <summary>More actions</summary>
     <div class="disclosure-body">
-        <a href="{% url 'operations:dog_edit' dog.pk %}" class="btn btn-outline btn-sm" style="margin-bottom:0.5rem">Edit dog</a>
         <a href="{% url 'operations:dog_vaccinations' dog.pk %}" class="btn btn-outline btn-sm" style="margin-bottom:0.5rem">Vaccination records</a>
         <a href="{% url 'operations:client_vcard' dog.pk %}" class="btn btn-outline btn-sm" style="margin-bottom:0.5rem">Export vCard</a>
         {% if dog.pipeline_stage != 'approved' %}

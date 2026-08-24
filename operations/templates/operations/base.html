@@ -151,6 +151,22 @@
             margin-bottom: 0.5rem;
         }
         .card-head h2 { margin: 0; display: inline; }
+        .card-kicker {
+            margin: 0 0 0.35rem;
+            font-size: 0.75rem;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            color: var(--muted);
+        }
+        .phone-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.75rem;
+            margin-top: 0.5rem;
+        }
+        .phone-row .btn { width: auto; flex-shrink: 0; }
         details.coi-mark {
             display: inline-block;
             margin: 0 0 0 0.35rem;
@@ -177,6 +193,17 @@
         }
         .compact-row:last-child { border-bottom: none; }
         .compact-row .title { font-weight: 600; }
+        .compact-row.split {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 0.35rem 0.5rem;
+        }
+        .compact-row.split .title {
+            text-decoration: none;
+            color: inherit;
+        }
+        .compact-row.split .btn { width: auto; margin-left: auto; }
         .truncate {
             overflow: hidden;
             white-space: nowrap;

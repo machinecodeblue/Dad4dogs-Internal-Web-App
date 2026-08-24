@@ -3,6 +3,7 @@
 {% block title %}{{ customer_owner.owner_name }} — Dad4dogs{% endblock %}
 {% block content %}
 <div class="card">
+    <p class="card-kicker">Primary owner contact</p>
     <div class="card-head">
         <div>
             <h2>{{ customer_owner.owner_name }}</h2>
@@ -25,10 +26,10 @@
         <a href="{% url 'operations:customer_edit' customer_owner.pk %}" class="btn btn-outline btn-sm">Edit</a>
     </div>
     {% if customer_owner.owner_phone %}
-    <a href="{{ customer_owner.owner_phone|as_tel }}" class="btn btn-primary">Call {{ customer_owner.owner_phone|phone_display }}</a>
-    {% endif %}
-    {% if customer_owner.emergency_contact_phone %}
-    <a href="{{ customer_owner.emergency_contact_phone|as_tel }}" class="btn btn-warn" style="margin-top:0.5rem">Emergency — {{ customer_owner.emergency_contact_phone|phone_display }}</a>
+    <div class="phone-row">
+        <span>{{ customer_owner.owner_phone|phone_display }}</span>
+        <a href="{{ customer_owner.owner_phone|as_tel }}" class="btn btn-primary btn-sm">Call</a>
+    </div>
     {% endif %}
     {% if customer_owner.owner_email %}
     <p style="margin-top:0.75rem">
@@ -42,22 +43,6 @@
         <a href="{{ customer_owner.address_maps_url }}" class="tap-call" target="_blank" rel="noopener">Open in Maps</a>
     </p>
     {% endif %}
-    {% endif %}
-    {% if customer_owner.emergency_contact_name %}
-    <p style="margin-top:0.75rem">
-        <strong>{{ customer_owner.emergency_contact_name }}</strong>
-        {% if customer_owner.emergency_contact_relationship %}
-        <span class="muted"> · {{ customer_owner.emergency_contact_relationship }}</span>
-        {% endif %}
-    </p>
-    {% endif %}
-    {% if customer_owner.authorized_pickup_list %}
-    <p style="margin-top:0.5rem"><span class="muted">Authorized pickup:</span></p>
-    <ul style="margin:0.25rem 0 0 1.1rem">
-        {% for name in customer_owner.authorized_pickup_list %}
-        <li>{{ name }}</li>
-        {% endfor %}
-    </ul>
     {% endif %}
     {% if customer_owner.coi_status != 'received' %}
     <p style="margin-top:0.75rem">
@@ -85,8 +70,42 @@
     {% endif %}
 </div>
 
+{% if customer_owner.emergency_contact_phone or customer_owner.emergency_contact_name or customer_owner.authorized_pickup_list %}
 <div class="card">
-    <h2>Dogs</h2>
+    <h2>Emergency &amp; Pickups</h2>
+    {% if customer_owner.emergency_contact_name or customer_owner.emergency_contact_phone or customer_owner.emergency_contact_relationship %}
+    <p>
+        <strong>{{ customer_owner.emergency_contact_name|default:"Emergency contact" }}</strong>
+        <span class="muted"> · Emergency contact</span>
+        {% if customer_owner.emergency_contact_relationship %}
+        <span class="muted"> · {{ customer_owner.emergency_contact_relationship }}</span>
+        {% endif %}
+    </p>
+    {% if customer_owner.emergency_contact_phone %}
+    <div class="phone-row">
+        <span>{{ customer_owner.emergency_contact_phone|phone_display }}</span>
+        <a href="{{ customer_owner.emergency_contact_phone|as_tel }}" class="btn btn-warn btn-sm">Call</a>
+    </div>
+    {% endif %}
+    {% endif %}
+    {% if customer_owner.authorized_pickup_list %}
+    <p style="margin-top:0.75rem"><span class="muted">Authorized pickup</span></p>
+    <ul style="margin:0.25rem 0 0 1.1rem">
+        {% for name in customer_owner.authorized_pickup_list %}
+        <li>{{ name }}</li>
+        {% endfor %}
+    </ul>
+    {% endif %}
+</div>
+{% endif %}
+
+<div class="card">
+    <div class="card-head">
+        <h2>Dogs</h2>
+        {% if dogs %}
+        <a href="{% url 'operations:customer_add_dog' customer_owner.pk %}" class="btn btn-outline btn-sm">Add dog</a>
+        {% endif %}
+    </div>
     {% if dogs %}
     {% for dog in dogs %}
     <a href="{% url 'operations:dog_detail' dog.pk %}" class="compact-row">
@@ -95,7 +114,6 @@
         {% include "operations/_vax_badge.html" %}
     </a>
     {% endfor %}
-    <a href="{% url 'operations:customer_add_dog' customer_owner.pk %}" class="btn btn-outline btn-sm" style="margin-top:0.5rem">Add dog</a>
     {% elif not hidden_dogs %}
     <p class="muted">No dogs on file yet.</p>
     <a href="{% url 'operations:customer_add_dog' customer_owner.pk %}" class="btn btn-primary" style="margin-top:0.5rem">Add First Dog</a>

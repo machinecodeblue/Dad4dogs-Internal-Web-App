@@ -55,7 +55,7 @@ Display helpers on `CustomerOwner`: `formatted_address` (multiline), `address_on
 | Field | Purpose |
 |-------|---------|
 | `emergency_contact_name` | Trusted fallback if primary owner unreachable |
-| `emergency_contact_phone` | Direct mobile — tap-to-call on customer/dog detail |
+| `emergency_contact_phone` | Direct mobile — yellow Call on the **Emergency & Pickups** card, grouped with that person’s name; dog detail still has emergency **vet** |
 | `emergency_contact_relationship` | Context for logistics (e.g. "Neighbor with house key") |
 | `authorized_pickup_names` | Multiline text — one name per line; custody authorization. `CustomerOwnerForm.clean_authorized_pickup_names()` strips blank lines and surrounding spaces before save. |
 
@@ -120,14 +120,14 @@ Method: `advance_pipeline()` on dog screen — returns `False` (no write) if alr
 
 | Screen | URL | Contents |
 |--------|-----|----------|
-| Client list | `/clients/` | Compact dog rows (`Dog · Owner · phone`); filters and extra create links in disclosures. `?stage=` / `?vax=`. Orphans under **Dogs without a customer**. |
+| Client list | `/clients/` | **Owner-first.** One card per customer: name, phone, **View** → customer summary. Dogs nested under that owner with vax/pipeline badges and **Book** → visit create for that dog. Dog name links to dog detail. Filters in a disclosure. Orphans under **Dogs without a customer**. |
 | Create customer from dog | `POST /dogs/<id>/create-customer/` | `ensure_for_client()` for an orphan dog, then customer detail |
 | **New Client & Dog** | `/clients/intake/` | One POST: owner + first dog + vet + optional Meet & Greet (`IntakeWizardForm`). Atomic. M&G visit **skips** standard-stay Approved/vax/COI gate. Pipeline → Meet & Greet if times set, else Inquiry. |
 | Add customer | `/clients/add/` | Owner + emergency contacts — no dog |
-| Customer | `/customers/<id>/` | Profile card: name + **Edit** (opens the existing edit form), Call, emergency, email, **address visible** (maps, pickup). **COI:** if missing, warn + mark sent/received on this card; if received, a **✓** beside the name (tap to clear). Dogs compact. No More actions, no dedicated COI card. |
+| Customer | `/customers/<id>/` | Three labeled cards. **Primary owner contact:** name + Edit, phone + compact Call, email, address/maps, COI warn or **✓**. **Emergency & Pickups:** name labeled “Emergency contact”, yellow Call beside that phone, authorized pickup listed. **Dogs:** compact rows + Add dog. No More actions, no dedicated COI card, no SMS. |
 | Edit customer | `/customers/<id>/edit/` | Primary + structured address (street / unit / city / province / postal) + emergency |
 | Add dog | `/customers/<id>/add-dog/` | Dog profile + vet contacts; pipeline starts at Inquiry |
-| Dog | `/dogs/<id>/` | Name, Call owner, emergency-vet call (max two primary buttons). Visits compact + Schedule stay. Address, clinic, feed, Hide/vCard in `<details>`. |
+| Dog | `/dogs/<id>/` | Labeled cards (same policy as customer). **Dog:** name + Edit, owner + compact Call, drop-off address. **Veterinary:** emergency vet as one unit (yellow Call), clinic compact Call. **Visits** + Schedule stay. Feed / hide / vCard in disclosures. |
 | Hide / unhide dog | `POST /dogs/<id>/hide/` · `POST /dogs/<id>/unhide/` | Soft-hide from client list. Legacy `/dogs/<id>/delete/` aliases hide. |
 | Edit dog | `/dogs/<id>/edit/` | Dog profile + veterinary section |
 | Regenerate feed | `POST /dogs/<id>/feed/regenerate/` | New `feed_secret` — old links stop working |
@@ -218,7 +218,7 @@ Public feed view lives in `views/customer_feed.py` — not in this package.
 
 `CustomerOwnerFormTests`, `AddressHandlingTests`, `CognitiveLoadUXTests`, `DogProfileFormTests`, `IntakeWizardTests`, `ContactDataTests`, `CustomerEditTests`, `CustomerViewsHttpTests`, `ContactSyncTests`, `ComplianceTests`, `VaccinationExpiryViewTests`, `FeedSlugTests`, `CustomerFeedTests` in `operations/tests.py`.
 
-`CognitiveLoadUXTests` covers the customer **summary**: Edit beside the name, no More actions, address not in a disclosure, missing COI warning, received COI as **✓** (`title="COI on file"`). Keep those green if you touch `customer_detail.html`.
+`CognitiveLoadUXTests` covers the customer **summary** (labeled cards, Edit, COI ✓ / warning) and the **client list** (`test_client_list_is_owner_first_with_view_and_book`: owner `h2`, View, nested dog **Book**). Keep those green if you touch `customer_detail.html` or `client_list.html`.
 
 ---
 

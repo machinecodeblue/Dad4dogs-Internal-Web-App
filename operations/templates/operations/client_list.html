@@ -40,25 +40,34 @@
     </details>
 </div>
 
-<div class="card">
 {% for group in customers %}
+<div class="card">
+    <div class="card-head">
+        <div>
+            <h2>{{ group.owner.owner_name }}</h2>
+            {% if group.owner.owner_phone %}
+            <p class="muted" style="margin:0.15rem 0 0">{{ group.owner.owner_phone|phone_display }}</p>
+            {% endif %}
+        </div>
+        <a href="{% url 'operations:customer_detail' group.owner.pk %}" class="btn btn-outline btn-sm">View</a>
+    </div>
+    {% if group.dogs %}
+    <p class="muted" style="margin:0.5rem 0 0.25rem">Dogs</p>
     {% for dog in group.dogs %}
-    <a href="{% url 'operations:dog_detail' dog.pk %}" class="compact-row">
-        <span class="title">{{ dog.dog_name }}</span>
-        <span class="muted"> · {{ group.owner.owner_name }}</span>
+    <div class="compact-row split">
+        <a href="{% url 'operations:dog_detail' dog.pk %}" class="title">{{ dog.dog_name }}</a>
         {% include "operations/_pipeline_badge.html" %}
         {% include "operations/_vax_badge.html" %}
-        {% if group.owner.owner_phone %}
-        <br><span class="muted truncate">{{ group.owner.owner_phone|phone_display }}</span>
-        {% endif %}
-    </a>
-    {% empty %}
-    <a href="{% url 'operations:customer_detail' group.owner.pk %}" class="compact-row">
-        <span class="title">{{ group.owner.owner_name }}</span>
-        <span class="muted"> · no dogs</span>
-    </a>
+        <a href="{% url 'operations:visit_create' dog.pk %}" class="btn btn-outline btn-sm">Book</a>
+    </div>
     {% endfor %}
+    {% else %}
+    <p class="muted" style="margin-top:0.5rem">No dogs on file.</p>
+    <a href="{% url 'operations:customer_add_dog' group.owner.pk %}" class="btn btn-outline btn-sm" style="margin-top:0.35rem">Add dog</a>
+    {% endif %}
+</div>
 {% empty %}
+<div class="card">
     {% if current_stage or current_vax %}
         {% if not orphan_dogs %}
         <p class="muted">No clients match these filters.</p>
@@ -67,19 +76,19 @@
     <p class="muted">No clients yet.</p>
     <a href="{% url 'operations:client_intake' %}" class="btn btn-primary" style="margin-top:0.5rem">New Client &amp; Dog</a>
     {% endif %}
-{% endfor %}
 </div>
+{% endfor %}
 
 {% if orphan_dogs %}
 <div class="card">
     <h2>Dogs without a customer</h2>
     {% for dog in orphan_dogs %}
-    <div class="compact-row">
+    <div class="compact-row split">
         <span class="title">{{ dog.dog_name }}</span>
         <span class="muted truncate"> · {{ dog.owner_email }}</span>
         {% include "operations/_pipeline_badge.html" %}
         {% include "operations/_vax_badge.html" %}
-        <form method="post" action="{% url 'operations:dog_create_customer' dog.pk %}" style="margin-top:0.5rem">
+        <form method="post" action="{% url 'operations:dog_create_customer' dog.pk %}">
             {% csrf_token %}
             <button type="submit" class="btn btn-outline btn-sm">Create customer</button>
         </form>

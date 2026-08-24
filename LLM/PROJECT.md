@@ -41,7 +41,7 @@ A **Django 5 monolith** for David's single-user dog boarding operation (~25 repe
    - `billing.md` — statements
    - `admin.md` — business settings, baseline contact info, documents (planned)
    - `feed.md` — timeline capture, customer photo feed, speakable URLs
-3. **`platform.md`** — dev server, HTTPS, ngrok, Gmail OAuth, PWA, **cognitive-load UX rules**, testing. Any list/detail/dashboard/check-in template change must follow those rules.
+3. **`platform.md`** — dev server, HTTPS, ngrok, Gmail OAuth, PWA, **detail-screen labeled-card policy**, testing. Any customer/dog/list/dashboard/check-in template change must follow those rules.
 
 Do **not** treat `Proposed work/` or `Decisions/` as the live spec. Open proposals are evaluation-only; decided notes are history. Standing rules live in this file and the domain markdown.
 
@@ -201,12 +201,13 @@ $env:PUBLIC_SITE_URL = "https://your-subdomain.ngrok.app"
 
 1. Identify the **domain** before editing (customers / scheduling / billing / admin / platform).
 2. Open the matching `LLM/<domain>.md` file.
-3. Keep **mobile-first, one-handed** UX — no desktop-only patterns, no dashboard sprawl. Standing rules in `platform.md` (accepted from Decisions; do not re-read Proposed work as spec):
-   - Detail screens: ≤5 primary fields above the fold (name, tap-to-call mobile, emergency call). Customer **Edit** beside the name (existing edit form). Customer address/email stay visible. Customer **COI:** warn if missing; **✓** beside the name if received. Dog feed/hide/vCard stay in `<details>`.
-   - Client list: compact `Dog · Owner · badge · phone` rows. No nested cards. Filters in a disclosure if more than 2.
-   - ≤2 primary CTAs per card. Dangerous/admin actions in **More actions**.
-   - ≤2 badges, and only for work that still needs doing (no green OK / COMPLETED / OK VAX).
-   - List notes: one line + `.truncate`. Reuse `.compact-row`, `details.disclosure`, `.admin-drawer`.
+3. Keep **mobile-first, one-handed** UX. **Every detail screen** (customer, dog, future records) follows the **labeled-card policy** in `platform.md`:
+   - Each card is labeled by **job** (`.card-kicker` or `h2`). No untitled stacks of buttons.
+   - Name + **Edit** (existing form). Phones are `.phone-row` (number + compact Call beside the person they belong to). Emergency Call is yellow.
+   - Short facts stay visible (address). Admin (feed, hide, vCard) in **More actions**.
+   - Customer: **Primary owner contact**, **Emergency & Pickups**, **Dogs**. COI: warn if missing; **✓** if received.
+   - Dog: **Dog**, **Veterinary**, **Visits**. Drop-off on the Dog card. Emergency vet on Veterinary, not under the dog’s name.
+   - Client list is **owner-first**: one card per customer (View → summary). Dogs nest under the owner with **Book**. Do not flatten to `Dog · Owner · phone` rows.
 4. Visit booking stays **two free-text fields** (Start/End) — no multi-step pickers.
 5. No bulk Google contact import without preview + checkboxes.
 6. Extend `operations/services/` for new business logic.

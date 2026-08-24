@@ -407,7 +407,8 @@ class AddressHandlingTests(TestCase):
         response = self.client.get(reverse('operations:dog_detail', kwargs={'pk': dog.pk}))
         self.assertContains(response, '191 Grey Street')
         self.assertContains(response, 'Open in Maps')
-        self.assertContains(response, '<summary>Address</summary>')
+        self.assertContains(response, 'Drop-off address')
+        self.assertNotContains(response, '<summary>Address</summary>')
 
 
 class CognitiveLoadUXTests(TestCase):
@@ -433,11 +434,15 @@ class CognitiveLoadUXTests(TestCase):
         user = get_user_model().objects.create_user('david-ux', 'ux@example.com', 'pass')
         self.client.force_login(user)
 
-    def test_client_list_is_compact_dog_owner_rows(self):
+    def test_client_list_is_owner_first_with_view_and_book(self):
         response = self.client.get(reverse('operations:client_list'))
-        self.assertContains(response, 'class="compact-row"')
+        self.assertContains(response, f'<h2>{self.owner.owner_name}</h2>')
+        self.assertContains(response, reverse('operations:customer_detail', args=[self.owner.pk]))
+        self.assertContains(response, '>View<')
         self.assertContains(response, 'class="title">Kobe<')
-        self.assertContains(response, self.owner.owner_name)
+        self.assertContains(response, reverse('operations:dog_detail', args=[self.dog.pk]))
+        self.assertContains(response, reverse('operations:visit_create', args=[self.dog.pk]))
+        self.assertContains(response, '>Book<')
         self.assertContains(response, '(416) 555-0100')
         self.assertNotContains(response, 'class="badge badge-ok"')
         self.assertNotContains(response, '>COI<')
@@ -446,10 +451,14 @@ class CognitiveLoadUXTests(TestCase):
         self.dog.emergency_vet_phone = '5195559999'
         self.dog.save(update_fields=['emergency_vet_phone', 'updated_at'])
         response = self.client.get(reverse('operations:dog_detail', args=[self.dog.pk]))
-        self.assertContains(response, 'Call (416) 555-0100')
+        self.assertContains(response, 'card-kicker">Dog')
+        self.assertContains(response, '(416) 555-0100')
+        self.assertContains(response, '>Call<')
+        self.assertContains(response, '<h2>Veterinary</h2>')
         self.assertContains(response, 'Emergency vet')
+        self.assertContains(response, 'btn-warn')
         self.assertContains(response, 'Schedule stay')
-        self.assertContains(response, '<summary>Address</summary>')
+        self.assertContains(response, reverse('operations:dog_edit', args=[self.dog.pk]))
         self.assertContains(response, '<summary>More actions</summary>')
         self.assertContains(response, 'Hide dog')
 
@@ -480,12 +489,38 @@ class CognitiveLoadUXTests(TestCase):
         response = self.client.get(reverse('operations:customer_detail', args=[self.owner.pk]))
         self.assertContains(response, reverse('operations:customer_edit', args=[self.owner.pk]))
         self.assertContains(response, '>Edit<')
+        self.assertContains(response, 'Primary owner contact')
         self.assertContains(response, 'jane-ux@example.com')
         self.assertContains(response, 'COI not sent')
+        self.assertContains(response, '(416) 555-0100')
         self.assertNotContains(response, '<h2>Certificate of insurance</h2>')
         self.assertNotContains(response, '<summary>Address</summary>')
+        self.assertNotContains(response, '<h2>Emergency')
         self.assertNotContains(response, '<summary>More actions</summary>')
         self.assertNotContains(response, 'Back to Clients')
+
+    def test_customer_detail_emergency_contacts_are_in_one_disclosure(self):
+        self.owner.emergency_contact_name = 'Bob Neighbor'
+        self.owner.emergency_contact_phone = '4165550200'
+        self.owner.emergency_contact_relationship = 'Neighbor with house key'
+        self.owner.authorized_pickup_names = 'Bob Neighbor\nJane Sister'
+        self.owner.save()
+        response = self.client.get(reverse('operations:customer_detail', args=[self.owner.pk]))
+        self.assertContains(response, '<h2>Emergency &amp; Pickups</h2>')
+        self.assertContains(response, 'Emergency contact')
+        self.assertContains(response, 'Authorized pickup')
+        self.assertContains(response, 'Bob Neighbor')
+        self.assertContains(response, 'Neighbor with house key')
+        self.assertContains(response, 'tel:+14165550200')
+        self.assertContains(response, 'btn-warn')
+        self.assertContains(response, '(416) 555-0200')
+        self.assertContains(response, 'Jane Sister')
+        html = response.content.decode()
+        emergency_card = html.find('<h2>Emergency &amp; Pickups</h2>')
+        self.assertGreater(emergency_card, html.find('Primary owner contact'))
+        after = html[emergency_card:]
+        self.assertIn('btn-warn', after)
+        self.assertIn('(416) 555-0200', after)
 
     def test_customer_detail_received_coi_is_a_mark_beside_the_name(self):
         self.owner.mark_coi_received()

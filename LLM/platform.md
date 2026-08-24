@@ -72,18 +72,43 @@ Messages appear in Gmail **Sent Mail** for audit trail.
 - Cards, large touch targets, green brand (`#2d6a4f`)
 - Max content width ~600px centred
 
-### Cognitive load (one-handed, dogs in hand)
+### Detail screens (labeled cards) — standing policy
 
-**Standing rules** — accepted 2026-08-23 (original note in `Decisions/Gemini suggested UX cognitive overload guidelines.md`). New screens and template edits must follow these. Do not reintroduce wall-of-data cards. Change **this section** if the rules change; do not edit the Decisions archive.
+This is the expected look for **every record-detail screen** (customer, dog, and any future detail). Forms (intake, edit customer, edit dog, visit) stay as they are. Change **this section** if the pattern changes.
 
-**Progressive disclosure**
-- **Customer & dog detail:** never more than 5 primary data points above the fold. Top card: full name, tap-to-call primary mobile, emergency (vet or contact) tap-to-call. Customer **Edit** is a small control beside the name and routes to the existing edit form — do not in-place-edit the summary. Customer **address, email, pickup** stay visible (they are short; extra clicks cost more than scroll). Dog clinic/feed/hide stay in `<details>` / **More actions**.
-- **Customer COI:** proof, not a dashboard. Missing/awaiting = warning + actions on the profile card. Received = a **✓** beside the name only (tap to see date / clear). Do not give COI its own card.
-- **Client list (`/clients/`):** compact rows `Dog Name · Owner Name · Status Badge · Primary Phone`. Do not nest full cards with notes, feed links, or address previews. Tap the row to open dog (or customer) detail. Group search/filter controls in a disclosure if more than 2 filters are present.
+Each card has one job. A kicker (`.card-kicker`) or `h2` names that job so the purpose is obvious before you read the body. Do not ship an untitled stack of buttons.
+
+| Rule | How it looks |
+|------|----------------|
+| **Label** | `.card-kicker` or `h2` — Primary owner contact, Emergency & Pickups, Dog, Veterinary, Visits, Dogs |
+| **Identity** | Name + **Edit** (small, beside the name) opens the **existing edit form**. Not in-place editing. At most two actionable badges. |
+| **Phones** | Number and compact **Call** in `.phone-row`, next to the person or clinic they belong to. Owner Call is green `btn-primary btn-sm`. Emergency (person or vet) is yellow `btn-warn btn-sm`. No full-width Call stacked under the title. |
+| **Proximity** | Name + role + number + Call are one unit (e.g. “David — Emergency contact” then yellow Call). |
+| **Visible facts** | Short always-needed text stays visible (owner address on customer; drop-off address on dog). Extra clicks cost more than a little scroll. |
+| **Lists** | Compact rows. One header action (Add dog, Schedule stay). |
+| **Admin** | Feed, hide, vCard, regenerate, pipeline — **More actions**. Not a third primary button. |
+
+**Customer (`/customers/<id>/`)**
+- **Primary owner contact** — name, Edit, phone + Call, email, address/maps. COI missing = warning + mark sent/received. COI received = **✓** beside the name (tap to clear). No dedicated COI card.
+- **Emergency & Pickups** — own card. Emergency person labeled; yellow Call on *their* number. Authorized pickup listed and labeled.
+- **Dogs** — compact rows + Add dog.
+
+**Dog (`/dogs/<id>/`)**
+- **Dog** — name, Edit, pipeline/vax badges, owner name + owner Call in a phone-row, drop-off address if on file.
+- **Veterinary** — own card when vet data exists. Emergency vet is one unit (name + yellow Call). Clinic phone is a compact Call, not a second full-width button under the dog’s name.
+- **Visits** — compact rows + Schedule stay.
+- Photo feed and hide/vCard stay in disclosures / More actions.
+
+**Do not add SMS** unless David asks. Do not put a second Edit on every card — one Edit on the identity card is enough.
+
+**Client list (`/clients/`) — owner-first**
+- The page is **Clients**, so the **human** is the parent. One card per owner (name + phone + **View** → customer summary). Dogs nest under that owner. Do not flatten to dog-first run-on rows (`Dog · Owner · phone`).
+- Dog row: name (link to dog detail) + actionable badges + **Book** (visit create for that dog). Book answers “which dog?” Multi-dog households share one owner card.
+- Filters stay in a disclosure if more than 2. Extra create/sync links in **More**.
 
 **Action density**
-- At most **2 primary CTA buttons** visible at once per card (e.g. Call + Emergency, or Log Moment + Check Out).
-- Dangerous or admin actions (Hide dog, regenerate feed, vCard, iCal) belong in a grouped **More actions** drawer. Customer **Edit** is beside the name. COI mark-sent / confirm-received sit on the profile card **only while outstanding**; once received, **✓** beside the name (tap to clear).
+- At most **2 primary CTA buttons** visible at once per card (check-in: Log Moment + Check Out). Detail phones use compact `.phone-row` Calls instead of two full-width stacked buttons.
+- Dangerous or admin actions belong in **More actions**.
 
 **Visual noise**
 - At most **2 badges** per card. Only actionable states (expiring/missing vax, pipeline not Approved, CHECKED IN, COI not received on the *customer* screen). Do not show green OK badges for a normal state — no OK VAX, no COMPLETED, no capacity OK, no SENT.
@@ -92,7 +117,7 @@ Messages appear in Gmail **Sent Mail** for audit trail.
 **Where this lands today**
 - Dashboard agenda: compact rows; occupancy as `N / standard` from Settings (never a bare 0 for the ceiling); vax tiles only if count > 0; capacity **badge** only when warning/over; iCal in a disclosure.
 - Check-in: Check In, or Log Moment + Check Out; emergency (else clinic) as tap-to-call, not a third button.
-- Shared CSS in `base.html`: `.compact-row`, `.card-head`, `.truncate`, `details.disclosure`, `details.coi-mark`, `.admin-drawer`. Shared badges: `_pipeline_badge.html`, `_vax_badge.html` (warn/danger only).
+- Shared CSS in `base.html`: `.compact-row`, `.card-head`, `.card-kicker`, `.phone-row`, `.truncate`, `details.disclosure`, `details.coi-mark`, `.admin-drawer`. Shared badges: `_pipeline_badge.html`, `_vax_badge.html` (warn/danger only).
 
 ### Progressive Web App (PWA) — David's admin app only
 Install to home screen for standalone mode (no browser address bar). Customer feed is a normal web page — they can bookmark or add to home screen manually.
