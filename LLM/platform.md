@@ -74,7 +74,7 @@ Messages appear in Gmail **Sent Mail** for audit trail.
 
 ### Cognitive load (one-handed, dogs in hand)
 
-**Standing rules** — adopted from `Proposed work/Gemini suggested UX cognitive overload guidelines.md`. New screens and template edits must follow these. Do not reintroduce wall-of-data cards.
+**Standing rules** — accepted 2026-08-23 (original note in `Decisions/Gemini suggested UX cognitive overload guidelines.md`). New screens and template edits must follow these. Do not reintroduce wall-of-data cards. Change **this section** if the rules change; do not edit the Decisions archive.
 
 **Progressive disclosure**
 - **Customer & dog detail:** never more than 5 primary data points above the fold. Top card: full name, tap-to-call primary mobile, emergency (vet or contact) tap-to-call. Secondary details (full address, COI timestamps, pickup names, care caps, clinic, feed admin) go in native `<details>` or a **More actions** drawer.

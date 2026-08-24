@@ -1,0 +1,80 @@
+Your assessment of the current UI is spot on. Hiding frequent actions and essential client details behind multiple accordions creates unnecessary friction, especially for an internal operations tool where speed and visibility are critical.
+
+Here is a breakdown of how you can flatten the architecture and reorganize the interface to make it much more intuitive:
+
+### 1. Consolidate the Client Profile (Top Card)
+
+The topmost section should serve as the central hub for Kathleen’s details, completely eliminating the need for a separate "Address & contacts" accordion.
+
+* **Inline Edit Action:** Place a small, recognizable edit icon (like a pencil or gear) directly to the right of Kathleen Kelly's name. This replaces the "Edit customer" button currently hiding in the "More actions" menu.
+* **Unified Contact Info:** Below her name, display her most critical contact methods side-by-side or stacked cleanly. You already have the prominent **Call (519) 860-6810** button; you can place her email (`kathleeneak@gmail.com`) directly below it.
+* **Expandable Address:** Instead of a heavy accordion, use a simple, subtle chevron drop-down (e.g., "Show Address") within this top card to reveal her physical address only when needed.
+
+### 2. Streamline the Certificate of Insurance (COI)
+
+Since COI compliance is a key operational metric, it deserves a dedicated, fully visible card rather than an accordion.
+
+* **Surface the Details:** Display the complete lifecycle of the document directly on the card. Include the Sent date, Accepted date, and the Received date (December 5, 2026).
+* **Contextual Action Button:** Move the **[Clear COI confirmation]** button out of "More actions" and place it directly inside this COI card. Positioning it alongside the received date gives the button immediate, logical context.
+
+### 3. Eliminate the "More Actions" Accordion
+
+By moving the **[Edit customer]** trigger to the top card alongside Kathleen's name, and moving the **[Clear COI confirmation]** button to the COI card, the "More Actions" accordion becomes completely obsolete. Deleting it will instantly clean up the UI and reduce cognitive load.
+
+### 4. Maintain the "Dogs" Section
+
+The structure of the "Dogs" section works well. The **[VAX]** tag next to Nila is a great example of at-a-glance information. Keeping this section sandwiched between the Client Profile and the administrative COI details maintains a logical flow (Who is the client -> Who is the dog -> What is the administrative status).
+
+**Proposed Layout Hierarchy:**
+
+1. **Kathleen Kelly** `[ ✏️ Edit ]`
+* Call Button
+* Email
+* *v Show Address*
+
+
+2. **Dogs**
+* Nila `[ VAX ]`
+* `[ Add dog ]`
+
+
+3. **Certificate of Insurance**
+* Status: Received (Dec 5, 2026) / Sent: [Date] / Accepted: [Date]
+* `[ Clear COI confirmation ]`
+
+
+The "In-Place" Interaction
+The Trigger: The user clicks the small [ ✏️ Edit ] icon next to Kathleen Kelly's name at the top of the card.
+
+The Swap: The static text on that specific card instantly transforms into editable form fields.
+
+"Kathleen Kelly" becomes a text input box.
+
+The Call button and email address turn into input fields for phone and email.
+
+The address expands and becomes editable fields.
+
+The Actions: The edit icon disappears, and in its place (or at the bottom right of the card), two clear buttons appear: [ Save ] (primary styling, like your dark green) and [ Cancel ] (secondary/ghost styling).
+
+Why this is the best approach:
+Zero Context Switching: You keep your eyes on the exact same spot. The rest of the dashboard (like the Dogs section and the COI status) remains perfectly visible in the background in case you need to reference it while typing.
+
+Frictionless: It requires the absolute minimum number of clicks to make an update.
+
+Clean UI: You don't have empty form fields cluttering the screen when you are just trying to view the customer details.
+
+This approach keeps the interface acting like a clean, readable profile card 90% of the time, and a functional form only for the 10% of the time you actually need to update something.
+
+When we interact with the database, we already have a very good user interface built up in the editing of the customer profile. That doesn't need to change. 
+Tying it Back to the Summary Page
+Since this robust edit page already exists, the goal for your Customer Summary page (the previous UI) is simply to get you here with zero friction.
+
+You can still apply the core idea from the previous step:
+
+Ditch the "More Actions" menu.
+
+Place a clear [ ✏️ Edit ] button directly beside Kathleen Kelly's name on the summary page.
+
+When you click that button, it routes you directly to this exact http://localhost:8000/customers/2/edit/ page.
+
+This keeps the summary page clean for quick viewing, while giving you instant access to this detailed form when you actually need to update a phone number or add an emergency contact.

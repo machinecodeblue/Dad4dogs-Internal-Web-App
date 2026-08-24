@@ -43,6 +43,8 @@ A **Django 5 monolith** for David's single-user dog boarding operation (~25 repe
    - `feed.md` — timeline capture, customer photo feed, speakable URLs
 3. **`platform.md`** — dev server, HTTPS, ngrok, Gmail OAuth, PWA, **cognitive-load UX rules**, testing. Any list/detail/dashboard/check-in template change must follow those rules.
 
+Do **not** treat `Proposed work/` or `Decisions/` as the live spec. Open proposals are evaluation-only; decided notes are history. Standing rules live in this file and the domain markdown.
+
 Do **not** change pricing tiers, pipeline stages, or visit status guards unless David explicitly asks. Daily capacity (standard + insurance max) is edited on **Settings** — do not hardcode 8/10 in templates or `capacity.py` checks.
 
 ---
@@ -199,7 +201,7 @@ $env:PUBLIC_SITE_URL = "https://your-subdomain.ngrok.app"
 
 1. Identify the **domain** before editing (customers / scheduling / billing / admin / platform).
 2. Open the matching `LLM/<domain>.md` file.
-3. Keep **mobile-first, one-handed** UX — no desktop-only patterns, no dashboard sprawl. Standing rules in `platform.md` (source: `Proposed work/Gemini suggested UX cognitive overload guidelines.md`):
+3. Keep **mobile-first, one-handed** UX — no desktop-only patterns, no dashboard sprawl. Standing rules in `platform.md` (accepted from Decisions; do not re-read Proposed work as spec):
    - Detail screens: ≤5 primary fields above the fold (name, tap-to-call mobile, emergency call). Address, COI, pickup, feed admin, hide/vCard go in `<details>`.
    - Client list: compact `Dog · Owner · badge · phone` rows. No nested cards. Filters in a disclosure if more than 2.
    - ≤2 primary CTAs per card. Dangerous/admin actions in **More actions**.
@@ -226,4 +228,22 @@ $env:PUBLIC_SITE_URL = "https://your-subdomain.ngrok.app"
 | [`admin.md`](admin.md) | Business settings, baseline contact info, **daily capacity** (standard + insurance max), documents |
 | [`feed.md`](feed.md) | Staff timeline, customer feed, speakable URLs, access logging |
 | [`platform.md`](platform.md) | Dev environment, HTTPS, ngrok, PWA, Gmail, **cognitive-load UX**, testing |
-| [`Proposed work/Gemini suggested UX cognitive overload guidelines.md`](Proposed%20work/Gemini%20suggested%20UX%20cognitive%20overload%20guidelines.md) | Original UX constraints — adopted into `platform.md`; keep in sync if the rules change |
+| [`Proposed work/`](Proposed%20work/) | **Inbox of proposals** — evaluate only; not standing spec. Empty of a topic means that idea is not on the table. See `Proposed work/README.md`. |
+| [`Decisions/`](Decisions/) | **Archive** of accepted, rejected, or partial proposals. History only. Live rules stay in the domain files named in each Decision header. |
+
+---
+
+## 10. Proposed work and Decisions
+
+`LLM/Proposed work/` is a list of **ideas we might put in the app**. Read it only when David asks to evaluate a proposal. Do not code from it on a normal change.
+
+When a proposal is decided (yes, no, or partial):
+
+1. Write any accepted rules into the matching domain file (`platform.md`, `customers.md`, …). That file becomes the live spec.
+2. Move the markdown into `LLM/Decisions/`, keeping the original filename (no `accepted-` / `1_` prefixes).
+3. Add a **Decision** header at the top: status, what we took, what we left, why, and where the live spec lives.
+4. Delete it from Proposed work so the inbox only holds open ideas.
+
+Partial work uses the same folder: the header says **partial** and lists what landed vs what did not. Rejected notes also go here with status **rejected** — one archive, not two.
+
+Do not edit a Decisions file to change the product. Edit the domain file named in its header.
