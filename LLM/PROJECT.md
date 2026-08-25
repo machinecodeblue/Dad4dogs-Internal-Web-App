@@ -51,44 +51,52 @@ Do **not** change pricing tiers, pipeline stages, or visit status guards unless 
 
 ## 3. Domain Package Layout (Code)
 
-Code is organized by domain in **models**, **forms**, and **views**:
+All core layers (`views`, `models`, `forms`) must be organized as **modular Python packages**:
 
 ```
 operations/
 ├── models/
-│   ├── __init__.py       # re-exports all models
-│   ├── customers.py      # CustomerOwner (incl. structured address), ClientProfile, VaccinationRecord
-│   ├── scheduling.py     # VisitSeries, Visit, TimelineMediaAsset, VisitTimelineEvent, PendingCalendarEvent
-│   ├── billing.py        # AccountStatement
-│   └── business.py       # BusinessProfile (singleton)
+│   ├── init.py          # Re-exports all models
+│   ├── customers.py         # CustomerOwner, ClientProfile, VaccinationRecord
+│   ├── scheduling.py        # VisitSeries, Visit, TimelineMediaAsset, VisitTimelineEvent
+│   ├── billing.py           # AccountStatement
+│   └── business.py          # BusinessProfile (singleton)
 ├── forms/
-│   ├── __init__.py
-│   ├── customers.py      # CustomerOwnerForm (structured address), DogProfileForm, VaccinationRecordForm
-│   ├── intake.py         # IntakeWizardForm (new client & dog)
-│   ├── scheduling.py     # VisitForm, TimelineMomentForm, TimelineForwardForm
-│   └── business.py       # BusinessProfileForm
+│   ├── init.py          # Re-exports all forms
+│   ├── customers.py         # CustomerOwnerForm, DogProfileForm, VaccinationRecordForm
+│   ├── intake.py            # IntakeWizardForm (new client & dog)
+│   ├── scheduling.py        # VisitForm, TimelineMomentForm, TimelineForwardForm
+│   └── business.py          # BusinessProfileForm
 ├── views/
-│   ├── __init__.py       # urls.py imports from here
-│   ├── customers.py      # clients, dogs, COI, vax, contacts, feed link regenerate
-│   ├── scheduling.py     # dashboard, check-in, visits, timeline, calendar, iCal
-│   ├── customer_feed.py  # public customer photo feed
-│   ├── billing.py        # statements
-│   ├── business.py       # business_settings
-│   └── pwa.py            # manifest.webmanifest, sw.js
-├── services/             # business logic — prefer adding here over bloating views
+│   ├── init.py          # urls.py imports from here (re-exports all sub-packages)
+│   ├── customers/           # Domain package for customer workflows
+│   │   ├── init.py      # Re-exports clients, intake, vaccinations, actions
+│   │   ├── clients.py       # client_list, customer/dog detail, edits
+│   │   ├── intake.py        # client_intake, client_create, dog_create_customer
+│   │   ├── vaccinations.py  # dog_vaccinations, add_vaccination, validate_vaccination
+│   │   ├── contacts.py      # contact sync/export (legacy)
+│   │   └── actions.py       # dog_hide, dog_unhide, update_coi, pipeline, feed regenerate
+│   ├── scheduling/          # Dashboard, check-in, visits, calendar
+│   ├── customer_feed.py     # Public customer photo feed
+│   ├── billing.py           # Statements
+│   ├── business.py          # Business settings
+│   └── pwa.py               # manifest.webmanifest, sw.js
+├── services/                # Pure business logic — prefer adding here over bloating views
 │   ├── timeline_media.py, timeline_visits.py, geolocation.py
 │   ├── addresses.py, phones.py, feed_slugs.py, feed_access.py
-│   └── visit_email.py, gmail_send.py, …
-├── pricing.py            # tiered fee engine (scheduling domain)
-├── capacity.py           # daily dog count guards (scheduling domain)
+│   └── visit_email.py, gmail_send.py
+├── pricing.py               # Tiered fee engine (scheduling domain)
+├── capacity.py              # Daily dog count guards (scheduling domain)
 └── templates/operations/
-```
+├── includes/            # Reusable partials (navigation, social widgets, share sheets)
+└── 
+...
 
 **Rule for new code:** add to the matching domain file. If a file grows past ~200 lines, split further within that domain — do not merge domains.
 
 ---
 
-## 4. Project Tree (source only)
+## 4.1 Project Tree (source only)
 
 Regenerate with: `tree /F /A > project_schema.txt` from project root.
 
@@ -105,6 +113,28 @@ Dad4dogs Internal Web App/
 ├── manage.py
 └── requirements.txt
 ```
+
+---
+
+## 4.2 LLM Coding & Architectural Rules
+
+### Rule A: Directory Packages & Max File Length
+- If any file exceeds ~150 lines, split it into submodules within its domain directory package[cite: 3].
+- Always expose public functions, models, and forms in `__init__.py` so that external imports and `urls.py` remain uninterrupted[cite: 3].
+
+### Rule B: Template Modularity & Explicit Context Wiring
+- Base templates (`base.html`, `customer_base.html`) must remain minimal shells; navigation, alert messaging, PWA dialogs, and modals must live in `templates/operations/includes/`[cite: 2].
+- When including reusable action components (e.g., `moment_interactions.html`), **explicitly map all required endpoints** (`react_url`, `comment_url`, `asset_id`, etc.) via `{% include "..." with ... %}`. Never rely on implicit context or pass unmapped parent objects.
+
+### Rule C: Database & Query Performance
+- Views must not perform raw in-memory grouping loops (e.g., `defaultdict` over whole tables). Delegate complex filtering and aggregations to custom `QuerySet` / `Manager` methods or service modules[cite: 3].
+- Do **not** add multi-tenant foreign keys (`tenant_id`, `business_id`) to database models[cite: 3]. Multi-tenancy is handled via database-level isolation (one SQLite file per tenant)[cite: 3].
+
+### Rule D: Visit Status & Transition Guards
+- Transitions: `scheduled` → `checked_in` → `completed` (or `cancelled`).
+- `check_in()` only from `scheduled`; `check_out()` only from `checked_in` with no existing `calculated_fee`.
+- Illegal transitions raise `ValidationError`. Never bypass methods by setting timestamps directly in views. Correct late tap times only via `update_actual_times()`.
+- Do not pass `skip_capacity=True` except from `VisitForm.save_all()`.
 
 ---
 
@@ -198,23 +228,67 @@ $env:PUBLIC_SITE_URL = "https://your-subdomain.ngrok.app"
 
 ---
 
-## 8. LLM Session Checklist
+## 8. LLM Session Checklist & Architectural Rules
+
+### 8.1 LLM Session Checklist
 
 1. Identify the **domain** before editing (customers / scheduling / billing / admin / platform).
+
+
 2. Open the matching `LLM/<domain>.md` file.
+
+
 3. Keep **mobile-first, one-handed** UX. Standing rules in `platform.md`:
-   - **Lists** (clients, statements, pending calendar, agenda, nested dogs/visits): **minimize real estate**. Flat rows, hairline dividers, name is the link, text-link actions. No per-item cards. Check-in stays a working surface with large CTAs.
-   - **Detail screens** (customer, dog, future records) follow the **labeled-card policy**: each card named by job; Edit beside the name; `.phone-row` Calls; address visible; admin in More actions. Customer: Primary owner / Emergency & Pickups / Dogs. Dog: Dog / Veterinary / Visits.
-   - Client list specifically: dense owner-first (`Last, First`), browser search, text **Book**. No Customer-only or Google Sync on that page.
+
+
+* **Lists** (clients, statements, pending calendar, agenda, nested dogs/visits): **minimize real estate**. Flat rows, hairline dividers, name is the link, text-link actions. No per-item cards. Check-in stays a working surface with large CTAs.
+
+
+* **Detail screens** (customer, dog, future records) follow the **labeled-card policy**: each card named by job; Edit beside the name; `.phone-row` Calls; address visible; admin in More actions. Customer: Primary owner / Emergency & Pickups / Dogs. Dog: Dog / Veterinary / Visits.
+
+
+* Client list specifically: dense owner-first (`Last, First`), browser search, text **Book**. No Customer-only or Google Sync on that page.
+
+
+
+
 4. Visit booking stays **two free-text fields** (Start/End) — no multi-step pickers.
+
+
 5. No bulk Google contact import without preview + checkboxes.
+
+
 6. Extend `operations/services/` for new business logic.
+
+
 7. Add tests in `operations/tests.py` for pricing, capacity, forms, or imports you touch. Capacity occupancy/blocks must follow Settings (`capacity_limits()`), not hardcoded 8/10.
+
+
 8. Do not bypass `Visit.check_in()` / `check_out()` status guards. Correct late tap times only via `update_actual_times()` (not by assigning timestamps in a view).
+
+
 9. Do not re-run `full_clean()` / capacity on check-in, check-out, or actual-time correction saves.
+
+
 10. Do not pass `skip_capacity=True` except from `VisitForm.save_all()`.
+
+
 11. Never commit `O-Auth Key/`, `certs/`, or live client PII.
 
+
+
+---
+
+### 8.2 Architectural Guardrails & Coding Standards
+
+1. **Package Domain Structure:** Any file approaching ~150–200 lines must be split into a domain subdirectory package with an `__init__.py` re-export layer so external imports and `urls.py` routes remain uninterrupted.
+2. **Explicit Template Context Wiring:** Reusable action includes (e.g., `moment_interactions.html`) must receive all explicit endpoint variables (`react_url`, `comment_url`, `asset_id`, etc.) via `{% include ... with ... %}`. Never rely on implicit context inheritance for form actions.
+
+
+3. **Database-per-Tenant Isolation:** Build strictly for single-tenant SQLite execution. Never add `tenant_id`, `business_id`, or multi-tenant foreign keys to models. Multi-tenancy is handled exclusively via database-level isolation.
+
+
+4. **No In-Memory Table Aggregations:** Views must not perform raw grouping loops across whole tables (e.g., `defaultdict` over entire querysets). Delegate filtering, grouping, and aggregations to custom `QuerySet` / `Manager` methods or service modules.
 ---
 
 ## 9. Domain Instruction Files

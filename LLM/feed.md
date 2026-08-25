@@ -288,7 +288,6 @@ When `PUBLIC_SITE_URL` is set, `format_booking_confirmation()` appends the feed 
 | Comment moderation queue | David approves/hides comments — not needed at current scale |
 | `published` flag per moment | David approves before customer sees — not needed today |
 | Production media auth | Proxy or signed URLs so `/media/` is not wide open |
-| Feed template refactor | `customer_feed.html` could adopt shared includes (currently inline; share page uses includes) |
 
 ## 11. Architectural payoff — two circles, zero data bleed
 

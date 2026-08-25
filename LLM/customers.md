@@ -1,8 +1,8 @@
 # Domain: Customers
 
-**Covers:** owners, dogs, COI, vaccinations, emergency contacts, veterinary contacts, Google Contacts import, pipeline per dog.
+**Covers:** owners, dogs, COI, vaccinations, emergency contacts, veterinary contacts, Google Contacts import (legacy), pipeline per dog.
 
-**Code packages:** `operations/models/customers.py`, `forms/customers.py`, `views/customers.py`  
+**Code packages:** `operations/models/customers.py`, `forms/customers.py`, `operations/views/customers/` (`clients.py`, `intake.py`, `vaccinations.py`, `contacts.py`, `actions.py`, `__init__.py`)  
 **Services:** `operations/services/contacts.py`, `addresses.py`, `phones.py`, `feed_slugs.py`, `feed_access.py`  
 **Customer feed & social:** see [`feed.md`](feed.md) — private feed (react, comment, share) and public `/feed/share/<token>/` (re-share, download)
 
@@ -11,7 +11,7 @@
 ## 1. Data Model
 
 | Model | Key | Owns |
-|-------|-----|------|
+|---|---|---|
 | `CustomerOwner` | `owner_email` (unique) | COI, primary owner contact, emergency/pickup contacts |
 | `ClientProfile` | `owner_email` + `dog_name` (unique) | Pipeline, visits, notes, **per-dog vet contacts**, feed URL credentials |
 | `VaccinationRecord` | FK → `ClientProfile` | Vet papers, expiry, validation |
@@ -36,7 +36,7 @@ Operational contact data is split between **Owner Data** (`CustomerOwner`) and *
 ### 2.1 Primary Owner Contact (`CustomerOwner`)
 
 | Field | Purpose |
-|-------|---------|
+|---|---|
 | `owner_name` | Full name — billing, statements, waivers |
 | `owner_salutation` | Pronouns or salutation (optional) |
 | `owner_email` | Unique database key — stored lowercase; form rejects duplicates (`iexact`) instead of a 500 |
@@ -53,7 +53,7 @@ Display helpers on `CustomerOwner`: `formatted_address` (multiline), `address_on
 ### 2.2 Emergency & Secondary Contact (`CustomerOwner`)
 
 | Field | Purpose |
-|-------|---------|
+|---|---|
 | `emergency_contact_name` | Trusted fallback if primary owner unreachable |
 | `emergency_contact_phone` | Direct mobile — yellow Call on the **Emergency & Pickups** card, grouped with that person’s name; dog detail still has emergency **vet** |
 | `emergency_contact_relationship` | Context for logistics (e.g. "Neighbor with house key") |
@@ -64,7 +64,7 @@ Property: `authorized_pickup_list` — parsed non-empty stripped lines for templ
 ### 2.3 Medical & Veterinary Contact (`ClientProfile` — per dog)
 
 | Field | Purpose |
-|-------|---------|
+|---|---|
 | `vet_clinic_name` | Primary clinic (e.g. Grey Street Animal Hospital) |
 | `vet_name` | Doctor who knows the dog's history |
 | `vet_clinic_phone` | Tap-to-call in dog-detail Veterinary disclosure; check-in uses it if no emergency vet |
@@ -119,7 +119,7 @@ Method: `advance_pipeline()` on dog screen — returns `False` (no write) if alr
 ## 5. Screens & URLs
 
 | Screen | URL | Contents |
-|--------|-----|----------|
+|---|---|---|
 | Client list | `/clients/` | **Dense owner-first list** (not per-client cards). Search (client-side, owner + dog names). **+ New Client** → intake only (no Customer-only on this page). Stage/vax filters inline. Rows: `Last, First — phone`; dogs nested with badges + text **Book**. Owner name → customer summary. Google Contact Sync lives on **Settings**, not here. |
 | Create customer from dog | `POST /dogs/<id>/create-customer/` | `ensure_for_client()` for an orphan dog, then customer detail |
 | **New Client & Dog** | `/clients/intake/` | One POST: owner + first dog + vet + optional Meet & Greet (`IntakeWizardForm`). Atomic. M&G visit **skips** standard-stay Approved/vax/COI gate. Pipeline → Meet & Greet if times set, else Inquiry. |
@@ -133,10 +133,10 @@ Method: `advance_pipeline()` on dog screen — returns `False` (no write) if alr
 | Regenerate feed | `POST /dogs/<id>/feed/regenerate/` | New `feed_secret` — old links stop working |
 | Vaccinations | `/dogs/<id>/vaccinations/` | List, add, validate — dog only |
 | Check-in | `/checkin/` | Per-visit owner phone + emergency (or clinic) tap-to-call. **Check In**, or **Log Moment** + **Check Out**. Correct late tap arrival/departure via compact datetime fields (`update_actual_times`); completed visits stay listed under **Checked out today**. |
-| vCard export | `/clients/<id>/vcard/` | Per-dog `.vcf` for Google |
-| Contact sync | `/contacts/sync/` | CSV upload hub |
-| Import preview | `/contacts/import/` | Analysis before DB write |
-| Import confirm | `/contacts/import/add/` | POST selected rows |
+| vCard export | `/clients/<id>/vcard/` | Per-dog `.vcf` for Google (legacy) |
+| Contact sync | `/contacts/sync/` | CSV upload hub (legacy) |
+| Import preview | `/contacts/import/` | Analysis before DB write (legacy) |
+| Import confirm | `/contacts/import/add/` | POST selected rows (legacy) |
 
 ### Legacy redirects
 - `/clients/<dog_pk>/` → customer view for that dog's owner
@@ -144,7 +144,7 @@ Method: `advance_pipeline()` on dog screen — returns `False` (no write) if alr
 
 ### Client list badges (actionable only — no green OK; at most two per row)
 | Badge | When shown |
-|-------|------------|
+|---|---|
 | VAX + date (amber) | Current vax expires within 30 days |
 | VAX EXPIRED (red) | Latest validated record expired |
 | NO VAX (amber) | No validated record — do not label this `VAX` (that looks like papers are on file) |
@@ -157,7 +157,7 @@ Method: `advance_pipeline()` on dog screen — returns `False` (no write) if alr
 ## 6. Forms
 
 | Form | File | Purpose |
-|------|------|---------|
+|---|---|---|
 | `CustomerOwnerForm` | `forms/customers.py` | Primary + **structured address** (all-or-nothing except unit) + emergency + pickup; **phone required** and NANP-validated; email lowercased and unique; pickup names stripped of blank lines. On edit, empty structured fields are prefilled from `parse_legacy_address(home_address)` — never dump a multiline blob into the street input. Empty province is `''`; aliases (`Ontario`) coerce to `ON`. |
 | `DogProfileForm` | `forms/customers.py` | Dog name via `is_valid_dog_name()`; duplicate `dog_name` error is on that field; vet phones NANP-validated. `save()` copies owner name/email/phone (resolves owner on edit if omitted) and always runs `ensure_feed_credentials(save=False)` so `commit=False` callers still get a secret/slug on the instance. |
 | `VaccinationRecordForm` | `forms/customers.py` | `fixed_client` pins the dog (POST cannot swap); `expires_at >= received_at`; `papers_received` checkbox `required=False` (unchecked = False); past expiry still saves with a warning |
@@ -165,9 +165,9 @@ Method: `advance_pipeline()` on dog screen — returns `False` (no write) if alr
 
 ---
 
-## 7. Google Contacts Import
+## 7. Google Contacts Import (Legacy / Deprecated)
 
-**Never auto-import the full CSV.** Preview first, David selects rows.
+**Never auto-import the full CSV.** Preview first, David selects rows. *Note: Native intake via `/clients/intake/` is the standard onboarding route.*
 
 ### Flow
 1. Export from Google as CSV (`Data samples/google_contacts.csv` = format reference)
@@ -175,18 +175,6 @@ Method: `advance_pipeline()` on dog screen — returns `False` (no write) if alr
 3. `contacts.py` parses + analyzes → session key `contact_import_analysis`
 4. Preview: name flags, duplicates, editable owner/dog/phone fields
 5. POST selected rows → creates `CustomerOwner`; `ClientProfile` only if `is_valid_dog_name()`
-
-### Import principles
-- Person-shaped name with no dog in notes → **customer only** (`CUSTOMER ONLY` badge)
-- Email matches existing customer with no dogs → `CUSTOMER ON FILE`
-- Never create a dog from owner's first name
-- Flag unreliable names in **Names to Verify** section
-- Emergency/vet fields are filled in manually after import — not parsed from Google CSV today
-
-### Export (Dad4dogs → Google)
-- Per dog vCard at `/clients/<id>/vcard/`
-- Includes `NOTE: Dog: <name>`
-- Includes `ADR;TYPE=HOME` from the owner's structured address when present
 
 ### Key service functions (`contacts.py`)
 `parse_google_csv`, `analyze_import`, `import_selected_contacts`, `build_vcard`, `is_valid_dog_name`, `assess_name_quality`
@@ -200,15 +188,20 @@ Method: `advance_pipeline()` on dog screen — returns `False` (no write) if alr
 
 ---
 
-## 8. Views (customers.py)
+## 8. Views (`operations/views/customers/`)
 
 Every view declares allowed methods (`@require_GET`, `@require_POST`, or `@require_http_methods(['GET', 'POST'])`). Wrong verbs return **405**.
+
+Views are organized by domain responsibility inside the `operations/views/customers/` directory package:
+- `clients.py`: `client_list`, `customer_detail`, `dog_detail`, `customer_edit`, `dog_edit`, `customer_add_dog`
+- `intake.py`: `client_intake`, `client_create`, `dog_create_customer`
+- `vaccinations.py`: `dog_vaccinations`, `add_vaccination`, `validate_vaccination`
+- `contacts.py`: `contact_sync`, `contact_import_preview`, `contact_import_selected`, `client_vcard` (legacy sync/export)
+- `actions.py`: `dog_hide`, `dog_unhide`, `advance_pipeline`, `update_coi`, `dog_feed_regenerate`, plus legacy redirects
 
 GET paths do **not** call `ensure_for_client()` or `ensure_feed_credentials()`. Missing owner → 404. `customer_edit` captures `old_email` **before** `is_valid()` (Django mutates the instance during model validation), then wraps owner save + dog denormalized copy in `transaction.atomic()`.
 
 `?stage=` must be a `PipelineStage` value or it is ignored (same as invalid `?vax=`). vCard filenames keep only `A-Za-z0-9_-`. Import `selected_rows` skip non-integers instead of 500.
-
-`client_list`, `client_create`, `customer_edit`, `customer_detail`, `customer_add_dog`, `dog_edit`, `dog_detail`, `dog_delete`, `dog_create_customer`, `dog_feed_regenerate`, `dog_vaccinations`, `update_coi`, `add_vaccination`, `validate_vaccination`, `advance_pipeline`, `contact_sync`, `contact_import_preview`, `contact_import_selected`, `client_vcard`, plus legacy redirects.
 
 Public feed view lives in `views/customer_feed.py` — not in this package.
 
@@ -225,7 +218,7 @@ Public feed view lives in `views/customer_feed.py` — not in this package.
 ## 10. Migrations
 
 | Migration | Contents |
-|-----------|----------|
+|---|---|
 | `0003_owner_coi_and_vax_expiry` | `CustomerOwner` + COI migration |
 | `0014_owner_emergency_and_vet_contacts` | Owner emergency/pickup + per-dog vet fields |
 | `0017_structured_home_address` | `address_street` / `unit` / `city` / `province` / `postal_code`; copies legacy `home_address` via `parse_legacy_address()` |
@@ -239,6 +232,5 @@ Public feed view lives in `views/customer_feed.py` — not in this package.
 - PDF/image upload for vet papers
 - Email/SMS reminders before `expires_at` — dashboard counts + `/clients/?vax=expiring` are done; outbound notify is not
 - Hard block scheduling until compliance + contact completeness — **partially done**: `VisitForm` create requires Approved + current vax + COI received (`standard_stay_blockers()`). Clone and calendar import still ungated. No emergency-phone / contact-completeness gate yet. Expiring (still current) dogs are **not** blocked — chase papers via the 30-day list.
-- Live Google People API sync (file-based CSV only today)
 - Multiple emergency contacts per owner (single fallback contact today)
 - PWA push to `owner_phone` on new photos (phone field is the hook)
