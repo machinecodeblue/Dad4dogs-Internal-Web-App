@@ -208,6 +208,26 @@ Get-ChildItem -Recurse -Directory -Filter "__pycache__" | Remove-Item -Recurse -
 
 ---
 
+### Template Architecture & Anti-Monolith Rules
+
+To prevent template bloat, avoid "God scripts," and ensure browser-level CSS caching, adhere to the following decomposition standards:
+
+- **No Massive Inline Styles or Scripts:** Never embed large CSS blocks or multi-function JavaScript listeners directly inside root layout templates (`base.html`, `customer_base.html`).
+  - Component and layout styles belong in static stylesheets (`operations/static/operations/css/app.css`).
+  - PWA-specific install and platform overlay styles belong in `pwa-install.css` (or partitioned inside `app.css`).
+  - Isolated DOM behaviors (e.g., slide-out navigation drawers, modals) belong in standalone JS files (`operations/static/operations/js/`).
+
+- **Modular Template Partials (`includes/`):** Break shared or repetitive HTML structures out of parent templates into partial includes prefixed with an underscore or descriptive name:
+  - `_header_nav.html` — App-wide sticky header, brand link, and drawer menu.
+  - `_messages.html` — Django flash alert message rendering.
+  - `_pwa_install_modals.html` — Android fallback guide and iOS Safari "Add to Home Screen" overlay DOM.
+  - `includes/moment_interactions.html`, `includes/share_sheet.html`, etc. — Shared social reaction bars, share sheets, and interactive scripts shared between private customer feeds and public share pages.
+
+- **Root Template Footprint:** `base.html` must serve strictly as a structural skeleton (~45–60 lines max), orchestrating block definitions (`{% block content %}`, `{% block extra_head %}`), meta tags, static asset links, and modular includes.
+
+
+---
+
 ## 6. Authentication & Security
 
 - `LOGIN_URL` = `/admin/login/`
