@@ -1,0 +1,43 @@
+<div id="custom-install-banner" class="hidden" data-mode="android" role="region" aria-label="Install Dad4dogs app">
+    <button type="button" id="custom-install-dismiss" class="install-banner-dismiss" aria-label="Dismiss install prompt">×</button>
+    <div class="install-banner-body">
+        <div class="install-banner-leading">
+            <svg class="install-banner-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+            </svg>
+            <div class="install-banner-text">
+                <h2>Install Dad4dogs App</h2>
+                <p id="install-banner-subtitle">Open check-in and operations from your home screen — no browser bar.</p>
+            </div>
+        </div>
+        <button type="button" id="custom-install-btn" class="install-cta-btn hidden">INSTALL</button>
+        <button type="button" id="guide-install-btn" class="install-cta-btn hidden">INSTALL</button>
+    </div>
+</div>
+
+<div id="android-install-overlay" class="hidden install-guide-overlay" role="dialog" aria-modal="true" aria-labelledby="android-install-title">
+    <div class="ios-install-card">
+        <h2 id="android-install-title">Install on Android</h2>
+        <p class="muted">If the one-tap prompt did not appear, use Chrome's menu:</p>
+        <ol class="ios-install-steps">
+            <li>Tap the <strong>⋮</strong> menu (top-right in Chrome).</li>
+            <li>Tap <strong>Install app</strong> or <strong>Add to Home screen</strong>.</li>
+            <li>Confirm — Dad4dogs opens full-screen from your home screen.</li>
+        </ol>
+        <button type="button" id="android-install-overlay-dismiss" class="btn btn-primary" style="margin-top:0.75rem">Got it</button>
+    </div>
+</div>
+
+<div id="ios-install-overlay" class="hidden install-guide-overlay" role="dialog" aria-modal="true" aria-labelledby="ios-install-title">
+    <div class="ios-install-card">
+        <h2 id="ios-install-title">Install on iPhone</h2>
+        <p class="muted">Safari does not allow one-tap install — use Apple's Add to Home Screen flow:</p>
+        <ol class="ios-install-steps">
+            <li>Tap the <strong>Share</strong> icon (box with arrow pointing up) at the bottom of Safari.</li>
+            <li>Scroll down and tap <strong>Add to Home Screen</strong>.</li>
+            <li>Tap <strong>Add</strong> — Dad4dogs opens full-screen like a native app.</li>
+        </ol>
+        <div class="ios-install-arrow" aria-hidden="true">↓</div>
+        <button type="button" id="ios-install-overlay-dismiss" class="btn btn-primary" style="margin-top:0.75rem">Got it</button>
+    </div>
+</div>

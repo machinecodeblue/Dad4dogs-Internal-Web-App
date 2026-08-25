@@ -1,0 +1,24 @@
+{% with url_name=request.resolver_match.url_name|default:'' %}
+<header class="app-header">
+    <div class="app-header-row">
+        <a href="{% url 'operations:dashboard' %}" class="app-brand{% if url_name == 'dashboard' %} active{% endif %}">Dad4dogs</a>
+        <nav class="app-primary-nav" aria-label="Primary">
+            <a href="{% url 'operations:mobile_checkin' %}" class="{% if url_name == 'mobile_checkin' or 'timeline' in url_name %}active{% endif %}">Check-In</a>
+            <a href="{% url 'operations:client_list' %}" class="{% if 'client' in url_name or 'customer' in url_name or 'dog_' in url_name or 'visit_' in url_name or 'vaccination' in url_name %}active{% endif %}">Clients</a>
+        </nav>
+        <button type="button" class="nav-menu-toggle" id="nav-menu-toggle" aria-expanded="false" aria-controls="nav-drawer" aria-label="Open menu">☰</button>
+    </div>
+</header>
+
+<div id="nav-drawer-backdrop" class="nav-drawer-backdrop hidden" hidden></div>
+<nav id="nav-drawer" class="nav-drawer hidden" hidden aria-label="More">
+    <div class="nav-drawer-head">
+        <strong>More</strong>
+        <button type="button" class="nav-drawer-close" id="nav-drawer-close" aria-label="Close menu">×</button>
+    </div>
+    <a href="{% url 'operations:statements' %}" class="{% if 'statement' in url_name %}active{% endif %}">Billing</a>
+    <a href="{% url 'operations:business_settings' %}" class="{% if url_name == 'business_settings' %}active{% endif %}">Settings</a>
+    <a href="{% url 'operations:pending_events' %}" class="{% if 'pending' in url_name or 'event' in url_name %}active{% endif %}">Calendar pending</a>
+    <a href="{% url 'operations:contact_sync' %}" class="{% if 'contact' in url_name %}active{% endif %}">Contacts</a>
+</nav>
+{% endwith %}
