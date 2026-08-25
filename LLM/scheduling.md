@@ -2,7 +2,7 @@
 
 **Covers:** visits, repeat series, dashboard agenda, check-in/out, pricing, capacity, calendar sync, booking confirmation email.
 
-**Code packages:** `operations/models/scheduling.py`, `forms/scheduling.py`, `views/scheduling.py`  
+**Code packages:** `operations/models/scheduling.py`, `forms/scheduling.py`, `operations/views/scheduling/` (`dashboard.py`, `checkin.py`, `visits.py`, `timeline.py`, `calendar.py`, `helpers.py`, `__init__.py`)  
 **Root modules:** `operations/pricing.py`, `operations/capacity.py`  
 **Services:** `agenda.py`, `datetime_parse.py`, `visit_repeat.py`, `visit_email.py`, `gmail_send.py`, `ical_feed.py`, `gmail_sync.py`, `timeline_media.py`, `timeline_visits.py`, `geolocation.py`  
 **Customer feed:** see [`feed.md`](feed.md) — public read-only view of timeline media
@@ -142,25 +142,27 @@ Updates/cancellations (METHOD:UPDATE/CANCEL) — not yet built
 
 ## 3. URLs
 
-Every view in `views/scheduling.py` declares allowed methods (`@require_GET`, `@require_POST`, or `@require_http_methods(['GET', 'POST'])`). Wrong verbs return **405**.
+Every view declares allowed methods (`@require_GET`, `@require_POST`, or `@require_http_methods(['GET', 'POST'])`). Wrong verbs return **405**.
 
 | Path | Methods | Purpose |
 |------|---------|---------|
 | `/` | GET | Dashboard — month calendar + daily agenda |
 | `/checkin/` | GET | Mobile check-in/out |
+| `/checkin/feed-activity/` | GET | JSON poll — live customer reactions/comments |
 | `/dogs/<id>/visits/add/` | GET, POST | Schedule visit (+ repeat + clone) |
 | `/visits/<id>/edit/` | GET, POST | Edit scheduled visit only |
-| `/visits/<id>/send-confirmation/` | POST — `send_booking_confirmation` for this visit if `confirmation_email_sent_at` is null |
-| `/visits/<id>/delete/` | POST | scheduled only |
+| `/visits/<id>/send-confirmation/` | POST | Send booking confirmation email |
+| `/visits/<id>/delete/` | POST | Delete scheduled visit only |
 | `/visits/parse-datetime/` | GET | JSON parse preview |
-| `/visits/<id>/check-in/` | POST — `check_in()`; illegal status → error message, no write |
-| `/visits/<id>/check-out/` | POST — `check_out()` + fee; illegal status → error message, no write |
-| `/visits/<id>/actual-times/` | POST — `update_actual_times()`; correct arrival (checked-in) or arrival+departure (completed); recalculates fee when completed |
-| `/visits/<id>/timeline/` | Log moment (photo/video) while checked in |
-| `/visits/<id>/timeline/<event>/forward/` | POST — share moment to other checked-in dogs |
-| `/calendar/pending/` | Dense list of imported events (Approve/Reject as `btn-sm` on the row). Not one padded card per event. |
-| `/ical/` | Public read-only iCal feed (David's calendar) |
-| `/feed/<secret>/<dog>/` | Public customer photo feed — see `feed.md` |
+| `/visits/<id>/check-in/` | POST | `check_in()`; illegal status → error message, no write |
+| `/visits/<id>/check-out/` | POST | `check_out()` + fee; illegal status → error message, no write |
+| `/visits/<id>/actual-times/` | POST | `update_actual_times()`; correct arrival (checked-in) or arrival+departure (completed) |
+| `/visits/<id>/timeline/` | GET, POST | Log moment (photo/video) while checked in |
+| `/visits/<id>/timeline/<event>/forward/` | POST | Share moment to other checked-in dogs |
+| `/calendar/pending/` | GET | Dense list of imported events |
+| `/calendar/pending/<id>/approve/` | POST | Approve calendar event → create visit |
+| `/calendar/pending/<id>/reject/` | POST | Reject calendar event |
+| `/ical/` | GET | Public read-only iCal feed (David's calendar) |
 
 ---
 
@@ -326,12 +328,16 @@ Do not call `full_clean()` from `check_in()` / `check_out()`. Do not pass `skip_
 
 ---
 
-## 9. Forms & Views Files
+## 9. Code Package Layout (`operations/views/scheduling/`)
 
-| File | Contents |
-|------|----------|
-| `forms/scheduling.py` | `VisitForm` (parse + repeat + capacity in `clean()`), `VisitScheduleForm` alias |
-| `views/scheduling.py` | `dashboard`, `mobile_checkin`, `visit_*`, `visit_timeline*` (shared forward-target queryset on GET), `pending_events`, `parse_datetime_field`, `ical_feed` |
+Views are organized by responsibility inside the directory package:
+- `dashboard.py`: `dashboard`, `parse_datetime_field`, `ical_feed`
+- `checkin.py`: `mobile_checkin`, `checkin_feed_activity`, `visit_check_in`, `visit_check_out`, `visit_update_actual_times`
+- `visits.py`: `visit_create`, `duplicate_visit`, `visit_edit`, `visit_send_confirmation`, `visit_delete`
+- `timeline.py`: `visit_timeline`, `visit_timeline_forward`
+- `calendar.py`: `pending_events`, `approve_pending_event`, `reject_pending_event`
+- `helpers.py`: `apply_visit_form_errors`, `form_error_message`, `parse_local_datetime_input`
+- `__init__.py`: Re-exports all public view functions for stable URL resolution
 
 ---
 
