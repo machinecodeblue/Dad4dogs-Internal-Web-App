@@ -107,10 +107,10 @@ from operations.services.contacts import (
     build_vcard,
     import_selected_contacts,
     is_valid_dog_name,
-    normalize_phone,
     parse_google_csv,
     suggest_client_fields,
 )
+from operations.services.phones import normalize_phone
 from operations.services.statements import format_statement_email
 
 TZ = ZoneInfo('America/Toronto')

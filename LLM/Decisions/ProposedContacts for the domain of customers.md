@@ -1,3 +1,13 @@
+# Decision
+
+- **Status:** accepted
+- **Live spec:** LLM/contacts.md (package map + API); LLM/customers.md points here for import/vCard
+- **What we took:** operations/services/contacts/ modular package layout; stable __init__ re-exports
+- **What we left:** Did not fold addresses/phones into contacts/; views remain under iews/customers/contacts.py
+- **Why:** Keep Google import/vCard logic auditable and aligned with applicationphilosophy without bloating customers.md
+
+---
+
 # This document is a proposal for the contact services, which is part of the customer's domain. 
 
 ##  1. Deployment package 

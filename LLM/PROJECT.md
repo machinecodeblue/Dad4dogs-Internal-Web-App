@@ -42,7 +42,8 @@ Detail 
 2. **applicationphilosophy.md** — how we shape code (small files, domain packages, no god modules). Read before structural or large feature work.
 3. **Domain file** for the area you are changing: 
 
-  * customers.md — owners, dogs, COI, vax, contacts
+  * customers.md — owners, dogs, COI, vax, emergency/vet contacts
+  * contacts.md — Google CSV import + vCard service package (`services/contacts/`)
   * scheduling.md — visits, agenda, check-in/out guards, pricing, email confirmations
   * billing.md — statements; portable SQLite export (future)
   * admin.md — business settings, baseline contact info, documents (planned)
@@ -100,11 +101,16 @@ operations/
 │   ├── business.py      # Business settings
 │   └── pwa.py           # manifest.webmanifest, sw.js
 ├── services/            # Pure business logic — prefer adding here over bloating views
-│   ├── timeline_media.py, timeline_visits.py, geolocation.py
+│   ├── timeline_media/  # staff capture: imaging, assets, attach, moments
+│   ├── timeline_visits.py, geolocation.py
+│   ├── feed_interactions/  # reactions, comments, sharing, check-in poll
+│   ├── contacts/        # Google CSV import + vCard (see contacts.md)
+│   │   ├── __init__.py, schemas.py, parsers.py, heuristics.py
+│   │   ├── matching.py, importers.py, session.py, vcard.py
 │   ├── addresses.py, phones.py, feed_slugs.py, feed_access.py
-│   ├── feed_interactions.py, feed_emojis.py, share_preview.py, statements.py
+│   ├── feed_emojis.py, share_preview.py, statements.py
 │   ├── context_tenant.py # get_active_workspace() single-operator bridge
-│   ├── pricing_engine.py # catalog fee stub — NOT wired to checkout yet
+│   ├── pricing_engine.py # catalog fees (DOG boarding parity with pricing.py)
 │   └── visit_email.py, gmail_send.py, gmail_sync.py
 ├── pricing.py           # Tiered fee engine (scheduling domain)
 ├── capacity.py          # Daily dog count guards (scheduling domain)
@@ -288,7 +294,8 @@ $env:PUBLIC_SITE_URL = ""
 
 | File | Contents |
 |---|---|
-| customers.md | Owners, dogs, COI, vaccinations, contacts import |
+| customers.md | Owners, dogs, COI, vaccinations, emergency/vet contacts, pipeline UI |
+| contacts.md | Google CSV import + vCard — `operations/services/contacts/` package |
 | scheduling.md | Visits, repeat, dashboard, check-in/out status guards, pricing, capacity limits from Settings, calendar, booking email |
 | billing.md | Weekly statements, checkout totals; `views/billing/` scaffolding; portable SQLite export (future); full cycle waits on services |
 | admin.md | Business settings, baseline contact info, daily capacity (standard + insurance max), documents |

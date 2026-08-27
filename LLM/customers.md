@@ -1,9 +1,9 @@
 # Domain: Customers
 
-**Covers:** owners, dogs, COI, vaccinations, emergency contacts, veterinary contacts, Google Contacts import (legacy), pipeline per dog.
+**Covers:** owners, dogs, COI, vaccinations, emergency contacts, veterinary contacts, pipeline per dog; Google Contacts import / vCard — see **[`contacts.md`](contacts.md)**.
 
 **Code packages:** `operations/models/customers.py`, `forms/customers.py`, `operations/views/customers/` (`clients.py`, `intake.py`, `vaccinations.py`, `contacts.py`, `actions.py`, `__init__.py`)  
-**Services:** `operations/services/contacts.py`, `addresses.py`, `phones.py`, `feed_slugs.py`, `feed_access.py`  
+**Services:** `operations/services/contacts/` (package — see `contacts.md`), `addresses.py`, `phones.py`, `feed_slugs.py`, `feed_access.py`  
 **Customer feed & social:** see [`feed.md`](feed.md) — private feed (react, comment, share) and public `/feed/share/<token>/` (re-share, download)
 
 ---
@@ -165,26 +165,20 @@ Method: `advance_pipeline()` on dog screen — returns `False` (no write) if alr
 
 ---
 
-## 7. Google Contacts Import (Legacy / Deprecated)
+## 7. Google Contacts Import & vCard
 
-**Never auto-import the full CSV.** Preview first, David selects rows. *Note: Native intake via `/clients/intake/` is the standard onboarding route.*
+**Standing package spec:** [`contacts.md`](contacts.md) (layout, public API, flows).
 
-### Flow
-1. Export from Google as CSV (`Data samples/google_contacts.csv` = format reference)
-2. Upload at `/contacts/sync/`
-3. `contacts.py` parses + analyzes → session key `contact_import_analysis`
-4. Preview: name flags, duplicates, editable owner/dog/phone fields
-5. POST selected rows → creates `CustomerOwner`; `ClientProfile` only if `is_valid_dog_name()`
+**Never auto-import the full CSV.** Preview first; David selects rows. Native intake via `/clients/intake/` is the standard onboarding route; Contacts sync remains available from **Settings**.
 
-### Key service functions (`contacts.py`)
-`parse_google_csv`, `analyze_import`, `import_selected_contacts`, `build_vcard`, `is_valid_dog_name`, `assess_name_quality`
+Quick flow: Google CSV → `/contacts/sync/` → preview `/contacts/import/` → POST selected → owners (+ dogs only when `is_valid_dog_name()`). vCard: `/clients/<id>/vcard/`.
 
 ### Address helpers (`addresses.py`)
 `format_address`, `normalize_postal_code`, `normalize_province`, `parse_legacy_address`, `maps_search_url` — Canadian postal + province only.
 
 ### Phone helpers (`phones.py`)
 `normalize_phone` (digits, strip leading `1`), `validate_phone` (require 10-digit NANP; area/exchange cannot start with 0 or 1), `format_phone` (`(416) 555-0100`), `tel_href` (`tel:+14165550100`), `e164`.  
-`NanpPhoneFormMixin` applies this to `owner_phone` (required), `emergency_contact_phone`, `vet_clinic_phone`, `emergency_vet_phone`. Empty optional phones stay empty. Import still uses `normalize_phone` for duplicate matching; stored import phones are validated when they look like NANP.
+`NanpPhoneFormMixin` applies this to `owner_phone` (required), `emergency_contact_phone`, `vet_clinic_phone`, `emergency_vet_phone`. Empty optional phones stay empty. Import matching uses `normalize_phone`; see `contacts.md` for package details.
 
 ---
 
@@ -196,7 +190,7 @@ Views are organized by domain responsibility inside the `operations/views/custom
 - `clients.py`: `client_list`, `customer_detail`, `dog_detail`, `customer_edit`, `dog_edit`, `customer_add_dog`
 - `intake.py`: `client_intake`, `client_create`, `dog_create_customer`
 - `vaccinations.py`: `dog_vaccinations`, `add_vaccination`, `validate_vaccination`
-- `contacts.py`: `contact_sync`, `contact_import_preview`, `contact_import_selected`, `client_vcard` (legacy sync/export)
+- `contacts.py`: `contact_sync`, `contact_import_preview`, `contact_import_selected`, `client_vcard` — thin views; logic in `services/contacts/` (`contacts.md`)
 - `actions.py`: `dog_hide`, `dog_unhide`, `advance_pipeline`, `update_coi`, `dog_feed_regenerate`, plus legacy redirects
 
 GET paths do **not** call `ensure_for_client()` or `ensure_feed_credentials()`. Missing owner → 404. `customer_edit` captures `old_email` **before** `is_valid()` (Django mutates the instance during model validation), then wraps owner save + dog denormalized copy in `transaction.atomic()`.

@@ -10,9 +10,33 @@
 - `operations/views/feed/` — customer feed + public share (`private.py`, `public.py`, `helpers.py`, `__init__.py`)
 - `operations/views/customers/actions.py` — `dog_feed_regenerate` (staff)
 
-**Services:** `timeline_media.py`, `timeline_visits.py`, `geolocation.py`, `feed_slugs.py`, `feed_access.py`, `feed_interactions.py`, `feed_emojis.py`, `share_preview.py`  
+**Services:** see package maps below  
 **Templates:** `visit_timeline.html` (staff), `customer_feed.html`, `public_photo_share.html`, `customer_base.html` (public)  
 **Includes:** `includes/moment_interactions.html`, `moment_social_styles.html`, `share_sheet.html`, `share_sheet_script.html`, `comment_panel_script.html`
+
+### Dual purpose (keep both in mind)
+
+| Purpose | Surfaces | Notes |
+|---------|----------|--------|
+| **Client engagement** | Private feed + public share tokens | Reactions, comments, OG share — no passwords |
+| **Contemporaneous audit** | Staff timeline capture | GPS + `captured_at`; immutable `TimelineMediaAsset`; status guards |
+
+### Service packages
+
+```
+operations/services/timeline_media/
+├── __init__.py      # create_photo/video_asset, log_moment, forward, …
+├── errors.py, imaging.py, assets.py, attach.py, moments.py
+
+operations/services/feed_interactions/
+├── __init__.py      # set_reaction, add_comment, share helpers, check-in poll
+├── errors.py, constants.py, queries.py, reactions.py, comments.py
+├── sharing.py, checkin_poll.py
+```
+
+Also: `timeline_visits.py`, `geolocation.py`, `feed_slugs.py`, `feed_access.py`, `feed_emojis.py`, `share_preview.py` (already small single-job modules).
+
+Do not re-merge `timeline_media` or `feed_interactions` into monoliths. Imports stay `from operations.services.timeline_media import …` / `feed_interactions`.
 
 ---
 
