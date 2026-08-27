@@ -1,4 +1,5 @@
-from operations.models import ClientProfile, SharedMediaLink
+from operations.models.customers import ClientProfile
+from operations.models.scheduling import SharedMediaLink
 from operations.services.feed_interactions.queries import asset_belongs_to_client
 from operations.services.feed_interactions.slugs import generate_unique_share_token
 

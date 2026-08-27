@@ -1,6 +1,7 @@
 from django.utils import timezone
 
-from operations.models import ClientProfile, MediaComment, MediaReaction, VisitTimelineEvent
+from operations.models.customers import ClientProfile
+from operations.models.scheduling import MediaComment, MediaReaction, VisitTimelineEvent
 from operations.services.feed_interactions.emojis import standard_emoji_label
 
 

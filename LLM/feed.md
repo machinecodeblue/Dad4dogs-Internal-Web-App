@@ -41,7 +41,13 @@ operations/services/feed_interactions/
 
 Also at `services/` root (shared, not feed-only): `timeline_visits.py`, **`geolocation.py`**.
 
-Imports: `from operations.services.feed_interactions import …` / `timeline_media`. Do not recreate top-level `feed_access.py`, `feed_emojis.py`, `feed_slugs.py`, or `share_preview.py`.
+Imports for views/tests: `from operations.services.feed_interactions import …` / `timeline_media`. Do not recreate top-level `feed_access.py`, `feed_emojis.py`, `feed_slugs.py`, or `share_preview.py`.
+
+**Models must not top-level-import this package.** If a model method needs slug/secret helpers, lazy-import the leaf module only:
+
+`from operations.services.feed_interactions.slugs import dog_slug_from_name, generate_unique_feed_secret`
+
+(See `applicationphilosophy.md` §5 — import layering.)
 
 ---
 

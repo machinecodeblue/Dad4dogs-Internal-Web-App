@@ -1,7 +1,7 @@
 from django.db.models import Count
 
-from operations.models import (
-    ClientProfile,
+from operations.models.customers import ClientProfile
+from operations.models.scheduling import (
     MediaComment,
     MediaReaction,
     TimelineMediaAsset,

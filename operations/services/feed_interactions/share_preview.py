@@ -2,7 +2,7 @@ import os
 
 from django.http import HttpRequest
 
-from operations.models import SharedMediaLink, TimelineMediaAsset
+from operations.models.scheduling import SharedMediaLink, TimelineMediaAsset
 
 
 def absolute_media_url(request: HttpRequest, file_field) -> str:

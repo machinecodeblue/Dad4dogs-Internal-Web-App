@@ -1,4 +1,5 @@
-from operations.models import ClientProfile, MediaReaction
+from operations.models.customers import ClientProfile
+from operations.models.scheduling import MediaReaction
 from operations.services.feed_interactions.errors import FeedInteractionError
 from operations.services.feed_interactions.queries import asset_belongs_to_client
 

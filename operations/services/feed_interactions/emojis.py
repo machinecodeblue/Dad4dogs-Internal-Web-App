@@ -2,7 +2,7 @@
 Reaction emoji maps — dog-themed in the feed UI, standard when summarized/shared.
 Replace DOG_EMOJI values with custom dog artwork paths when assets are ready.
 """
-from operations.models import MediaReaction
+from operations.models.scheduling import MediaReaction
 
 REACTION_ORDER = [choice.value for choice in MediaReaction.Emoji]
 

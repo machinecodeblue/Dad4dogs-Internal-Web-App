@@ -1,6 +1,7 @@
 from django.utils import timezone
 
-from operations.models import ClientProfile, MediaComment
+from operations.models.customers import ClientProfile
+from operations.models.scheduling import MediaComment
 from operations.services.feed_interactions.constants import (
     COMMENT_MAX_LENGTH,
     COMMENTS_PER_VISITOR_PER_DAY,

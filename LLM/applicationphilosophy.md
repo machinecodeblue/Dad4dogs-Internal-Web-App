@@ -61,7 +61,23 @@ When in doubt, copy the **scheduling / customers / feed** package style, not a n
 
 ---
 
-## 5. How this relates to SOC 2 posture
+## 5. Import layering (avoid circular imports)
+
+Django loads `operations/models/__init__.py` early. A **circular import** happens when a model module top-level-imports a services package that, while loading, imports that same model.
+
+| Layer | OK at module top level | Avoid |
+|-------|------------------------|--------|
+| **`operations/models/*`** | Other models, Django, stdlib | **Services** — especially a package `__init__.py` that eagerly loads many submodules |
+| **`operations/services/*`** | Models via **submodule paths** (`operations.models.customers`, `operations.models.scheduling`) | Relying on `from operations.models import X` when that triggers a half-loaded `models/__init__` |
+| **Model method needs a service** | **Lazy import inside the method**; prefer a **leaf** module (e.g. `feed_interactions.slugs`) | Top-level `from operations.services…` |
+
+**Why leaf imports:** `from operations.services.feed_interactions import dog_slug_from_name` still runs the package `__init__` (access, check-in poll, …). `from operations.services.feed_interactions.slugs import …` only loads slug helpers.
+
+Do **not** “fix” cycles by restoring deleted top-level shims (`feed_slugs.py`, etc.). Fix the layering.
+
+---
+
+## 6. How this relates to SOC 2 posture
 
 We are not claiming certification from file size. We are choosing habits that make compliance work possible:
 
@@ -73,7 +89,7 @@ Product SOC 2 controls (tenant isolation targets, visitor tracking, no PII in lo
 
 ---
 
-## 6. Working with LLMs (standing expectations)
+## 7. Working with LLMs (standing expectations)
 
 * Do **not** append “just one more function” into an already-large module when a split is the honest fix.
 * Prefer a short package map in the domain `.md` when you add a submodule.
@@ -82,7 +98,7 @@ Product SOC 2 controls (tenant isolation targets, visitor tracking, no PII in lo
 
 ---
 
-## 7. What this file is not
+## 8. What this file is not
 
 * Not a substitute for `platform.md` (dev server, UX density, PWA).
 * Not a substitute for domain rules (pricing tiers, visit guards, capacity).

@@ -440,7 +440,8 @@ class ClientProfile(TenantAwareModel):
         return True
 
     def ensure_feed_credentials(self, *, save: bool = True) -> 'ClientProfile':
-        from operations.services.feed_interactions import (
+        # Leaf import — avoid feed_interactions.__init__ (loads access/etc. → cycle risk).
+        from operations.services.feed_interactions.slugs import (
             dog_slug_from_name,
             generate_unique_feed_secret,
         )
@@ -459,7 +460,7 @@ class ClientProfile(TenantAwareModel):
 
     def sync_feed_dog_slug(self, *, save: bool = True) -> None:
         """Keep the dog slug aligned with the current dog name."""
-        from operations.services.feed_interactions import dog_slug_from_name
+        from operations.services.feed_interactions.slugs import dog_slug_from_name
 
         slug = dog_slug_from_name(self.dog_name)
         if self.feed_dog_slug != slug:
@@ -469,7 +470,7 @@ class ClientProfile(TenantAwareModel):
 
     def regenerate_feed_secret(self, *, save: bool = True) -> str:
         """Issue a new secret — old feed links stop working."""
-        from operations.services.feed_interactions import (
+        from operations.services.feed_interactions.slugs import (
             dog_slug_from_name,
             generate_unique_feed_secret,
         )
