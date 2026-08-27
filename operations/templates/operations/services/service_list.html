@@ -1,0 +1,48 @@
+{% extends "operations/base.html" %}
+{% block title %}Services — Dad4dogs{% endblock %}
+{% block content %}
+<div class="card">
+    <div class="row-between">
+        <div>
+            <p class="card-kicker">Settings</p>
+            <h2 style="margin:0">Services &amp; offerings</h2>
+            <p class="muted" style="margin:0.35rem 0 0">Catalog for rates and categories. Checkout still uses the classic pricing engine until Phase 2.</p>
+        </div>
+        <a href="{% url 'operations:service_create' %}" class="btn btn-primary btn-sm">Add service</a>
+    </div>
+</div>
+
+<div class="card" style="padding:0">
+    {% if services %}
+    {% for service in services %}
+    <div class="compact-row">
+        <div>
+            <a href="{% url 'operations:service_edit' service.pk %}"><strong>{{ service.name }}</strong></a>
+            <span class="muted"> · {{ service.get_target_category_display }} · {{ service.get_rate_type_display }} · ${{ service.base_rate }}</span>
+            {% if not service.is_active %}<span class="muted"> · inactive</span>{% endif %}
+            {% if service.capacity_exempt %}<span class="muted"> · capacity exempt</span>{% endif %}
+            {% with n=service.behavior_rules.all|length %}
+            {% if n %}<span class="muted"> · {{ n }} rule{{ n|pluralize }}</span>{% endif %}
+            {% endwith %}
+            {% if service.summary %}
+            <div class="muted" style="margin-top:0.2rem">{{ service.summary }}</div>
+            {% endif %}
+        </div>
+        <div class="row-actions">
+            <a href="{% url 'operations:service_edit' service.pk %}" class="text-link">Edit</a>
+            <form method="post" action="{% url 'operations:service_toggle_active' service.pk %}" style="display:inline">
+                {% csrf_token %}
+                <button type="submit" class="text-link" style="background:none;border:none;padding:0;cursor:pointer">
+                    {% if service.is_active %}Deactivate{% else %}Activate{% endif %}
+                </button>
+            </form>
+        </div>
+    </div>
+    {% endfor %}
+    {% else %}
+    <p class="muted" style="padding:1rem">No services yet. Add one or run migrations to seed defaults.</p>
+    {% endif %}
+</div>
+
+<p style="margin-top:1rem"><a href="{% url 'operations:business_settings' %}" class="text-link">← Business settings</a></p>
+{% endblock %}

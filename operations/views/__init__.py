@@ -9,6 +9,15 @@ from operations.views.billing import (
     statements_list,
 )
 from operations.views.business import business_settings
+from operations.views.services import (
+    rule_create,
+    rule_delete,
+    service_create,
+    service_deactivate,
+    service_edit,
+    service_list,
+    service_toggle_active,
+)
 from operations.views.feed import (
     customer_feed,
     customer_feed_comment,
@@ -111,6 +120,13 @@ __all__ = [
     'parse_datetime_field',
     'pending_events',
     'reject_pending_event',
+    'rule_create',
+    'rule_delete',
+    'service_create',
+    'service_deactivate',
+    'service_edit',
+    'service_list',
+    'service_toggle_active',
     'statement_detail',
     'statements_list',
     'update_coi',

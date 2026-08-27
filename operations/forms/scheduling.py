@@ -2,11 +2,12 @@ from decimal import Decimal, InvalidOperation
 
 from django import forms
 from django.core.exceptions import ValidationError
-from django.db import transaction
+from django.db import models, transaction
 from django.utils import timezone
 
 from operations.capacity import check_visit_capacity, overlapping_dog_visit
-from operations.models import ClientProfile, Visit, VisitSeries
+from operations.models import BusinessService, ClientProfile, Visit, VisitSeries
+from operations.services.context_tenant import get_active_workspace
 from operations.services.datetime_parse import format_datetime_display, format_datetime_input, parse_datetime_text
 from operations.services.visit_repeat import (
     END_AFTER,
@@ -46,6 +47,12 @@ class VisitForm(forms.Form):
             'rows': 2,
             'placeholder': 'Optional notes',
         }),
+    )
+    business_service = forms.ModelChoiceField(
+        label='Service',
+        queryset=BusinessService.objects.none(),
+        required=True,
+        empty_label='Select a service…',
     )
     repeat_frequency = forms.ChoiceField(
         label='Repeat',
@@ -89,11 +96,29 @@ class VisitForm(forms.Form):
         super().__init__(*args, **kwargs)
         self.client = client
         self.instance = instance
+        workspace = get_active_workspace()
+        service_field = self.fields['business_service']
+        service_field.queryset = (
+            BusinessService.objects.filter(tenant=workspace, is_active=True)
+            .order_by('target_category', 'name')
+        )
+        service_field.label_from_instance = (
+            lambda obj: f'{obj.name} — ${obj.base_rate}'
+        )
         if instance:
             self.fields['start_at'].initial = format_datetime_input(instance.scheduled_start)
             self.fields['end_at'].initial = format_datetime_input(instance.scheduled_end)
             self.fields['notes'].initial = instance.notes
             self.client = instance.client
+            if instance.business_service_id:
+                service_field.initial = instance.business_service_id
+                service_field.queryset = (
+                    BusinessService.objects.filter(tenant=workspace)
+                    .filter(
+                        models.Q(is_active=True) | models.Q(pk=instance.business_service_id),
+                    )
+                    .order_by('target_category', 'name')
+                )
             for name in (
                 'repeat_frequency',
                 'repeat_interval',
@@ -153,7 +178,10 @@ class VisitForm(forms.Form):
         cleaned['occurrences'] = self._build_occurrences(cleaned)
         if self._occurrence_limit_exceeded(cleaned):
             return cleaned
-        self._validate_occurrence_capacity(cleaned['occurrences'])
+        self._validate_occurrence_capacity(
+            cleaned['occurrences'],
+            business_service=cleaned.get('business_service'),
+        )
         return cleaned
 
     def _validate_standard_stay_readiness(self) -> None:
@@ -206,7 +234,12 @@ class VisitForm(forms.Form):
                 return True
         return False
 
-    def _validate_occurrence_capacity(self, occurrences: list[tuple]) -> None:
+    def _validate_occurrence_capacity(
+        self,
+        occurrences: list[tuple],
+        *,
+        business_service=None,
+    ) -> None:
         if not self.client:
             self.add_error(None, 'Dog is required to schedule a visit.')
             return
@@ -230,6 +263,7 @@ class VisitForm(forms.Form):
                 client=self.client,
                 scheduled_start=occ_start,
                 scheduled_end=occ_end,
+                business_service=business_service,
             )
             capacity = check_visit_capacity(probe)
             if capacity['status'] == 'blocked':
@@ -248,6 +282,7 @@ class VisitForm(forms.Form):
         if not self.client:
             raise ValidationError('Dog is required to schedule a visit.')
         notes = self.cleaned_data.get('notes', '')
+        business_service = self.cleaned_data['business_service']
         occurrences = self.cleaned_data['occurrences']
         created: list[Visit] = []
         series = None
@@ -273,9 +308,13 @@ class VisitForm(forms.Form):
                 visit.scheduled_start = occ_start
                 visit.scheduled_end = occ_end
                 visit.notes = notes
+                visit.business_service = business_service
                 visit.save(
                     skip_capacity=True,
-                    update_fields=['scheduled_start', 'scheduled_end', 'notes', 'updated_at'],
+                    update_fields=[
+                        'scheduled_start', 'scheduled_end', 'notes',
+                        'business_service', 'updated_at',
+                    ],
                 )
             else:
                 visit = Visit(
@@ -283,6 +322,7 @@ class VisitForm(forms.Form):
                     scheduled_start=occ_start,
                     scheduled_end=occ_end,
                     notes=notes,
+                    business_service=business_service,
                     series=series,
                     series_position=index if series else None,
                 )

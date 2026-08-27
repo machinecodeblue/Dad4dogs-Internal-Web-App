@@ -41,6 +41,16 @@ from operations.models import (
     VisitTimelineEvent,
 )
 from operations.models.customers import VAX_EXPIRY_WARNING_DAYS
+
+def _default_service_pk(slug='overnight_stay'):
+    from operations.models import BusinessService
+    from operations.services.context_tenant import get_active_workspace
+    workspace = get_active_workspace()
+    service = BusinessService.objects.filter(tenant=workspace, slug=slug).first()
+    if service is None:
+        service = BusinessService.objects.filter(tenant=workspace, is_active=True).first()
+    return service.pk
+
 from operations.models.scheduling import timeline_asset_upload_path
 from operations.services.feed_interactions import set_reaction, add_comment, get_or_create_share_link
 from operations.services.geolocation import resolve_timeline_coordinates
@@ -1690,6 +1700,7 @@ class VisitRepeatTests(TestCase):
         ))
         form = VisitForm(
             data={
+            'business_service': _default_service_pk(),
                 'start_at': 'April 10, 2026 9 am',
                 'end_at': 'April 10, 2026 5 pm',
                 'notes': '',
@@ -1717,6 +1728,7 @@ class VisitRepeatTests(TestCase):
         ))
         form = VisitForm(
             data={
+            'business_service': _default_service_pk(),
                 'start_at': 'April 10, 2026 9 am',
                 'end_at': 'April 10, 2026 5 pm',
                 'notes': '',
@@ -1745,6 +1757,7 @@ class VisitRepeatTests(TestCase):
         ))
         form = VisitForm(
             data={
+            'business_service': _default_service_pk(),
                 'start_at': 'April 10, 2026 9 am',
                 'end_at': 'April 10, 2026 5 pm',
                 'notes': '',
@@ -1767,6 +1780,7 @@ class VisitRepeatTests(TestCase):
         ))
         form = VisitForm(
             data={
+            'business_service': _default_service_pk(),
                 'start_at': 'April 10, 2026 9 am',
                 'end_at': 'April 10, 2026 5 pm',
                 'notes': '',
@@ -1789,6 +1803,7 @@ class VisitRepeatTests(TestCase):
         ))
         form = VisitForm(
             data={
+            'business_service': _default_service_pk(),
                 'start_at': 'April 10, 2026 9 am',
                 'end_at': 'April 10, 2026 5 pm',
                 'notes': '',
@@ -1814,6 +1829,7 @@ class VisitFormTests(TestCase):
     def test_create_visit_from_natural_language(self):
         form = VisitForm(
             data={
+            'business_service': _default_service_pk(),
                 'start_at': 'April 11, 2026 1 pm',
                 'end_at': 'April 11, 2026 6 pm',
                 'notes': 'First visit',
@@ -1834,6 +1850,7 @@ class VisitFormTests(TestCase):
         )
         form = VisitForm(
             data={
+            'business_service': _default_service_pk(),
                 'start_at': 'April 11, 2026 1 pm',
                 'end_at': 'April 11, 2026 6 pm',
                 'notes': '',
@@ -1851,6 +1868,7 @@ class VisitFormTests(TestCase):
         self.dog.hide()
         form = VisitForm(
             data={
+            'business_service': _default_service_pk(),
                 'start_at': 'April 11, 2026 1 pm',
                 'end_at': 'April 11, 2026 6 pm',
                 'notes': '',
@@ -1870,6 +1888,7 @@ class VisitFormTests(TestCase):
         CustomerOwner.ensure_for_client(dog).mark_coi_received()
         form = VisitForm(
             data={
+            'business_service': _default_service_pk(),
                 'start_at': 'April 11, 2026 1 pm',
                 'end_at': 'April 11, 2026 6 pm',
                 'notes': '',
@@ -1889,6 +1908,7 @@ class VisitFormTests(TestCase):
         self.dog.save(update_fields=['pipeline_stage', 'updated_at'])
         form = VisitForm(
             data={
+            'business_service': _default_service_pk(),
                 'start_at': 'April 11, 2026 10 am',
                 'end_at': 'April 11, 2026 6 pm',
                 'notes': 'Moved',
@@ -1900,6 +1920,7 @@ class VisitFormTests(TestCase):
     def test_overnight_visit_natural_language(self):
         form = VisitForm(
             data={
+            'business_service': _default_service_pk(),
                 'start_at': 'April 10, 2026 1 pm',
                 'end_at': 'April 11, 2026 1 am',
                 'notes': '',
@@ -1914,6 +1935,7 @@ class VisitFormTests(TestCase):
     def test_rejects_end_before_start(self):
         form = VisitForm(
             data={
+            'business_service': _default_service_pk(),
                 'start_at': 'April 10, 2026 1 pm',
                 'end_at': 'April 10, 2026 7 am',
                 'notes': '',
@@ -1930,6 +1952,7 @@ class VisitFormTests(TestCase):
         )
         form = VisitForm(
             data={
+            'business_service': _default_service_pk(),
                 'start_at': 'April 11, 2026 8 am',
                 'end_at': 'April 11, 2026 5 pm',
                 'notes': '',
@@ -1948,6 +1971,7 @@ class VisitFormTests(TestCase):
         )
         form = VisitForm(
             data={
+            'business_service': _default_service_pk(),
                 'start_at': 'April 11, 2026 12 pm',
                 'end_at': 'April 11, 2026 5 pm',
                 'notes': '',
@@ -1966,6 +1990,7 @@ class VisitFormTests(TestCase):
         )
         form = VisitForm(
             data={
+            'business_service': _default_service_pk(),
                 'start_at': 'April 11, 2026 8 am',
                 'end_at': 'April 11, 2026 5 pm',
                 'notes': 'Same window',
@@ -1982,6 +2007,7 @@ class VisitFormTests(TestCase):
         )
         form = VisitForm(
             data={
+            'business_service': _default_service_pk(),
                 'start_at': 'April 11, 2026 10 am',
                 'end_at': 'April 11, 2026 6 pm',
                 'notes': 'Moved',
@@ -2008,6 +2034,7 @@ class VisitFormTests(TestCase):
         visit.status = Visit.Status.SCHEDULED
         form = VisitForm(
             data={
+            'business_service': _default_service_pk(),
                 'start_at': 'April 11, 2026 10 am',
                 'end_at': 'April 11, 2026 6 pm',
                 'notes': 'Moved',
@@ -2057,6 +2084,7 @@ class VisitFormTests(TestCase):
         before = Visit.objects.count()
         form = VisitForm(
             data={
+            'business_service': _default_service_pk(),
                 'start_at': 'April 11, 2026 1 pm',
                 'end_at': 'April 11, 2026 6 pm',
                 'notes': '',
@@ -2076,6 +2104,7 @@ class VisitFormTests(TestCase):
         before = Visit.objects.count()
         form = VisitForm(
             data={
+            'business_service': _default_service_pk(),
                 'start_at': 'April 11, 2026 1 pm',
                 'end_at': 'April 11, 2026 6 pm',
                 'notes': '',
@@ -2102,6 +2131,7 @@ class VisitFormTests(TestCase):
         )
         form = VisitForm(
             data={
+            'business_service': _default_service_pk(),
                 'start_at': 'April 11, 2026 2 pm',
                 'end_at': 'April 11, 2026 6 pm',
                 'notes': 'Moved',
@@ -2115,6 +2145,7 @@ class VisitFormTests(TestCase):
     def test_save_all_does_not_recheck_capacity(self):
         form = VisitForm(
             data={
+            'business_service': _default_service_pk(),
                 'start_at': 'April 10, 2026 9 am',
                 'end_at': 'April 10, 2026 5 pm',
                 'notes': '',

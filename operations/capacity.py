@@ -226,6 +226,20 @@ def _daily_dog_counts(
 
 def check_visit_capacity(visit) -> dict:
     """Check capacity for every calendar day the visit spans."""
+    service = getattr(visit, 'business_service', None)
+    # Non-dog or capacity-exempt catalog offerings skip facility dog caps.
+    if service is not None and (
+        bool(service.capacity_exempt) or service.target_category != 'DOG'
+    ):
+        standard, ceiling = capacity_limits()
+        return {
+            'count': 0,
+            'standard': standard,
+            'ceiling': ceiling,
+            'status': 'ok',
+            'message': '',
+        }
+
     start_day, end_day = _capacity_span_dates(visit)
     standard, ceiling = capacity_limits()
     counts = _daily_dog_counts(

@@ -75,6 +75,13 @@ urlpatterns = [
     path('statements/', views.statements_list, name='statements'),
     path('statements/<int:pk>/', views.statement_detail, name='statement_detail'),
     path('settings/', views.business_settings, name='business_settings'),
+    path('settings/services/', views.service_list, name='service_list'),
+    path('settings/services/add/', views.service_create, name='service_create'),
+    path('settings/services/<int:pk>/edit/', views.service_edit, name='service_edit'),
+    path('settings/services/<int:pk>/toggle/', views.service_toggle_active, name='service_toggle_active'),
+    path('settings/services/<int:pk>/deactivate/', views.service_deactivate, name='service_deactivate'),
+    path('settings/services/<int:service_pk>/rules/add/', views.rule_create, name='rule_create'),
+    path('settings/services/rules/<int:pk>/delete/', views.rule_delete, name='rule_delete'),
 
     path('ical/', views.ical_feed, name='ical_feed'),
 ]

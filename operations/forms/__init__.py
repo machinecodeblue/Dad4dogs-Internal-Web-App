@@ -7,12 +7,15 @@ from operations.forms.business import BusinessProfileForm
 from operations.forms.customers import CustomerOwnerForm, DogProfileForm, VaccinationRecordForm
 from operations.forms.intake import IntakeWizardForm
 from operations.forms.scheduling import TimelineForwardForm, TimelineMomentForm, VisitForm, VisitScheduleForm
+from operations.forms.services import BusinessServiceForm, ServiceBehaviorRuleForm
 
 __all__ = [
     'BusinessProfileForm',
+    'BusinessServiceForm',
     'CustomerOwnerForm',
     'DogProfileForm',
     'IntakeWizardForm',
+    'ServiceBehaviorRuleForm',
     'VaccinationRecordForm',
     'TimelineForwardForm',
     'TimelineMomentForm',

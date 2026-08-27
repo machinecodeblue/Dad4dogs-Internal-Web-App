@@ -1,0 +1,22 @@
+{% extends "operations/base.html" %}
+{% block title %}Add rule — {{ service.name }}{% endblock %}
+{% block content %}
+<div class="card">
+    <p class="card-kicker">{{ service.name }}</p>
+    <h2 style="margin:0">Add behavior rule</h2>
+</div>
+
+<form method="post">
+    {% csrf_token %}
+    <div class="card">
+        {% for field in form %}
+        <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+        {{ field }}
+        {% if field.help_text %}<p class="muted" style="margin:0.25rem 0 0.75rem">{{ field.help_text }}</p>{% endif %}
+        {% if field.errors %}<p class="muted" style="color:var(--danger)">{{ field.errors.0 }}</p>{% endif %}
+        {% endfor %}
+        <button type="submit" class="btn btn-primary">Save rule</button>
+        <a href="{% url 'operations:service_edit' service.pk %}" class="btn btn-outline">Cancel</a>
+    </div>
+</form>
+{% endblock %}

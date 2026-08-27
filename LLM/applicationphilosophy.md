@@ -78,7 +78,7 @@ Product SOC 2 controls (tenant isolation targets, visitor tracking, no PII in lo
 * Do **not** append “just one more function” into an already-large module when a split is the honest fix.
 * Prefer a short package map in the domain `.md` when you add a submodule.
 * After a structural split, update the matching `LLM/<domain>.md` paths so the next session does not thrash on deleted monoliths.
-* Large feature work (e.g. services/pricing catalog) must start as a **domain package**, not a single god file — see `services.md` (next major build; do not implement until asked).
+* Large feature work (e.g. services/pricing catalog) must start as a **domain package**, not a single god file — see `services.md` (Phase 1 catalog landed; checkout engine cutover is Phase 2).
 
 ---
 

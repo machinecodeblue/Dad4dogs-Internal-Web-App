@@ -3,10 +3,12 @@ from django.contrib import admin
 from .models import (
     AccountStatement,
     BusinessProfile,
+    BusinessService,
     CapacitySettings,
     ClientProfile,
     CustomerOwner,
     PendingCalendarEvent,
+    ServiceBehaviorRule,
     VaccinationRecord,
     Visit,
     VisitSeries,
@@ -36,6 +38,46 @@ class CapacitySettingsAdmin(admin.ModelAdmin):
     list_display = ('workspace', 'standard_capacity', 'insurance_ceiling', 'updated_at')
     raw_id_fields = ('workspace',)
     readonly_fields = ('updated_at',)
+
+
+class ServiceBehaviorRuleInline(admin.TabularInline):
+    model = ServiceBehaviorRule
+    extra = 0
+
+
+@admin.register(BusinessService)
+class BusinessServiceAdmin(admin.ModelAdmin):
+    list_display = (
+        'name', 'slug', 'tenant', 'target_category', 'rate_type',
+        'base_rate', 'is_active', 'capacity_exempt',
+    )
+    list_filter = ('target_category', 'rate_type', 'is_active', 'capacity_exempt')
+    search_fields = ('name', 'slug', 'summary', 'description')
+    raw_id_fields = ('tenant',)
+    inlines = [ServiceBehaviorRuleInline]
+    fieldsets = (
+        (None, {
+            'fields': (
+                'tenant', 'name', 'slug', 'target_category', 'rate_type',
+                'base_rate', 'is_active', 'capacity_exempt',
+            ),
+        }),
+        ('Customer-facing plan', {
+            'fields': ('summary', 'description'),
+            'description': 'Shown (or destined) for customers. Plain text only.',
+        }),
+        ('Internal', {
+            'fields': ('staff_notes',),
+            'description': 'Never include staff notes on customer emails or statements.',
+        }),
+    )
+
+
+@admin.register(ServiceBehaviorRule)
+class ServiceBehaviorRuleAdmin(admin.ModelAdmin):
+    list_display = ('service', 'trigger_type', 'threshold_value', 'modified_rate', 'tenant')
+    list_filter = ('trigger_type',)
+    raw_id_fields = ('service', 'tenant')
 
 
 class VaccinationRecordInline(admin.TabularInline):
@@ -126,7 +168,7 @@ class VisitAdmin(admin.ModelAdmin):
     )
     list_filter = ('status',)
     search_fields = ('client__dog_name', 'client__owner_name')
-    raw_id_fields = ('client', 'cloned_from', 'series')
+    raw_id_fields = ('client', 'business_service', 'cloned_from', 'series')
 
 
 @admin.register(PendingCalendarEvent)

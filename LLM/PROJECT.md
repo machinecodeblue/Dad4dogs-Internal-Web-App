@@ -47,7 +47,7 @@ Detail 
   * billing.md — statements; portable SQLite export (future)
   * admin.md — business settings, baseline contact info, documents (planned)
   * feed.md — timeline capture, customer photo feed, speakable URLs, visitor fingerprinting
-  * services.md — **next major build** (configurable services/pricing design). Not live; do not implement until David asks.
+  * services.md — Phase 1 catalog scaffolding under `/settings/services/`; checkout still on `pricing.py`
 4. **platform.md** — dev server, HTTPS, ngrok, Gmail OAuth, PWA, **detail-screen labeled-card policy**, testing. Any customer/dog/list/dashboard/check-in template change must follow those rules.
 
 Do **not** treat Proposed work/ or Decisions/ as the live spec. Open proposals are evaluation-only; decided notes are history. Standing rules live in this file, `applicationphilosophy.md`, and the domain markdown. 
@@ -65,6 +65,7 @@ operations/
 │   ├── customers.py     # CustomerOwner, ClientProfile, VaccinationRecord
 │   ├── scheduling.py    # VisitSeries, Visit, TimelineMediaAsset, VisitTimelineEvent, MediaComment, MediaReaction
 │   ├── billing.py       # AccountStatement
+│   ├── services.py      # BusinessService, ServiceBehaviorRule
 │   ├── tenant.py        # Workspace (thin tenant root)
 │   ├── base.py          # TenantAwareModel
 │   └── business.py      # BusinessProfile + CapacitySettings (1:1 to Workspace)
@@ -94,6 +95,8 @@ operations/
 │   ├── billing/         # Statements list/detail scaffolding
 │   │   ├── __init__.py  # Re-exports statements_list, statement_detail, statement_send_email
 │   │   ├── list.py, detail.py, actions.py (send stub), helpers.py (unbilled stub)
+│   ├── services/        # Settings catalog CRUD (Phase 1)
+│   │   ├── __init__.py, catalog.py, edit.py, rules.py, actions.py, helpers.py
 │   ├── business.py      # Business settings
 │   └── pwa.py           # manifest.webmanifest, sw.js
 ├── services/            # Pure business logic — prefer adding here over bloating views
@@ -101,6 +104,7 @@ operations/
 │   ├── addresses.py, phones.py, feed_slugs.py, feed_access.py
 │   ├── feed_interactions.py, feed_emojis.py, share_preview.py, statements.py
 │   ├── context_tenant.py # get_active_workspace() single-operator bridge
+│   ├── pricing_engine.py # catalog fee stub — NOT wired to checkout yet
 │   └── visit_email.py, gmail_send.py, gmail_sync.py
 ├── pricing.py           # Tiered fee engine (scheduling domain)
 ├── capacity.py          # Daily dog count guards (scheduling domain)
@@ -229,6 +233,8 @@ scheduled → checked_in → completed (or cancelled). 
 | e-Transfer automation | Not started |
 | Operational database PostgreSQL | Done — local Postgres 18; see platform.md |
 | Schema multi-tenancy (Workspace + tenant FKs + CapacitySettings) | Done — Phase 1; single-operator bridge `get_active_workspace()` |
+| Services catalog scaffolding (`BusinessService`, Settings CRUD) | Done — Phase 1 |
+| Services Phase 2 (visit FK, engine cutover, capacity_exempt) | Done — booking requires service; DOG fees ≡ classic overnight-first |
 | Default tenant QuerySet / middleware | Not started — Phase 2 |
 | Portable SQLite export (operator download) | Not started — future; billing.md section 8 |
 | Multi-tenant auth / workspace membership | Not started — single-operator today |
@@ -255,7 +261,7 @@ $env:PUBLIC_SITE_URL = ""
 ### 8.1 LLM Session Checklist
 
    1. Identify the domain before editing (customers / scheduling / billing / admin / feed / platform). For structure or a large new domain, read `applicationphilosophy.md` first.
-   2. Open the matching LLM/<domain>.md file. Treat `services.md` as next-build design only — do not implement until David asks.
+   2. Open the matching LLM/<domain>.md file. Services catalog is Phase 1 scaffolding — do not swap checkout off `pricing.py` unless asked.
    3. Keep mobile-first, one-handed UX. Standing rules in platform.md:
    * Lists (clients, statements, pending calendar, agenda, nested dogs/visits): minimize real estate. Flat rows, hairline dividers, name is the link, text-link actions. No per-item cards. Check-in stays a working surface with large CTAs.
       * Detail screens (customer, dog, future records) follow the labeled-card policy: each card named by job; Edit beside the name; .phone-row Calls; address visible; admin in More actions. Customer: Primary owner / Emergency & Pickups / Dogs. Dog: Dog / Veterinary / Visits.
@@ -289,7 +295,7 @@ $env:PUBLIC_SITE_URL = ""
 | feed.md | Staff timeline, customer feed, speakable URLs, access logging |
 | platform.md | Dev environment, HTTPS, ngrok, PWA, Gmail, cognitive-load UX, testing |
 | applicationphilosophy.md | How we develop: small auditable files, domain packages, convention over configuration, anti-god-module — separate from product rules |
-| services.md | **Next major build (design basis).** Configurable services/pricing catalog — not implemented. Live pricing still `scheduling.md` / `pricing.py`. Do not code until David starts that build. |
+| services.md | Phase 1 catalog CRUD (`/settings/services/`). Live checkout still `pricing.py`. Phase 2 = engine cutover + capacity_exempt. |
 | Proposed work/ | Inbox of proposals — evaluate only; not standing spec. Empty of a topic means that idea is not on the table. See Proposed work/README.md. |
 | Decisions/ | Archive of accepted, rejected, or partial proposals. History only. Live rules stay in the domain files named in each Decision header. |
 

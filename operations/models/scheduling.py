@@ -57,6 +57,14 @@ class Visit(TenantAwareModel):
         CANCELLED = 'cancelled', 'Cancelled'
 
     client = models.ForeignKey(ClientProfile, on_delete=models.CASCADE, related_name='visits')
+    business_service = models.ForeignKey(
+        'operations.BusinessService',
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name='visits',
+        help_text='Catalog offering for this stay. Required on new bookings; null on legacy visits.',
+    )
     series = models.ForeignKey(
         VisitSeries,
         null=True,
@@ -137,6 +145,14 @@ class Visit(TenantAwareModel):
         finally:
             self._skip_capacity_check = previous
 
+    def _price_stay(self, arrival, departure):
+        """Fee from catalog engine when a service is linked; else legacy pricing.py."""
+        if self.business_service_id:
+            from operations.services.pricing_engine import calculate_service_fee
+
+            return calculate_service_fee(self.business_service, arrival, departure)
+        return calculate_fee(arrival, departure)
+
     def check_in(self):
         if self.status != self.Status.SCHEDULED:
             raise ValidationError('Only scheduled visits can be checked in.')
@@ -153,7 +169,7 @@ class Visit(TenantAwareModel):
             raise ValidationError('Only checked-in visits can be checked out.')
         self.actual_departure = timezone.now()
         arrival = self.actual_arrival or self.scheduled_start
-        fee, breakdown = calculate_fee(arrival, self.actual_departure)
+        fee, breakdown = self._price_stay(arrival, self.actual_departure)
         self.calculated_fee = fee
         self.fee_breakdown = breakdown
         self.status = self.Status.COMPLETED
@@ -188,7 +204,7 @@ class Visit(TenantAwareModel):
                 raise ValidationError('Departure must be after arrival.')
             self.actual_arrival = new_arrival
             self.actual_departure = new_departure
-            fee, breakdown = calculate_fee(new_arrival, new_departure)
+            fee, breakdown = self._price_stay(new_arrival, new_departure)
             self.calculated_fee = fee
             self.fee_breakdown = breakdown
             self.save(update_fields=[
@@ -213,6 +229,7 @@ class Visit(TenantAwareModel):
             scheduled_start=new_start,
             scheduled_end=new_end,
             cloned_from=self,
+            business_service=self.business_service,
             notes=f'Cloned from visit on {start:%Y-%m-%d}',
         )
 

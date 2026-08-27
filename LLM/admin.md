@@ -88,7 +88,8 @@ How it is read at runtime (`operations/capacity.py`):
 
 | Screen | URL | Contents |
 |--------|-----|----------|
-| Business settings | `/settings/` | Identity, location/hours, phones, **standard capacity** + **insurance max** (two models, one form), **Google Contact Sync** (not on `/clients/`) |
+| Business settings | `/settings/` | Identity, location/hours, phones, **standard capacity** + **insurance max** (two models, one form), link to **Services**, **Google Contact Sync** |
+| Services catalog | `/settings/services/` | `BusinessService` CRUD + behavior rules (Phase 1; checkout still classic pricing) — see `services.md` |
 
 Drawer **Settings** links here (not a bottom-nav tab — see `platform.md` §4).
 

@@ -1,73 +1,100 @@
-> **Next major build — design basis, not live code.**  
-> This file is the standing design for the upcoming **business services + configurable pricing** work (service catalog, rates, non-dog offerings, behavior rules). There is **no** `operations/models/services.py` (or matching forms/views) yet.  
-> **Live pricing today** remains the hardcoded tiers in `scheduling.md` / `operations/pricing.py`.  
-> **Do not implement from this file** until David explicitly starts the services build (he may finish package refactoring first). When that build starts, ship it as a **domain package** (models/forms/views/services split early) per `applicationphilosophy.md` — not a single god module. Pattern to copy: `views/scheduling/`, `views/customers/`, `views/feed/`.
+# Domain: Services & Offerings
 
-### Domain: Services & Offerings
+**Status:** Phase 2 **in progress / landing** — visits link to `BusinessService`; checkout uses `pricing_engine` when a service is set (DOG boarding parity with `pricing.py`); capacity skips for exempt / non-DOG.
 
-**Covers:** Dynamic business services, customizable rates, home/pet drop-in checks, and billing engine calculations.
+**Covers:** Dynamic business services, customizable rates, categories, behavior rules; future capacity-exempt / pricing-engine cutover.
 
-**Intended code packages (when built):** `operations/models/services.py` (or `models/services/` package), `forms/services.py`, `views/services/` package with `__init__.py` re-exports — exact split follows `applicationphilosophy.md`.
+**Code packages:**
+- `operations/models/services.py` — `BusinessService`, `ServiceBehaviorRule` (`TenantAwareModel`)
+- `operations/forms/services.py` — `BusinessServiceForm`, `ServiceBehaviorRuleForm`
+- `operations/views/services/` — catalog / edit / rules / actions / helpers
+- `operations/services/pricing_engine.py` — **stub**; not wired to `Visit.check_out()`
 
-### 1. Purpose
+**Live pricing today:** `scheduling.md` / `operations/pricing.py` (Short $15 / Daytime $25 / Overnight $37.50).
 
-Operators need the flexibility to manage their business catalog without modifying source code. The application must support diverse service profiles—ranging from standard dog boarding to property care and drop-in visits for non-canine pets (cats, guinea pigs, rabbits)—complete with custom tier rules and independent rate structures managed through /settings/services/. 
+---
 
-### 2. Data Model
+## 0. Package layout
 
-### BusinessService
+```
+operations/views/services/
+├── __init__.py      # Re-exports public callables
+├── catalog.py       # service_list
+├── edit.py          # service_create, service_edit
+├── rules.py         # rule_create, rule_delete
+├── actions.py       # service_toggle_active, service_deactivate
+└── helpers.py       # form_error_message
+```
 
-Defines an active commercial offering available for a tenant's business. 
+URLs under `/settings/services/`. Entry link on Business Settings tools card.
 
-Field 
+---
 
-Type 
+## 1. Purpose
 
-Purpose 
+Operators manage a commercial catalog without code changes — dog boarding, small-pet/property checks, etc. — via `/settings/services/`.
 
-**name**
-CharFieldPublic name (e.g., "Standard Overnight Stay", "House & Small Pet Check")
-**slug**
-SlugFieldCode identifier for pricing engine lookup (overnight_stay, house_check)
-**target_category**
-CharField (Choices)DOG, CAT, SMALL_PET, PROPERTY_ONLY
-**rate_type**
-CharField (Choices)FLAT, HOURLY, DAILY
-**base_rate**
-DecimalFieldNumeric fee applied per unit in CAD
-**is_active**
-BooleanFieldControls visibility on booking drop-downs; soft-deletes only
-**capacity_exempt**
-BooleanFieldIf True, bookings bypass facility standard/insurance ceiling limits
+---
 
-### ServiceBehaviorRule
+## 2. Data Model
 
-Optional conditional rules mapped to a service to handle tier switches (e.g., changing rates based on duration thresholds). 
+### `BusinessService` (per workspace)
 
-Field 
+| Field | Purpose |
+|-------|---------|
+| `tenant` | FK → Workspace |
+| `name` | Public name |
+| `slug` | Unique per tenant (e.g. `overnight_stay`) |
+| `summary` | Optional short customer-facing blurb for lists / future pickers (max ~240 chars) |
+| `description` | **Required** full customer-facing **service plan** (plain text): what is included, expectations, boundaries |
+| `staff_notes` | Optional **internal only** — never on customer emails, statements, or public pages |
+| `target_category` | DOG / CAT / SMALL_PET / PROPERTY_ONLY |
+| `rate_type` | FLAT / HOURLY / DAILY |
+| `base_rate` | CAD |
+| `is_active` | Soft-hide from future booking dropdowns |
+| `capacity_exempt` | Column ready; **capacity.py not wired yet** (Phase 2) |
 
-Type 
+Unique: `(tenant, slug)`.
 
-Purpose 
+**Copy rules:** Customer-facing surfaces may use `summary` and `description` only. Behavior rules explain *pricing modifiers*, not the product story — the plan text is what makes the offering understandable in full.
 
-**service**
-FK → BusinessServiceThe parent service receiving the modifier
-**trigger_type**
-CharField (Choices)DURATION_UNDER, DURATION_OVER, TIME_WINDOW
-**threshold_value**
-IntegerFieldHour count or time parameter triggering the rule
-**modified_rate**
-DecimalFieldThe new rate applied if the condition evaluates to True
+### `ServiceBehaviorRule`
 
-### 3. Operational Logic & Interface Rules
+| Field | Purpose |
+|-------|---------|
+| `tenant` | FK → Workspace |
+| `service` | FK → BusinessService |
+| `trigger_type` | DURATION_UNDER / DURATION_OVER / TIME_WINDOW |
+| `threshold_value` | Hours or window parameter |
+| `modified_rate` | CAD when trigger matches |
 
-### The Drop-In Validation Model
+Seeded defaults for Dad4dogs: Short Visit $15, Daytime Visit $25, Overnight Stay $37.50 (DOG / FLAT) — mirror classic tiers for catalog presence only.
 
-* When David or another operator books a service where target_category is not DOG, or capacity_exempt is set to True, the system bypasses the same-day facility capacity checks.
-* House checks and small pet visits can scale infinitely on a busy holiday weekend without blocking standard high-margin dog stays.
+---
 
-### Pricing Evaluation Flow
+## 3. Phase boundaries
 
-1. David selects a ClientProfile and links a BusinessService to a new booking window.
-2. At checkout, pricing.py reads the recorded BusinessService and loops through its active ServiceBehaviorRule dependencies.
-3. If an overnight window rule is triggered (e.g., a time-sensitive window boundary crossing), the modified rate is logged into fee_breakdown JSON fields dynamically.
+| Phase | Work |
+|-------|------|
+| **1 (done)** | Models, Settings CRUD, descriptions, seed, pricing_engine stub |
+| **2a (done)** | `Visit.business_service` + required booking picker + plan summary/description on form |
+| **2b (done)** | Checkout / fee correction uses `pricing_engine` when service set; DOG boarding ≡ `pricing.py` overnight-first |
+| **2c (done)** | `capacity_exempt` or non-DOG skips facility capacity (overlap still enforced) |
+| **3** | Billing service-aware statement lines |
+
+---
+
+## 4. Rules for LLMs
+
+1. New bookings **require** an active `BusinessService`. Legacy visits may have `business_service=null` and still check out via `pricing.py`.  
+2. Keep views thin; fee math for linked services goes through `services/pricing_engine.py` (DOG boarding reuses overnight-first helpers for parity).  
+3. Scope queries with `get_active_workspace()` / `tenant=`.  
+4. Soft-hide via `is_active`; do not hard-delete services with history (`on_delete=PROTECT` on visits).  
+5. Always require a clear customer-facing `description` when creating/editing a service. Never leak `staff_notes` to customers.  
+6. Capacity: skip facility caps when `capacity_exempt` or `target_category != DOG`; same-dog overlap always applies.
+
+---
+
+## 5. Tests
+
+Add catalog CRUD tests when expanding Phase 1. Existing pricing/capacity suites must stay green (checkout unchanged).

@@ -149,10 +149,23 @@ class IntakeWizardForm(CustomerOwnerForm):
         dog.ensure_feed_credentials()
         visit = None
         if has_meet:
+            from operations.models import BusinessService
+            from operations.services.context_tenant import get_active_workspace
+
+            workspace = get_active_workspace()
+            meet_service = (
+                BusinessService.objects.filter(
+                    tenant=workspace,
+                    is_active=True,
+                    slug='short_visit',
+                ).first()
+                or BusinessService.objects.filter(tenant=workspace, is_active=True).first()
+            )
             visit = Visit.objects.create(
                 client=dog,
                 scheduled_start=self.cleaned_data['meet_greet_start_dt'],
                 scheduled_end=self.cleaned_data['meet_greet_end_dt'],
                 notes='Meet & Greet — intake',
+                business_service=meet_service,
             )
         return owner, dog, visit
