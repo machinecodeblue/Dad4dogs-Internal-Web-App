@@ -1,6 +1,6 @@
 from django.db import migrations, models
 
-import operations.services.feed_slugs as feed_slugs
+import operations.services.feed_interactions.slugs as feed_slugs
 
 
 def backfill_share_tokens(apps, schema_editor):

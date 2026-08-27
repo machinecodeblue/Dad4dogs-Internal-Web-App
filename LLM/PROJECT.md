@@ -102,13 +102,13 @@ operations/
 │   └── pwa.py           # manifest.webmanifest, sw.js
 ├── services/            # Pure business logic — prefer adding here over bloating views
 │   ├── timeline_media/  # staff capture: imaging, assets, attach, moments
-│   ├── timeline_visits.py, geolocation.py
-│   ├── feed_interactions/  # reactions, comments, sharing, check-in poll
+│   ├── timeline_visits.py, geolocation.py   # geolocation shared (not feed-only)
+│   ├── feed_interactions/  # feed surface: access, emojis, slugs, share, reactions…
+│   │   ├── access.py, emojis.py, slugs.py, share_preview.py, sharing.py, …
 │   ├── contacts/        # Google CSV import + vCard (see contacts.md)
 │   │   ├── __init__.py, schemas.py, parsers.py, heuristics.py
 │   │   ├── matching.py, importers.py, session.py, vcard.py
-│   ├── addresses.py, phones.py, feed_slugs.py, feed_access.py
-│   ├── feed_emojis.py, share_preview.py, statements.py
+│   ├── addresses.py, phones.py, statements.py
 │   ├── context_tenant.py # get_active_workspace() single-operator bridge
 │   ├── pricing_engine.py # catalog fees (DOG boarding parity with pricing.py)
 │   └── visit_email.py, gmail_send.py, gmail_sync.py

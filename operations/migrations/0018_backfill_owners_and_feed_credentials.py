@@ -4,7 +4,10 @@ from django.db import migrations
 def backfill_owners_and_feed(apps, schema_editor):
     ClientProfile = apps.get_model('operations', 'ClientProfile')
     CustomerOwner = apps.get_model('operations', 'CustomerOwner')
-    from operations.services.feed_slugs import dog_slug_from_name, generate_unique_feed_secret
+    from operations.services.feed_interactions import (
+        dog_slug_from_name,
+        generate_unique_feed_secret,
+    )
 
     for dog in ClientProfile.objects.all().iterator():
         email = (dog.owner_email or '').strip().lower()

@@ -2,16 +2,16 @@ from django.http import HttpResponse
 from django.urls import reverse
 
 from operations.models import SharedMediaLink
-from operations.services.feed_emojis import standard_emoji_label
 from operations.services.feed_interactions import (
     DISPLAY_NAME_COOKIE,
     DISPLAY_NAME_MAX_AGE,
     comments_for_assets,
+    generate_unique_share_token,
     reaction_counts_for_assets,
     share_url_for_link,
+    standard_emoji_label,
     visitor_reactions_for_assets,
 )
-from operations.services.feed_slugs import generate_unique_share_token
 
 
 def apply_feed_private_headers(response: HttpResponse) -> HttpResponse:

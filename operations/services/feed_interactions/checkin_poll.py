@@ -1,7 +1,7 @@
 from django.utils import timezone
 
 from operations.models import ClientProfile, MediaComment, MediaReaction, VisitTimelineEvent
-from operations.services.feed_emojis import standard_emoji_label
+from operations.services.feed_interactions.emojis import standard_emoji_label
 
 
 def build_checkin_feed_activity(

@@ -29,14 +29,19 @@ operations/services/timeline_media/
 ├── errors.py, imaging.py, assets.py, attach.py, moments.py
 
 operations/services/feed_interactions/
-├── __init__.py      # set_reaction, add_comment, share helpers, check-in poll
+├── __init__.py      # public API for the whole feed surface
 ├── errors.py, constants.py, queries.py, reactions.py, comments.py
-├── sharing.py, checkin_poll.py
+├── sharing.py           # share link create / URL / view count
+├── share_preview.py     # OG image + download filename helpers
+├── checkin_poll.py      # staff check-in activity payload
+├── access.py            # visitor cookie, FeedAccessLog, 30-day stats
+├── emojis.py            # dog vs standard reaction glyphs
+└── slugs.py             # feed_secret + share_token generators
 ```
 
-Also: `timeline_visits.py`, `geolocation.py`, `feed_slugs.py`, `feed_access.py`, `feed_emojis.py`, `share_preview.py` (already small single-job modules).
+Also at `services/` root (shared, not feed-only): `timeline_visits.py`, **`geolocation.py`**.
 
-Do not re-merge `timeline_media` or `feed_interactions` into monoliths. Imports stay `from operations.services.timeline_media import …` / `feed_interactions`.
+Imports: `from operations.services.feed_interactions import …` / `timeline_media`. Do not recreate top-level `feed_access.py`, `feed_emojis.py`, `feed_slugs.py`, or `share_preview.py`.
 
 ---
 
@@ -121,7 +126,7 @@ Anonymous access tracking per browser cookie — not per person.
       ↑ feed_secret  ↑ feed_dog_slug
 ```
 
-### Speakable secret generation (`feed_slugs.py`)
+### Speakable secret generation (`feed_interactions.slugs`)
 - Stacked **CV syllables** (consonant + vowel): two chunks of 2–3 syllables → `movakitu`, `bokomelu`
 - Scale: ~8 dogs, ~30 customers — guessability is not a concern at this size
 - **Uniqueness:** DB unique on `feed_secret`; retry on collision; UUID hex as last resort
@@ -173,7 +178,7 @@ Mobile check-in card → **Log Moment** → `/visits/<pk>/timeline/`
 - All timeline events for that dog, newest first (full history across visits)
 - Thumbnail photos (tap → full-res), videos with controls
 - Caption and capture time
-- **Dog-themed reactions** in the bar (🐾 🐕 🐶 🦴 🥺) — stored by key; **standard emojis** (👍 ❤️ …) in counts/shared text (`feed_emojis.py`)
+- **Dog-themed reactions** in the bar (🐾 🐕 🐶 🦴 🥺) — stored by key; **standard emojis** (👍 ❤️ …) in counts/shared text (`feed_interactions.emojis`)
 - **Comments** — 💬 icon + count; thread/form hidden until tapped
 - **Share** — compact share icon → sheet (Copy, Gmail, WhatsApp, Facebook, native)
 - “Group moment” badge on forwarded events — **no** raw GPS, admin nav, or capture controls
@@ -191,7 +196,7 @@ Customers have no accounts. Use `visitor_id` cookie (`dad4dogs_feed_vid`), not `
 | `MediaComment` | Text + `display_name` per visitor |
 | `SharedMediaLink` | UUID pk + `share_token` (16-char URL key) → public single-moment page |
 
-Service: `operations/services/feed_interactions.py`
+Service: `operations/services/feed_interactions/`
 
 ### Social UX (private feed + public share)
 
@@ -200,7 +205,7 @@ Both surfaces use the same low-friction interaction pattern via `moment_interact
 | Element | Behaviour |
 |---------|-----------|
 | **Reaction bar** | Always visible — dog emojis (🐾 🐕 🐶 🦴 🥺) submit on tap; **no comment required** |
-| **Reaction counts** | Standard emojis (👍 ❤️ …) in summary text — `feed_emojis.py` |
+| **Reaction counts** | Standard emojis (👍 ❤️ …) in summary text — `feed_interactions.emojis` |
 | **💬 Comment balloon** | Compact icon + count badge; thread/form **hidden until tapped** |
 | **Share icon** | Compact icon → bottom sheet (Copy, Gmail, WhatsApp, Facebook, native `navigator.share`) |
 | **Download icon** | Public share page only — saves high-res file as `dad4dogs_<uuid>.jpg` |
@@ -231,7 +236,7 @@ Share icon opens bottom sheet — no POST; uses existing `SharedMediaLink.share_
 - **View counting:** `view_count` increments on GET only; POST redirects use `?posted=1` to skip re-counting
 - **Robots:** `index, follow` on share page (OG crawlers); private feed stays `noindex, nofollow`
 
-**Social previews:** `share_preview.py` sets Open Graph + Twitter tags with the **moment photo** as `og:image` (not the Dad4dogs app icon). High-res image URL used for `og:image`, `twitter:image`, and page favicon.
+**Social previews:** `feed_interactions.share_preview` sets Open Graph + Twitter tags with the **moment photo** as `og:image` (not the Dad4dogs app icon). High-res image URL used for `og:image`, `twitter:image`, and page favicon.
 
 ### Response headers
 - `X-Robots-Tag: noindex, nofollow`
@@ -345,9 +350,9 @@ return FileResponse(field.open('rb'), as_attachment=True, filename=filename)
 | Area | Path |
 |------|------|
 | Views | `operations/views/feed/` (`private.py` / `public.py`) — feed, share, react, comment, download |
-| Interactions | `operations/services/feed_interactions.py` — reactions, comments, share links, view count |
-| OG + download | `operations/services/share_preview.py` — preview image, download filename/URL |
-| Emojis | `operations/services/feed_emojis.py` — dog UI emojis vs standard count labels |
+| Interactions | `operations/services/feed_interactions/` — reactions, comments, share links, access, slugs |
+| OG + download | `feed_interactions.share_preview` — preview image, download filename/URL |
+| Emojis | `feed_interactions.emojis` — dog UI emojis vs standard count labels |
 | Staff poll | `operations/views/scheduling/checkin.py` — `checkin_feed_activity` |
 
 ---

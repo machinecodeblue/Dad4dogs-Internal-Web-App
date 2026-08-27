@@ -2,7 +2,7 @@ import uuid
 
 from django.http import HttpRequest, HttpResponse
 
-from operations.models import ClientProfile, FeedAccessLog
+from operations.models.customers import ClientProfile, FeedAccessLog
 
 VISITOR_COOKIE_NAME = 'dad4dogs_feed_vid'
 VISITOR_COOKIE_MAX_AGE = 60 * 60 * 24 * 365

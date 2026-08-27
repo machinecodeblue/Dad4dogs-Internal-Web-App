@@ -86,8 +86,11 @@ from operations.services.gmail_send import (
     build_booking_invite_message,
     send_gmail,
 )
-from operations.services.feed_access import VISITOR_COOKIE_NAME
-from operations.services.feed_slugs import dog_slug_from_name, generate_feed_secret
+from operations.services.feed_interactions import (
+    VISITOR_COOKIE_NAME,
+    dog_slug_from_name,
+    generate_feed_secret,
+)
 from operations.services.visit_email import (
     VisitEmailError,
     format_booking_confirmation,

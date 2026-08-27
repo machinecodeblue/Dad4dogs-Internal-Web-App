@@ -4,12 +4,13 @@ from django.urls import reverse
 from django.views.decorators.http import require_GET, require_POST
 
 from operations.models import ClientProfile, VisitTimelineEvent
-from operations.services.feed_access import get_or_set_visitor_id, log_feed_access
-from operations.services.feed_emojis import reaction_choices_for_feed
 from operations.services.feed_interactions import (
     DISPLAY_NAME_COOKIE,
     FeedInteractionError,
     add_comment,
+    get_or_set_visitor_id,
+    log_feed_access,
+    reaction_choices_for_feed,
     set_reaction,
 )
 from operations.views.feed.helpers import (

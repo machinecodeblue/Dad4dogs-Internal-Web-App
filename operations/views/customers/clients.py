@@ -10,7 +10,7 @@ from django.views.decorators.http import require_GET, require_http_methods
 from operations.forms import CustomerOwnerForm, DogProfileForm
 from operations.models import ClientProfile, CustomerOwner
 from operations.models.customers import VAX_FILTER_CHOICES
-from operations.services.feed_access import feed_access_stats
+from operations.services.feed_interactions import feed_access_stats
 
 
 def customer_owner_or_404(dog: ClientProfile) -> CustomerOwner:

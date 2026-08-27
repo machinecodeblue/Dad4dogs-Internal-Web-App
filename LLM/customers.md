@@ -3,7 +3,7 @@
 **Covers:** owners, dogs, COI, vaccinations, emergency contacts, veterinary contacts, pipeline per dog; Google Contacts import / vCard — see **[`contacts.md`](contacts.md)**.
 
 **Code packages:** `operations/models/customers.py`, `forms/customers.py`, `operations/views/customers/` (`clients.py`, `intake.py`, `vaccinations.py`, `contacts.py`, `actions.py`, `__init__.py`)  
-**Services:** `operations/services/contacts/` (package — see `contacts.md`), `addresses.py`, `phones.py`, `feed_slugs.py`, `feed_access.py`  
+**Services:** `operations/services/contacts/` (see `contacts.md`), `addresses.py`, `phones.py`; feed secrets/stats via `feed_interactions/` (see `feed.md`)  
 **Customer feed & social:** see [`feed.md`](feed.md) — private feed (react, comment, share) and public `/feed/share/<token>/` (re-share, download)
 
 ---

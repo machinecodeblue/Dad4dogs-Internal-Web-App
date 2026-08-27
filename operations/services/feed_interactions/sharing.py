@@ -1,6 +1,6 @@
 from operations.models import ClientProfile, SharedMediaLink
 from operations.services.feed_interactions.queries import asset_belongs_to_client
-from operations.services.feed_slugs import generate_unique_share_token
+from operations.services.feed_interactions.slugs import generate_unique_share_token
 
 
 def get_or_create_share_link(*, client: ClientProfile, asset_id: int) -> SharedMediaLink:

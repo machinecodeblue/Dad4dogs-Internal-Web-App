@@ -11,7 +11,6 @@ from operations.services.addresses import (
     format_address,
     maps_search_url,
 )
-from operations.services.feed_slugs import dog_slug_from_name, generate_unique_feed_secret
 
 VAX_EXPIRY_WARNING_DAYS = 30
 
@@ -441,6 +440,11 @@ class ClientProfile(TenantAwareModel):
         return True
 
     def ensure_feed_credentials(self, *, save: bool = True) -> 'ClientProfile':
+        from operations.services.feed_interactions import (
+            dog_slug_from_name,
+            generate_unique_feed_secret,
+        )
+
         update_fields = []
         if not self.feed_dog_slug:
             self.feed_dog_slug = dog_slug_from_name(self.dog_name)
@@ -455,6 +459,8 @@ class ClientProfile(TenantAwareModel):
 
     def sync_feed_dog_slug(self, *, save: bool = True) -> None:
         """Keep the dog slug aligned with the current dog name."""
+        from operations.services.feed_interactions import dog_slug_from_name
+
         slug = dog_slug_from_name(self.dog_name)
         if self.feed_dog_slug != slug:
             self.feed_dog_slug = slug
@@ -463,6 +469,11 @@ class ClientProfile(TenantAwareModel):
 
     def regenerate_feed_secret(self, *, save: bool = True) -> str:
         """Issue a new secret — old feed links stop working."""
+        from operations.services.feed_interactions import (
+            dog_slug_from_name,
+            generate_unique_feed_secret,
+        )
+
         self.feed_secret = generate_unique_feed_secret()
         if not self.feed_dog_slug:
             self.feed_dog_slug = dog_slug_from_name(self.dog_name)

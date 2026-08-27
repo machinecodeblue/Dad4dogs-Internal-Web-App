@@ -4,25 +4,23 @@ from django.urls import reverse
 from django.views.decorators.http import require_GET, require_POST
 
 from operations.models import SharedMediaLink
-from operations.services.feed_access import get_or_set_visitor_id
-from operations.services.feed_emojis import reaction_choices_for_feed
 from operations.services.feed_interactions import (
     DISPLAY_NAME_COOKIE,
     FeedInteractionError,
     add_comment,
+    build_share_preview_context,
     comments_for_assets,
+    generate_unique_share_token,
+    get_or_set_visitor_id,
+    reaction_choices_for_feed,
     reaction_counts_for_assets,
     record_share_view,
     set_reaction,
-    share_url_for_link,
-    visitor_reactions_for_assets,
-)
-from operations.services.feed_slugs import generate_unique_share_token
-from operations.services.share_preview import (
-    build_share_preview_context,
     share_download_field,
     share_download_filename,
     share_download_page_url,
+    share_url_for_link,
+    visitor_reactions_for_assets,
 )
 from operations.views.feed.helpers import reaction_summary, set_display_name_cookie
 
