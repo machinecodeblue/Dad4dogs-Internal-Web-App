@@ -2379,7 +2379,7 @@ class VisitEmailTests(TestCase):
         self.assertContains(response, 'emailed Apr 10')
         self.assertNotContains(response, 'Send email')
 
-    @patch('operations.views.scheduling.send_booking_confirmation')
+    @patch('operations.views.scheduling.visits.send_booking_confirmation')
     def test_send_confirmation_view_calls_email(self, mock_send):
         visit = Visit.objects.create(
             client=self.dog,
@@ -2397,7 +2397,7 @@ class VisitEmailTests(TestCase):
         self.assertEqual(args[0], self.dog)
         self.assertEqual(list(args[1]), [visit])
 
-    @patch('operations.views.scheduling.send_booking_confirmation')
+    @patch('operations.views.scheduling.visits.send_booking_confirmation')
     def test_send_confirmation_view_skips_if_already_sent(self, mock_send):
         visit = Visit.objects.create(
             client=self.dog,
@@ -3020,7 +3020,7 @@ class VisitCheckInOutViewTests(TestCase):
         self.assertEqual(visit.actual_departure, first_departure)
         self.assertEqual(visit.calculated_fee, first_fee)
 
-    @patch('operations.views.scheduling.timezone.localdate', return_value=date(2026, 4, 10))
+    @patch('operations.views.scheduling.checkin.timezone.localdate', return_value=date(2026, 4, 10))
     def test_overnight_visit_appears_on_checkin(self, _mock_today):
         Visit.objects.create(
             client=self.dog,
@@ -3448,6 +3448,13 @@ class TimelineMomentFormTests(TestCase):
 
 class VisitTimelineTests(TestCase):
     def setUp(self):
+        # active_checked_in_visits() scopes to local "today"; freeze to visit day.
+        self._today_patch = patch(
+            'operations.services.timeline_visits.timezone.localdate',
+            return_value=date(2026, 7, 6),
+        )
+        self._today_patch.start()
+        self.addCleanup(self._today_patch.stop)
         self.user = get_user_model().objects.create_user(username='david', password='testpass123')
         self.client = DjangoTestClient()
         self.client.login(username='david', password='testpass123')
@@ -3501,7 +3508,7 @@ class VisitTimelineTests(TestCase):
                 used_fallback=False,
                 fallback_label='',
             )
-        with patch('operations.views.scheduling.visits_available_for_forward') as mock_fwd:
+        with patch('operations.views.scheduling.timeline.visits_available_for_forward') as mock_fwd:
             response = self.client.get(
                 reverse('operations:visit_timeline', args=[self.visit.pk]),
             )

@@ -13,8 +13,14 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 import os
 from pathlib import Path
 
+from django.core.exceptions import ImproperlyConfigured
+from dotenv import load_dotenv
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+# Local secrets (POSTGRES_*, etc.). `.env` is gitignored.
+load_dotenv(BASE_DIR / '.env')
 
 
 # Quick-start development settings - unsuitable for production
@@ -84,13 +90,23 @@ TEMPLATES = [
 WSGI_APPLICATION = 'config.wsgi.application'
 
 
-# Database
+# Database — operational engine is PostgreSQL (see LLM/PROJECT.md).
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
+
+_POSTGRES_PASSWORD = os.environ.get('POSTGRES_PASSWORD', '').strip()
+if not _POSTGRES_PASSWORD:
+    raise ImproperlyConfigured(
+        'POSTGRES_PASSWORD is required. Copy .env.example to .env and set it.'
+    )
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': os.environ.get('POSTGRES_DB', 'dad4dogs'),
+        'USER': os.environ.get('POSTGRES_USER', 'dad4dogs'),
+        'PASSWORD': _POSTGRES_PASSWORD,
+        'HOST': os.environ.get('POSTGRES_HOST', 'localhost'),
+        'PORT': os.environ.get('POSTGRES_PORT', '5432'),
     }
 }
 

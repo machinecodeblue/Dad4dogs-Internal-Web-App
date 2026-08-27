@@ -203,7 +203,7 @@ GET paths do **not** call `ensure_for_client()` or `ensure_feed_credentials()`. 
 
 `?stage=` must be a `PipelineStage` value or it is ignored (same as invalid `?vax=`). vCard filenames keep only `A-Za-z0-9_-`. Import `selected_rows` skip non-integers instead of 500.
 
-Public feed view lives in `views/customer_feed.py` — not in this package.
+Public feed views live in `views/feed/` — not in this package. Feed regenerate stays in `customers/actions.py`.
 
 ---
 

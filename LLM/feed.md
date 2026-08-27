@@ -5,9 +5,10 @@
 **Code packages:**
 - `operations/models/scheduling.py` — `TimelineMediaAsset`, `VisitTimelineEvent`
 - `operations/models/customers.py` — `feed_secret`, `feed_dog_slug`, `FeedAccessLog`
-- `operations/views/scheduling.py` — `visit_timeline`, `visit_timeline_forward` (staff)
-- `operations/views/customer_feed.py` — `customer_feed` (public)
-- `operations/views/customers.py` — `dog_feed_regenerate` (staff)
+- `operations/views/scheduling/timeline.py` — `visit_timeline`, `visit_timeline_forward` (staff)
+- `operations/views/scheduling/checkin.py` — `checkin_feed_activity` (staff poll)
+- `operations/views/feed/` — customer feed + public share (`private.py`, `public.py`, `helpers.py`, `__init__.py`)
+- `operations/views/customers/actions.py` — `dog_feed_regenerate` (staff)
 
 **Services:** `timeline_media.py`, `timeline_visits.py`, `geolocation.py`, `feed_slugs.py`, `feed_access.py`, `feed_interactions.py`, `feed_emojis.py`, `share_preview.py`  
 **Templates:** `visit_timeline.html` (staff), `customer_feed.html`, `public_photo_share.html`, `customer_base.html` (public)  
@@ -319,11 +320,11 @@ return FileResponse(field.open('rb'), as_attachment=True, filename=filename)
 ### Key implementation files
 | Area | Path |
 |------|------|
-| Views | `operations/views/customer_feed.py` — feed, share, react, comment, download |
+| Views | `operations/views/feed/` (`private.py` / `public.py`) — feed, share, react, comment, download |
 | Interactions | `operations/services/feed_interactions.py` — reactions, comments, share links, view count |
 | OG + download | `operations/services/share_preview.py` — preview image, download filename/URL |
 | Emojis | `operations/services/feed_emojis.py` — dog UI emojis vs standard count labels |
-| Staff poll | `operations/views/scheduling.py` — `checkin_feed_activity` |
+| Staff poll | `operations/views/scheduling/checkin.py` — `checkin_feed_activity` |
 
 ---
 

@@ -204,7 +204,7 @@ Home screen (`/`) = David's daily operations view.
 - Counts come from `ClientProfile.objects.vaccination_status_counts()` (one annotated aggregate). Do not N+1 `has_current_vaccination` on the dashboard.
 
 ### Overlap query (same as capacity, check-in, feed activity, timeline eligibility)
-`scheduled_start < day_end` AND `scheduled_end > day_start` where bounds are **local** midnight from `agenda.day_bounds()`. Do **not** use `scheduled_start__date` / `scheduled_end__date` — SQLite `__date__` on aware datetimes is UTC-ish and drops overnight stays that cross midnight.
+`scheduled_start < day_end` AND `scheduled_end > day_start` where bounds are **local** midnight from `agenda.day_bounds()`. Do **not** use `scheduled_start__date` / `scheduled_end__date` — those `__date` lookups are wrong for aware datetimes (especially overnight stays that cross local midnight). Always use `day_bounds()` overlap.
 
 ---
 

@@ -4,17 +4,20 @@ A Django monolith for David's single-user dog boarding operations at **Dad4dogs*
 
 ## Tech Stack
 
-- **Django 5** + **SQLite**
+- **Django 5** + **PostgreSQL 18** (operational engine)
 - Mobile-optimized UI (designed for ngrok tunnel access)
 - Read-only iCal feed for Google Calendar subscription
 
 ## Quick Start
 
 ```bash
+# Prerequisites: PostgreSQL running locally; database/role dad4dogs
+# Copy .env.example to .env and set POSTGRES_PASSWORD
+
 # Install dependencies
 pip install -r requirements.txt
 
-# Run migrations
+# Run migrations (fresh schema on Postgres)
 python manage.py migrate
 
 # Create your login (David)

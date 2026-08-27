@@ -71,7 +71,7 @@ How it is read at runtime (`operations/capacity.py`):
 |--------|-----|----------|
 | Business settings | `/settings/` | Identity, location/hours, phones, **standard capacity** + **insurance max**, **Google Contact Sync** (not on `/clients/`) |
 
-Bottom nav **Settings** links here.
+Drawer **Settings** links here (not a bottom-nav tab — see `platform.md` §4).
 
 Django admin also exposes **Business profile** for the same singleton record (`operations/admin.py`).
 

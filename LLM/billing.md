@@ -42,7 +42,7 @@ Unique constraint: one statement per dog per `week_start`.
 | `/statements/` | Dense list (same tenet as `/clients/`): one card, hairline rows, name is the link. Amber badge only when not yet sent. |
 | `/statements/<id>/` | Detail + formatted email body preview |
 
-Bottom nav **Billing** links here.
+Drawer **Billing** links here (not a bottom-nav tab — see `platform.md` §4).
 
 ---
 
@@ -60,9 +60,9 @@ python manage.py generate_statements
 
 ---
 
-## 5. Views (billing.py)
+## 5. Views (`views/billing.py`)
 
-`statements_list`, `statement_detail`
+Public views today: **`statements_list`**, **`statement_detail`** only. No portable-database export endpoints yet.
 
 ---
 
@@ -75,6 +75,7 @@ python manage.py generate_statements
 | Send statement via Gmail | **Not wired** — use booking email pattern when implementing |
 | e-Transfer send automation | Not started |
 | Zero-admin accounting dashboard | Partial — list + preview only |
+| Portable SQLite export (operator data download) | **Future** — compile from Postgres; see `PROJECT.md` Rule C / §9.1. Not started. |
 
 ---
 
@@ -89,6 +90,15 @@ Mark `send_status = sent` and `sent_at` after successful send.
 
 ---
 
-## 8. Tests
+## 8. Multi-Operator Extraction Architecture (Future Deferral)
+
+The app is **single-operator today**. Do not implement extraction or invent tenancy from this section unless David asks.
+
+* **Symmetric relational design:** Keep core models on a clean relational schema so a future portability pipeline can map tables without special-case blobs.
+* **Deferred extraction logic:** Compiling one operator's footprint out of production PostgreSQL into a downloadable standalone `.sqlite3` is **explicitly deferred**. No UI, management command, or `views/billing.py` trigger exists yet. Focus on statements and core operations until that work is scheduled (`PROJECT.md` Rule C / section 9.1).
+
+---
+
+## 9. Tests
 
 Statement logic is covered indirectly via pricing/checkout tests. Add dedicated statement tests when email send is wired.

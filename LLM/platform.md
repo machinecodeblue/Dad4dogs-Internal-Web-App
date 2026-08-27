@@ -4,18 +4,50 @@
 
 ---
 
-## 1. Tech Stack
+## 1. Tech Stack & Environment
 
 | Item | Value |
 |------|-------|
 | Framework | Django 5.x |
-| Database | SQLite (`db.sqlite3`) |
+| Database engine | **PostgreSQL 18.6** (local community edition; Windows service `postgresql-x64-18`) |
+| Database / role | `dad4dogs` / `dad4dogs` |
+| Port | `5432` |
+| Driver | `psycopg[binary]>=3.2` |
+| Env loader | `python-dotenv` (project-root `.env`, gitignored) |
 | Timezone | `America/Toronto` |
 | Auth | Django admin login; `@login_required` on all operational views |
-| User model | Single user (David) — `createsuperuser` once, no registration |
+| User model | Single administrative operator (David) — `createsuperuser` once, no registration |
 
 ### Dependencies (`requirements.txt`)
-Django, icalendar, python-dateutil, werkzeug (HTTPS dev server), google-auth-oauthlib, google-api-python-client (Gmail send)
+Django, icalendar, python-dateutil, werkzeug (HTTPS dev server), google-auth-oauthlib, google-api-python-client (Gmail send), **psycopg[binary]**, **python-dotenv**
+
+### PostgreSQL local setup (`.env` / `config/settings.py`)
+
+The app relies on environment parameters for database config. Real secrets must never be committed. Copy `.env.example` → `.env` and set:
+
+| Variable | Typical local value |
+|----------|---------------------|
+| `POSTGRES_DB` | `dad4dogs` |
+| `POSTGRES_USER` | `dad4dogs` (app-specific non-root login role) |
+| `POSTGRES_PASSWORD` | *(required — secret credential matching the DB user; no default in settings)* |
+| `POSTGRES_HOST` | `localhost` (or `127.0.0.1`) |
+| `POSTGRES_PORT` | `5432` |
+
+**Zero fallback:** `config/settings.py` loads `.env` via `python-dotenv` and **requires** `POSTGRES_PASSWORD`. There is no silent SQLite fallback. Missing/incorrect env raises `ImproperlyConfigured` at boot.
+
+**Legacy SQLite:** Leftover `db.sqlite3` on disk is a deprecated local artifact. Rename to `db.sqlite3.bak` or archive it. Live features write exclusively to PostgreSQL (`LLM/PROJECT.md` production engine).
+
+**Tests:** `python manage.py test operations` creates a temporary `test_dad4dogs` database. The local `dad4dogs` role needs `CREATEDB`.
+
+Fresh schema:
+
+```bash
+pip install -r requirements.txt
+python manage.py migrate
+python manage.py createsuperuser
+```
+
+**Operator scope today:** single-operator. Multi-tenant workspace isolation and portable SQLite export are **future** (`PROJECT.md` Rule C / §9.1; `billing.md` §8).
 
 ---
 
@@ -273,5 +305,5 @@ Do not commit new live client PII without David's consent.
 
 - Target: 2GB Linode instance
 - Move `O-Auth Key/token.json` to secure path via `GMAIL_OAUTH_DIR` env var
-- Replace SQLite if concurrency demands it
+- Keep PostgreSQL as the operational database; supply `POSTGRES_*` via host env (not committed `.env`)
 - Set `DEBUG=False`, proper `SECRET_KEY`, `ALLOWED_HOSTS`
