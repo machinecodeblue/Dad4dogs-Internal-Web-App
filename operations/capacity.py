@@ -1,4 +1,4 @@
-from datetime import date, datetime, time, timedelta
+﻿from datetime import date, datetime, time, timedelta
 
 from django.db.models import Count, Q
 from django.utils import timezone
@@ -14,14 +14,26 @@ INSURANCE_CEILING = DEFAULT_INSURANCE_CEILING
 
 
 def capacity_limits() -> tuple[int, int]:
-    """Standard daily capacity and insurance ceiling from Settings, else defaults."""
-    from operations.models import BusinessProfile
+    """Standard daily capacity and insurance ceiling from CapacitySettings, else defaults."""
+    from operations.models import CapacitySettings
+    from operations.services.context_tenant import (
+        ACTIVE_WORKSPACE_SLUG,
+        get_active_workspace,
+    )
 
+    # Single JOIN query on the hot path (same budget as the old singleton values_list).
     row = (
-        BusinessProfile.objects.filter(singleton_key='X')
+        CapacitySettings.objects.filter(workspace__slug=ACTIVE_WORKSPACE_SLUG)
         .values_list('standard_capacity', 'insurance_ceiling')
         .first()
     )
+    if not row:
+        get_active_workspace()
+        row = (
+            CapacitySettings.objects.filter(workspace__slug=ACTIVE_WORKSPACE_SLUG)
+            .values_list('standard_capacity', 'insurance_ceiling')
+            .first()
+        )
     if not row:
         return STANDARD_CAPACITY, INSURANCE_CEILING
     standard, ceiling = row
@@ -162,7 +174,7 @@ def _as_local(dt: datetime) -> datetime:
 def _capacity_span_dates(visit) -> tuple[date, date]:
     """Local calendar days that overlap the visit (same rule as scheduled_end__gt=day_start).
 
-    An end exactly at local midnight belongs to the prior day only — SQL uses
+    An end exactly at local midnight belongs to the prior day only ΓÇö SQL uses
     scheduled_end > day_start, so 2026-04-12 00:00 does not occupy 12 April.
     """
     start_local = _as_local(visit.scheduled_start)

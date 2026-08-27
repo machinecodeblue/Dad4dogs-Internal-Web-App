@@ -1,9 +1,30 @@
 from django import forms
 
-from operations.models import BusinessProfile
+from operations.models import BusinessProfile, CapacitySettings
 
 
 class BusinessProfileForm(forms.ModelForm):
+    """Edits BusinessProfile plus CapacitySettings on one settings screen."""
+
+    standard_capacity = forms.IntegerField(
+        min_value=1,
+        max_value=50,
+        widget=forms.NumberInput(attrs={
+            'min': 1,
+            'max': 50,
+            'inputmode': 'numeric',
+        }),
+    )
+    insurance_ceiling = forms.IntegerField(
+        min_value=1,
+        max_value=50,
+        widget=forms.NumberInput(attrs={
+            'min': 1,
+            'max': 50,
+            'inputmode': 'numeric',
+        }),
+    )
+
     class Meta:
         model = BusinessProfile
         fields = [
@@ -14,8 +35,6 @@ class BusinessProfileForm(forms.ModelForm):
             'main_phone',
             'secondary_phone',
             'emergency_phone',
-            'standard_capacity',
-            'insurance_ceiling',
         ]
         widgets = {
             'business_name': forms.TextInput(attrs={
@@ -51,17 +70,14 @@ class BusinessProfileForm(forms.ModelForm):
                 'autocomplete': 'tel',
                 'inputmode': 'tel',
             }),
-            'standard_capacity': forms.NumberInput(attrs={
-                'min': 1,
-                'max': 50,
-                'inputmode': 'numeric',
-            }),
-            'insurance_ceiling': forms.NumberInput(attrs={
-                'min': 1,
-                'max': 50,
-                'inputmode': 'numeric',
-            }),
         }
+
+    def __init__(self, *args, capacity_settings: CapacitySettings | None = None, **kwargs):
+        self.capacity_settings = capacity_settings
+        super().__init__(*args, **kwargs)
+        if capacity_settings is not None:
+            self.fields['standard_capacity'].initial = capacity_settings.standard_capacity
+            self.fields['insurance_ceiling'].initial = capacity_settings.insurance_ceiling
 
     def clean(self):
         cleaned = super().clean()
@@ -73,3 +89,12 @@ class BusinessProfileForm(forms.ModelForm):
                 'Insurance maximum must be at least the standard daily capacity.',
             )
         return cleaned
+
+    def save(self, commit=True):
+        profile = super().save(commit=commit)
+        if commit and self.capacity_settings is not None:
+            self.capacity_settings.standard_capacity = self.cleaned_data['standard_capacity']
+            self.capacity_settings.insurance_ceiling = self.cleaned_data['insurance_ceiling']
+            self.capacity_settings.full_clean()
+            self.capacity_settings.save()
+        return profile

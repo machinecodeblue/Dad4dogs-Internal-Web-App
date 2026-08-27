@@ -65,7 +65,9 @@ operations/
 │   ├── customers.py     # CustomerOwner, ClientProfile, VaccinationRecord
 │   ├── scheduling.py    # VisitSeries, Visit, TimelineMediaAsset, VisitTimelineEvent, MediaComment, MediaReaction
 │   ├── billing.py       # AccountStatement
-│   └── business.py      # BusinessProfile (singleton per operating environment)
+│   ├── tenant.py        # Workspace (thin tenant root)
+│   ├── base.py          # TenantAwareModel
+│   └── business.py      # BusinessProfile + CapacitySettings (1:1 to Workspace)
 ├── forms/
 │   ├── __init__.py      # Re-exports all forms
 │   ├── customers.py     # CustomerOwnerForm, DogProfileForm, VaccinationRecordForm
@@ -96,6 +98,7 @@ operations/
 │   ├── timeline_media.py, timeline_visits.py, geolocation.py
 │   ├── addresses.py, phones.py, feed_slugs.py, feed_access.py
 │   ├── feed_interactions.py, feed_emojis.py, share_preview.py, statements.py
+│   ├── context_tenant.py # get_active_workspace() single-operator bridge
 │   └── visit_email.py, gmail_send.py, gmail_sync.py
 ├── pricing.py           # Tiered fee engine (scheduling domain)
 ├── capacity.py          # Daily dog count guards (scheduling domain)
@@ -223,8 +226,10 @@ scheduled → checked_in → completed (or cancelled). 
 | GoDaddy inquiry parsing | Not started |
 | e-Transfer automation | Not started |
 | Operational database PostgreSQL | Done — local Postgres 18; see platform.md |
+| Schema multi-tenancy (Workspace + tenant FKs + CapacitySettings) | Done — Phase 1; single-operator bridge `get_active_workspace()` |
+| Default tenant QuerySet / middleware | Not started — Phase 2 |
 | Portable SQLite export (operator download) | Not started — future; billing.md section 8 |
-| Multi-tenant workspace scoping | Not started — single-operator today |
+| Multi-tenant auth / workspace membership | Not started — single-operator today |
 
 ------------------------------
 ## 7. Quick Commands

@@ -27,6 +27,7 @@ from operations.forms import (
 )
 from operations.models import (
     BusinessProfile,
+    CapacitySettings,
     ClientProfile,
     CustomerOwner,
     MediaComment,
@@ -2689,10 +2690,10 @@ class VisitCapacitySaveTests(TestCase):
             self._visit()
 
     def test_settings_ceiling_blocks_below_default(self):
-        profile = BusinessProfile.load()
-        profile.standard_capacity = 2
-        profile.insurance_ceiling = 2
-        profile.save(update_fields=['standard_capacity', 'insurance_ceiling', 'updated_at'])
+        caps = CapacitySettings.load()
+        caps.standard_capacity = 2
+        caps.insurance_ceiling = 2
+        caps.save(update_fields=['standard_capacity', 'insurance_ceiling', 'updated_at'])
         for i in range(2):
             dog = ClientProfile.objects.create(
                 dog_name=f'Low{i}',
@@ -2887,9 +2888,9 @@ class CapacityTimezoneTests(TestCase):
 class VisitIndexTests(TestCase):
     def test_hot_lookup_fields_are_indexed(self):
         indexed = {tuple(index.fields) for index in Visit._meta.indexes}
-        self.assertIn(('scheduled_start',), indexed)
-        self.assertIn(('scheduled_end',), indexed)
-        self.assertIn(('status',), indexed)
+        self.assertIn(('tenant', 'scheduled_start'), indexed)
+        self.assertIn(('tenant', 'scheduled_end'), indexed)
+        self.assertIn(('tenant', 'status'), indexed)
 
 
 class VisitCloneToDateTests(TestCase):
@@ -3216,39 +3217,50 @@ class BusinessProfileTests(TestCase):
         second = BusinessProfile.load()
         self.assertEqual(first.pk, second.pk)
         self.assertEqual(BusinessProfile.objects.count(), 1)
+        self.assertIsNotNone(first.workspace_id)
 
     def test_save_business_details(self):
-        form = BusinessProfileForm(data={
-            'business_name': 'Dad4dogs',
-            'business_email': 'david@dad4dogs.ca',
-            'address': '123 Main St\nToronto, ON M5V 1A1',
-            'hours_of_operation': 'Mon–Fri 7:00 AM – 7:00 PM',
-            'main_phone': '416-555-0100',
-            'secondary_phone': '416-555-0101',
-            'emergency_phone': '416-555-9999',
-            'standard_capacity': 8,
-            'insurance_ceiling': 10,
-        }, instance=BusinessProfile.load())
+        caps = CapacitySettings.load()
+        form = BusinessProfileForm(
+            data={
+                'business_name': 'Dad4dogs',
+                'business_email': 'david@dad4dogs.ca',
+                'address': '123 Main St\nToronto, ON M5V 1A1',
+                'hours_of_operation': 'Mon–Fri 7:00 AM – 7:00 PM',
+                'main_phone': '416-555-0100',
+                'secondary_phone': '416-555-0101',
+                'emergency_phone': '416-555-9999',
+                'standard_capacity': 8,
+                'insurance_ceiling': 10,
+            },
+            instance=BusinessProfile.load(),
+            capacity_settings=caps,
+        )
         self.assertTrue(form.is_valid(), form.errors)
         profile = form.save()
+        caps.refresh_from_db()
         self.assertEqual(profile.main_phone, '416-555-0100')
         self.assertEqual(profile.emergency_phone, '416-555-9999')
-        self.assertEqual(profile.standard_capacity, 8)
-        self.assertEqual(profile.insurance_ceiling, 10)
+        self.assertEqual(caps.standard_capacity, 8)
+        self.assertEqual(caps.insurance_ceiling, 10)
         self.assertIn('Toronto', profile.formatted_address)
 
     def test_insurance_ceiling_cannot_be_below_standard(self):
-        form = BusinessProfileForm(data={
-            'business_name': 'Dad4dogs',
-            'business_email': 'david@dad4dogs.ca',
-            'address': '',
-            'hours_of_operation': '',
-            'main_phone': '',
-            'secondary_phone': '',
-            'emergency_phone': '',
-            'standard_capacity': 8,
-            'insurance_ceiling': 5,
-        }, instance=BusinessProfile.load())
+        form = BusinessProfileForm(
+            data={
+                'business_name': 'Dad4dogs',
+                'business_email': 'david@dad4dogs.ca',
+                'address': '',
+                'hours_of_operation': '',
+                'main_phone': '',
+                'secondary_phone': '',
+                'emergency_phone': '',
+                'standard_capacity': 8,
+                'insurance_ceiling': 5,
+            },
+            instance=BusinessProfile.load(),
+            capacity_settings=CapacitySettings.load(),
+        )
         self.assertFalse(form.is_valid())
         self.assertIn('insurance_ceiling', form.errors)
 
@@ -3286,16 +3298,17 @@ class BusinessSettingsViewTests(TestCase):
         })
         self.assertEqual(response.status_code, 302)
         profile = BusinessProfile.load()
+        caps = CapacitySettings.load()
         self.assertEqual(profile.main_phone, '416-555-0100')
         self.assertEqual(profile.hours_of_operation, 'Daily 8 AM – 6 PM')
-        self.assertEqual(profile.standard_capacity, 6)
-        self.assertEqual(profile.insurance_ceiling, 9)
+        self.assertEqual(caps.standard_capacity, 6)
+        self.assertEqual(caps.insurance_ceiling, 9)
 
     def test_dashboard_uses_saved_standard_capacity(self):
-        profile = BusinessProfile.load()
-        profile.standard_capacity = 6
-        profile.insurance_ceiling = 9
-        profile.save(update_fields=['standard_capacity', 'insurance_ceiling', 'updated_at'])
+        caps = CapacitySettings.load()
+        caps.standard_capacity = 6
+        caps.insurance_ceiling = 9
+        caps.save(update_fields=['standard_capacity', 'insurance_ceiling', 'updated_at'])
         response = self.client.get(reverse('operations:dashboard'))
         self.assertEqual(response.context['capacity']['standard'], 6)
         self.assertEqual(response.context['capacity']['ceiling'], 9)

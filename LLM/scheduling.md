@@ -293,7 +293,7 @@ Tests: `PricingEngineTests`, `VisitCheckOutTests`
 
 **Purpose:** Standard is the comfortable daily count (dashboard `N / standard`, warning when over). Insurance max is the policy hard stop (block **new** bookings when a day would go over). Both live on `BusinessProfile` and are edited on `/settings/` — see `admin.md` §2 Daily capacity.
 
-**How:** `capacity.capacity_limits()` reads `standard_capacity` / `insurance_ceiling` from the singleton (`values_list`, no `load()`). Missing row → module defaults 8 / 10. Do not hardcode 8/10 in templates or booking checks; use `capacity.standard` / `capacity.ceiling` from `assess_capacity`.
+**How:** `capacity.capacity_limits()` reads `standard_capacity` / `insurance_ceiling` from **`CapacitySettings`** for the active workspace (one JOIN/`values_list` on the hot path). Missing row → module defaults 8 / 10. Do not hardcode 8/10 in templates or booking checks; use `capacity.standard` / `capacity.ceiling` from `assess_capacity`. See `admin.md` for CapacitySettings vs BusinessProfile.
 
 | Count | Behaviour |
 |-------|-----------|

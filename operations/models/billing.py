@@ -2,10 +2,12 @@ from decimal import Decimal
 
 from django.db import models
 
+from operations.models.base import TenantAwareModel
+
 from .customers import ClientProfile
 
 
-class AccountStatement(models.Model):
+class AccountStatement(TenantAwareModel):
     class SendStatus(models.TextChoices):
         DRAFT = 'draft', 'Draft'
         QUEUED = 'queued', 'Queued for Send'

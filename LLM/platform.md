@@ -47,7 +47,7 @@ python manage.py migrate
 python manage.py createsuperuser
 ```
 
-**Operator scope today:** single-operator. Multi-tenant workspace isolation and portable SQLite export are **future** (`PROJECT.md` Rule C / §9.1; `billing.md` §8).
+**Operator scope today:** single-operator via `get_active_workspace()` (slug `dad4dogs`). **Schema** is multi-tenant (`Workspace`, `tenant` FKs, `CapacitySettings`) — see Decision *Multi-tenant schema Option B*. Default QuerySet tenant filters, membership auth, and portable SQLite export remain **future** (`PROJECT.md` Rule C / §9.1; `billing.md` §8).
 
 ---
 

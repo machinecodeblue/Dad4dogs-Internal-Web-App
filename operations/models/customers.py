@@ -5,6 +5,7 @@ from django.db.models import Count, Max, Q
 from django.urls import reverse
 from django.utils import timezone
 
+from operations.models.base import TenantAwareModel
 from operations.services.addresses import (
     CANADIAN_PROVINCES,
     format_address,
@@ -27,12 +28,12 @@ VAX_FILTER_CHOICES = (
 )
 
 
-class CustomerOwner(models.Model):
+class CustomerOwner(TenantAwareModel):
     """
-    The owner's relationship with Dad4dogs — one record per owner email.
+    The owner's relationship with Dad4dogs — one record per owner email per workspace.
     Certificate of insurance applies here, not per dog.
     """
-    owner_email = models.EmailField(unique=True)
+    owner_email = models.EmailField()
     owner_name = models.CharField(max_length=200)
     owner_salutation = models.CharField(
         max_length=40,
@@ -91,6 +92,12 @@ class CustomerOwner(models.Model):
         ordering = ['owner_name']
         verbose_name = 'customer (owner)'
         verbose_name_plural = 'customers (owners)'
+        constraints = [
+            models.UniqueConstraint(
+                fields=['tenant', 'owner_email'],
+                name='unique_tenant_customer_owner_email',
+            ),
+        ]
 
     def __str__(self):
         return f'{self.owner_name} ({self.owner_email})'
@@ -187,11 +194,18 @@ class CustomerOwner(models.Model):
         email = (client.owner_email or '').strip()
         if not email:
             return None
-        return cls.objects.filter(owner_email__iexact=email).first()
+        qs = cls.objects.filter(owner_email__iexact=email)
+        if getattr(client, 'tenant_id', None):
+            qs = qs.filter(tenant_id=client.tenant_id)
+        return qs.first()
 
     @classmethod
     def ensure_for_client(cls, client: 'ClientProfile') -> 'CustomerOwner':
+        from operations.services.context_tenant import get_active_workspace
+
+        tenant = client.tenant if getattr(client, 'tenant_id', None) else get_active_workspace()
         owner, _ = cls.objects.get_or_create(
+            tenant=tenant,
             owner_email=client.owner_email.lower().strip(),
             defaults={
                 'owner_name': client.owner_name,
@@ -253,7 +267,7 @@ class ClientProfileQuerySet(models.QuerySet):
         )
 
 
-class ClientProfile(models.Model):
+class ClientProfile(TenantAwareModel):
     class PipelineStage(models.TextChoices):
         INQUIRY = 'inquiry', 'Inquiry'
         MEET_GREET = 'meet_greet', 'Meet & Greet'
@@ -308,8 +322,8 @@ class ClientProfile(models.Model):
     class Meta:
         constraints = [
             models.UniqueConstraint(
-                fields=['owner_email', 'dog_name'],
-                name='unique_owner_email_dog_name',
+                fields=['tenant', 'owner_email', 'dog_name'],
+                name='unique_tenant_owner_email_dog_name',
             ),
         ]
         ordering = ['dog_name', 'owner_name']
@@ -483,7 +497,7 @@ class ClientProfile(models.Model):
         return path
 
 
-class FeedAccessLog(models.Model):
+class FeedAccessLog(TenantAwareModel):
     """Anonymous per-browser access log for customer feeds (local visitor ID cookie)."""
     client = models.ForeignKey(
         ClientProfile,
@@ -505,7 +519,7 @@ class FeedAccessLog(models.Model):
         return f'{self.client.dog_name} — {self.visitor_id[:8]}… @ {self.accessed_at:%Y-%m-%d %H:%M}'
 
 
-class VaccinationRecord(models.Model):
+class VaccinationRecord(TenantAwareModel):
     client = models.ForeignKey(
         ClientProfile,
         on_delete=models.CASCADE,

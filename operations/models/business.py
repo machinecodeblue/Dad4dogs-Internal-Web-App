@@ -8,10 +8,19 @@ DEFAULT_INSURANCE_CEILING = 10
 
 class BusinessProfile(models.Model):
     """
-    Singleton record for Dad4dogs baseline business details.
-    Use BusinessProfile.load() — never create multiple rows.
+    Per-workspace brand / contact baseline (OneToOne to Workspace).
+
+    Capacity integers live on CapacitySettings — not here.
+    Use BusinessProfile.load() for the active single-operator workspace.
     """
-    singleton_key = models.CharField(max_length=1, default='X', unique=True, editable=False)
+
+    workspace = models.OneToOneField(
+        'operations.Workspace',
+        on_delete=models.CASCADE,
+        related_name='profile',
+        null=True,
+        blank=True,
+    )
 
     business_name = models.CharField(
         max_length=200,
@@ -44,17 +53,6 @@ class BusinessProfile(models.Model):
         help_text='Number clients should call if there is an urgent problem.',
     )
 
-    standard_capacity = models.PositiveSmallIntegerField(
-        default=DEFAULT_STANDARD_CAPACITY,
-        validators=[MinValueValidator(1), MaxValueValidator(50)],
-        help_text='Comfortable daily dog count. Days above this show a warning.',
-    )
-    insurance_ceiling = models.PositiveSmallIntegerField(
-        default=DEFAULT_INSURANCE_CEILING,
-        validators=[MinValueValidator(1), MaxValueValidator(50)],
-        help_text='Hard maximum for new bookings (insurance). Cannot schedule above this.',
-    )
-
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
@@ -64,24 +62,15 @@ class BusinessProfile(models.Model):
     def __str__(self):
         return self.business_name or 'Dad4dogs'
 
-    def clean(self):
-        super().clean()
-        if (
-            self.standard_capacity
-            and self.insurance_ceiling
-            and self.insurance_ceiling < self.standard_capacity
-        ):
-            raise ValidationError({
-                'insurance_ceiling': 'Insurance maximum must be at least the standard daily capacity.',
-            })
-
-    def save(self, *args, **kwargs):
-        self.singleton_key = 'X'
-        super().save(*args, **kwargs)
-
     @classmethod
     def load(cls) -> 'BusinessProfile':
-        profile, _ = cls.objects.get_or_create(singleton_key='X')
+        from operations.services.context_tenant import get_active_workspace
+
+        workspace = get_active_workspace()
+        profile, _ = cls.objects.get_or_create(
+            workspace=workspace,
+            defaults={'business_name': 'Dad4dogs'},
+        )
         return profile
 
     @property
@@ -103,3 +92,60 @@ class BusinessProfile(models.Model):
     @property
     def calendar_location(self) -> str:
         return self.formatted_address
+
+
+class CapacitySettings(models.Model):
+    """
+    Per-workspace facility capacity numbers.
+
+    Warn vs block orchestration lives in operations/capacity.py — not on this model.
+    Phase 1: standard_capacity + insurance_ceiling only.
+    """
+
+    workspace = models.OneToOneField(
+        'operations.Workspace',
+        on_delete=models.CASCADE,
+        related_name='capacity_settings',
+    )
+    standard_capacity = models.PositiveSmallIntegerField(
+        default=DEFAULT_STANDARD_CAPACITY,
+        validators=[MinValueValidator(1), MaxValueValidator(50)],
+        help_text='Comfortable daily dog count. Days above this show a warning.',
+    )
+    insurance_ceiling = models.PositiveSmallIntegerField(
+        default=DEFAULT_INSURANCE_CEILING,
+        validators=[MinValueValidator(1), MaxValueValidator(50)],
+        help_text='Hard maximum for new bookings (insurance). Cannot schedule above this.',
+    )
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = 'capacity settings'
+        verbose_name_plural = 'capacity settings'
+
+    def __str__(self):
+        return (
+            f'{self.workspace.slug}: '
+            f'{self.standard_capacity}/{self.insurance_ceiling}'
+        )
+
+    def clean(self):
+        super().clean()
+        if (
+            self.standard_capacity
+            and self.insurance_ceiling
+            and self.insurance_ceiling < self.standard_capacity
+        ):
+            raise ValidationError({
+                'insurance_ceiling': (
+                    'Insurance maximum must be at least the standard daily capacity.'
+                ),
+            })
+
+    @classmethod
+    def load(cls) -> 'CapacitySettings':
+        from operations.services.context_tenant import get_active_workspace
+
+        workspace = get_active_workspace()
+        settings, _ = cls.objects.get_or_create(workspace=workspace)
+        return settings

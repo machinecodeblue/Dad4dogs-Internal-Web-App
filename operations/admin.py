@@ -3,6 +3,7 @@ from django.contrib import admin
 from .models import (
     AccountStatement,
     BusinessProfile,
+    CapacitySettings,
     ClientProfile,
     CustomerOwner,
     PendingCalendarEvent,
@@ -11,13 +12,30 @@ from .models import (
     VisitSeries,
     TimelineMediaAsset,
     VisitTimelineEvent,
+    Workspace,
 )
+
+
+@admin.register(Workspace)
+class WorkspaceAdmin(admin.ModelAdmin):
+    list_display = ('slug', 'is_active', 'created_at', 'updated_at')
+    list_filter = ('is_active',)
+    search_fields = ('slug',)
+    readonly_fields = ('id', 'created_at', 'updated_at')
 
 
 @admin.register(BusinessProfile)
 class BusinessProfileAdmin(admin.ModelAdmin):
-    list_display = ('business_name', 'main_phone', 'business_email', 'updated_at')
-    readonly_fields = ('singleton_key', 'updated_at')
+    list_display = ('business_name', 'workspace', 'main_phone', 'business_email', 'updated_at')
+    raw_id_fields = ('workspace',)
+    readonly_fields = ('updated_at',)
+
+
+@admin.register(CapacitySettings)
+class CapacitySettingsAdmin(admin.ModelAdmin):
+    list_display = ('workspace', 'standard_capacity', 'insurance_ceiling', 'updated_at')
+    raw_id_fields = ('workspace',)
+    readonly_fields = ('updated_at',)
 
 
 class VaccinationRecordInline(admin.TabularInline):

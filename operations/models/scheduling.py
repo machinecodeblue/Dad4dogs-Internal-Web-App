@@ -6,12 +6,13 @@ from django.db import models
 from django.utils import timezone
 
 from operations.capacity import check_visit_capacity, overlapping_dog_visit
+from operations.models.base import TenantAwareModel
 from operations.pricing import calculate_fee
 
 from .customers import ClientProfile
 
 
-class VisitSeries(models.Model):
+class VisitSeries(TenantAwareModel):
     """Links recurring visits created together (Google Calendar–style repeat)."""
     client = models.ForeignKey(
         ClientProfile, on_delete=models.CASCADE, related_name='visit_series',
@@ -48,7 +49,7 @@ class VisitSeries(models.Model):
         return repeat_summary(pairs, self.frequency, self.interval)
 
 
-class Visit(models.Model):
+class Visit(TenantAwareModel):
     class Status(models.TextChoices):
         SCHEDULED = 'scheduled', 'Scheduled'
         CHECKED_IN = 'checked_in', 'Checked In'
@@ -90,9 +91,9 @@ class Visit(models.Model):
     class Meta:
         ordering = ['-scheduled_start']
         indexes = [
-            models.Index(fields=['scheduled_start'], name='visit_scheduled_start_idx'),
-            models.Index(fields=['scheduled_end'], name='visit_scheduled_end_idx'),
-            models.Index(fields=['status'], name='visit_status_idx'),
+            models.Index(fields=['tenant', 'scheduled_start'], name='visit_tenant_start_idx'),
+            models.Index(fields=['tenant', 'scheduled_end'], name='visit_tenant_end_idx'),
+            models.Index(fields=['tenant', 'status'], name='visit_tenant_status_idx'),
         ]
 
     def __str__(self):
@@ -257,7 +258,7 @@ def timeline_upload_path(instance, filename: str) -> str:
     return f'timeline/{visit_id}/{filename}'
 
 
-class TimelineMediaAsset(models.Model):
+class TimelineMediaAsset(TenantAwareModel):
     """
     Immutable capture payload — one file set shared across multiple visit timelines.
     """
@@ -305,7 +306,7 @@ class TimelineMediaAsset(models.Model):
         return f'{self.get_media_type_display()} @ {self.captured_at:%Y-%m-%d %H:%M}'
 
 
-class VisitTimelineEvent(models.Model):
+class VisitTimelineEvent(TenantAwareModel):
     """
     Links a shared TimelineMediaAsset to one visit's contemporaneous record.
     Forwarding creates new rows pointing at the same asset.
@@ -399,7 +400,7 @@ class VisitTimelineEvent(models.Model):
         return self.visit.client.owner_email
 
 
-class MediaReaction(models.Model):
+class MediaReaction(TenantAwareModel):
     """Per-browser emoji reaction on a timeline moment (no customer login)."""
 
     class Emoji(models.TextChoices):
@@ -434,7 +435,7 @@ class MediaReaction(models.Model):
         return f'{self.get_emoji_display()} on asset {self.media_asset_id}'
 
 
-class MediaComment(models.Model):
+class MediaComment(TenantAwareModel):
     """Visitor comment on a timeline moment — display name only, no account."""
 
     media_asset = models.ForeignKey(
@@ -460,7 +461,7 @@ class MediaComment(models.Model):
         return f'{self.display_name}: {self.text[:40]}'
 
 
-class SharedMediaLink(models.Model):
+class SharedMediaLink(TenantAwareModel):
     """
     Opaque public link for a single moment — does not expose the private feed URL.
     """
@@ -496,7 +497,7 @@ class SharedMediaLink(models.Model):
         return f'Share {self.id} — {self.client.dog_name}'
 
 
-class PendingCalendarEvent(models.Model):
+class PendingCalendarEvent(TenantAwareModel):
     class ReviewStatus(models.TextChoices):
         PENDING = 'pending', 'Pending Review'
         APPROVED = 'approved', 'Approved'
