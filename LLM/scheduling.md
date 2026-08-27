@@ -9,7 +9,7 @@
 
 ---
 
-## 1. Data Model
+## 1.1 Data Model
 
 | Model | Purpose |
 |-------|---------|
@@ -55,6 +55,18 @@ Migration: `0016_visit_hot_lookup_indexes`.
 - `is_editable` — scheduled visits only
 - `accepts_timeline_events` — `True` only while `checked_in`
 
+---
+## 1.2 Package layout 
+```
+operations/views/scheduling/
+├── __init__.py      # Re-exports all views to keep operations/views/__init__.py stable
+├── helpers.py       # _form_error_message, _apply_visit_form_errors, _parse_local_datetime_input
+├── dashboard.py     # dashboard, ical_feed, parse_datetime_field
+├── checkin.py       # mobile_checkin, visit_check_in, visit_check_out, visit_update_actual_times, checkin_feed_activity
+├── visits.py        # visit_create, duplicate_visit, visit_edit, visit_delete, visit_send_confirmation
+├── timeline.py      # visit_timeline, visit_timeline_forward
+└── calendar.py      # pending_events, approve_pending_event, reject_pending_event
+```
 ---
 
 ## 2. Visit Booking UX
