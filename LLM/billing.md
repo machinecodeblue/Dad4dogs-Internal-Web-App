@@ -7,14 +7,17 @@
 **Related:** checkout pricing lives in `scheduling` domain (`pricing.py`, `Visit.check_out()`)
 
 ---
-## 0. Package deployment. 
+## 0. Package layout
+
+Scaffolding follows `applicationphilosophy.md` (same pattern as `scheduling/`, `customers/`, `feed/`). Not a finished product — stubs are intentional until **services** lands.
+
 ```
 operations/views/billing/
-├── __init__.py          # Stable public re-exports (statements_list, statement_detail, etc.)
-├── list.py              # statements_list (dense scannable listing)
-├── detail.py            # statement_detail (statement view & email preview)
-├── actions.py           # statement_send_email, generate_adhoc (future action triggers)
-└── helpers.py           # Billing-specific view utilities / query helpers
+├── __init__.py          # Stable public re-exports (statements_list, statement_detail, statement_send_email)
+├── list.py              # statements_list (dense scannable listing) — live
+├── detail.py            # statement_detail (statement view & email preview) — live
+├── actions.py           # statement_send_email stub; generate_adhoc later
+└── helpers.py           # get_unbilled_summary_for_client (stub)
 ```
 
 ## 1. Data Model
@@ -69,9 +72,16 @@ python manage.py generate_statements
 
 ---
 
-## 5. Views (`views/billing.py`)
+## 5. Views (`views/billing/`)
 
-Public views today: **`statements_list`**, **`statement_detail`** only. No portable-database export endpoints yet.
+| Callable | Module | Status |
+|----------|--------|--------|
+| `statements_list` | `list.py` | **Live** — dense statement list |
+| `statement_detail` | `detail.py` | **Live** — detail + email preview |
+| `statement_send_email` | `actions.py` | **Stub** — placeholder message; no URL wired yet |
+| `get_unbilled_summary_for_client` | `helpers.py` | **Stub** — `pass` |
+
+Re-exported via `views/billing/__init__.py` → `views/__init__.py` for `urls.py`. No portable-database export endpoints yet (future → `actions.py` or dedicated service).
 
 ---
 
@@ -84,7 +94,9 @@ Public views today: **`statements_list`**, **`statement_detail`** only. No porta
 | Send statement via Gmail | **Not wired** — use booking email pattern when implementing |
 | e-Transfer send automation | Not started |
 | Zero-admin accounting dashboard | Partial — list + preview only |
+| View package split (`views/billing/`) | **Done** — scaffolding; see §0 |
 | Portable SQLite export (operator data download) | **Future** — compile from Postgres; see `PROJECT.md` Rule C / §9.1. Not started. |
+| Full billing cycle (service-aware lines, adhoc, e-Transfer) | **Blocked on services domain** — see `Proposed work/Billing package roadmap.md` |
 
 ---
 
@@ -104,7 +116,7 @@ Mark `send_status = sent` and `sent_at` after successful send.
 The app is **single-operator today**. Do not implement extraction or invent tenancy from this section unless David asks.
 
 * **Symmetric relational design:** Keep core models on a clean relational schema so a future portability pipeline can map tables without special-case blobs.
-* **Deferred extraction logic:** Compiling one operator's footprint out of production PostgreSQL into a downloadable standalone `.sqlite3` is **explicitly deferred**. No UI, management command, or `views/billing.py` trigger exists yet. Focus on statements and core operations until that work is scheduled (`PROJECT.md` Rule C / section 9.1).
+* **Deferred extraction logic:** Compiling one operator's footprint out of production PostgreSQL into a downloadable standalone `.sqlite3` is **explicitly deferred**. No UI, management command, or `views/billing/actions.py` export trigger exists yet. Focus on statement scaffolding and **services** before expanding the billing cycle (`PROJECT.md` Rule C / section 9.1; Proposed work *Billing package roadmap*).
 
 ---
 

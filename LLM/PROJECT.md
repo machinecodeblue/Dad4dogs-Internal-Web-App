@@ -91,7 +91,9 @@ operations/
 │   │   ├── private.py   # customer_feed, react, comment, redirect (secret URL)
 │   │   ├── public.py    # public share / react / comment / download
 │   │   └── helpers.py
-│   ├── billing.py       # Statements list/detail (portable export future — not here yet)
+│   ├── billing/         # Statements list/detail scaffolding
+│   │   ├── __init__.py  # Re-exports statements_list, statement_detail, statement_send_email
+│   │   ├── list.py, detail.py, actions.py (send stub), helpers.py (unbilled stub)
 │   ├── business.py      # Business settings
 │   └── pwa.py           # manifest.webmanifest, sw.js
 ├── services/            # Pure business logic — prefer adding here over bloating views
@@ -282,7 +284,7 @@ $env:PUBLIC_SITE_URL = ""
 |---|---|
 | customers.md | Owners, dogs, COI, vaccinations, contacts import |
 | scheduling.md | Visits, repeat, dashboard, check-in/out status guards, pricing, capacity limits from Settings, calendar, booking email |
-| billing.md | Weekly statements, checkout totals; portable SQLite export (future) |
+| billing.md | Weekly statements, checkout totals; `views/billing/` scaffolding; portable SQLite export (future); full cycle waits on services |
 | admin.md | Business settings, baseline contact info, daily capacity (standard + insurance max), documents |
 | feed.md | Staff timeline, customer feed, speakable URLs, access logging |
 | platform.md | Dev environment, HTTPS, ngrok, PWA, Gmail, cognitive-load UX, testing |

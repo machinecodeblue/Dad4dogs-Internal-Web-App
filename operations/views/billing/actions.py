@@ -18,4 +18,4 @@ def statement_send_email(request, pk):
     # Placeholder for gmail_send integration
     # Mark status and redirect back to detail view
     messages.info(request, f"Email sending for statement #{statement.pk} is queued.")
-    return redirect('statement_detail', pk=statement.pk)
+    return redirect('operations:statement_detail', pk=statement.pk)

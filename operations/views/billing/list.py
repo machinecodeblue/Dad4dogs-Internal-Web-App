@@ -10,7 +10,7 @@ from operations.models import AccountStatement
 def statements_list(request):
     """
     Dense listing of account statements.
-    Selects related client and owner for zero-N+1 rendering.
+    Selects related client for dense list rendering.
     """
     statements = (
         AccountStatement.objects
