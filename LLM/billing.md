@@ -2,11 +2,20 @@
 
 **Covers:** weekly statements, checkout fee totals, future payment automation.
 
-**Code packages:** `operations/models/billing.py`, `views/billing.py`  
+**Code packages:** `operations/models/billing.py`, `views/billing/`  
 **Services:** `operations/services/statements.py`  
 **Related:** checkout pricing lives in `scheduling` domain (`pricing.py`, `Visit.check_out()`)
 
 ---
+## 0. Package deployment. 
+```
+operations/views/billing/
+├── __init__.py          # Stable public re-exports (statements_list, statement_detail, etc.)
+├── list.py              # statements_list (dense scannable listing)
+├── detail.py            # statement_detail (statement view & email preview)
+├── actions.py           # statement_send_email, generate_adhoc (future action triggers)
+└── helpers.py           # Billing-specific view utilities / query helpers
+```
 
 ## 1. Data Model
 

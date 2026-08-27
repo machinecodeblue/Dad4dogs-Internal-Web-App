@@ -3,7 +3,11 @@ Domain-grouped views for operations.
 
 urls.py imports from here: from . import views
 """
-from operations.views.billing import statement_detail, statements_list
+from operations.views.billing import (
+    statement_detail,
+    statement_send_email,
+    statements_list,
+)
 from operations.views.business import business_settings
 from operations.views.feed import (
     customer_feed,
