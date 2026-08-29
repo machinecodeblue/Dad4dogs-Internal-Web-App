@@ -13,6 +13,8 @@
 - Scheduled: **Check In**. Checked-in: **Log Moment** + **Check Out**. Time correction: compact `datetime-local` + outline **Update time(s)** (not a third primary CTA)
 - Capacity count always; WARNING/OVER only when not ok
 - Check-in → `actual_arrival = now`, `checked_in`; check-out → `actual_departure = now`, `_price_stay()`, `completed`
+- **Meet & Greet check-out:** redirects to `/visits/<id>/meet-greet-outcome/` (notes + **Pass** / **Decline**) — only Pass opens Evaluation
+- **Initial Evaluation check-out:** redirects to `/visits/<id>/evaluation-outcome/` (notes + Approve / Reject / Further)
 - Capacity re-checked at check-in (view message); model save does not re-block
 - **Owner feed activity** polls `/checkin/feed-activity/` every 15s
 

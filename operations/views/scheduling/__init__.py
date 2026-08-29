@@ -5,6 +5,8 @@ from operations.views.scheduling.calendar import (
 )
 from operations.views.scheduling.checkin import (
     checkin_feed_activity,
+    evaluation_outcome,
+    meet_greet_outcome,
     mobile_checkin,
     visit_check_in,
     visit_check_out,
@@ -33,6 +35,8 @@ __all__ = [
     'checkin_feed_activity',
     'visit_check_in',
     'visit_check_out',
+    'evaluation_outcome',
+    'meet_greet_outcome',
     'visit_update_actual_times',
     'parse_datetime_field',
     'visit_create',

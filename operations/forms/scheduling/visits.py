@@ -1,3 +1,5 @@
+from datetime import timedelta
+
 from django import forms
 from django.core.exceptions import ValidationError
 from django.db import models, transaction
@@ -11,6 +13,7 @@ from operations.services.datetime_parse import (
     format_datetime_input,
     parse_datetime_text,
 )
+from operations.services.pipeline import INITIAL_EVALUATION_SLUG, MEET_GREET_SLUG
 from operations.services.visit_repeat import (
     END_AFTER,
     END_ON,
@@ -36,12 +39,14 @@ class VisitForm(forms.Form):
     )
     end_at = forms.CharField(
         label='End',
+        required=False,
         widget=forms.TextInput(attrs={
             'placeholder': 'e.g. April 28, 2026 5 pm',
             'autocomplete': 'off',
             'spellcheck': 'false',
             'class': 'datetime-text-input',
         }),
+        help_text='For Meet & Greet, leave blank to default to 15 minutes after start.',
     )
     notes = forms.CharField(
         required=False,
@@ -93,15 +98,19 @@ class VisitForm(forms.Form):
         *args,
         client: ClientProfile | None = None,
         instance: Visit | None = None,
+        preferred_service_slug: str | None = None,
         **kwargs,
     ):
         super().__init__(*args, **kwargs)
         self.client = client
         self.instance = instance
+        self.preferred_service_slug = preferred_service_slug
         workspace = get_active_workspace()
         service_field = self.fields['business_service']
+        # Boarding stays only — M&G / Evaluation use dedicated schedule screens.
         service_field.queryset = (
             BusinessService.objects.filter(tenant=workspace, is_active=True)
+            .exclude(slug__in=[MEET_GREET_SLUG, INITIAL_EVALUATION_SLUG])
             .order_by('target_category', 'name')
         )
         service_field.label_from_instance = (
@@ -128,18 +137,26 @@ class VisitForm(forms.Form):
                 'send_confirmation_email',
             ):
                 del self.fields[name]
-        elif self.client and self.client.owner_email:
-            self.fields['send_confirmation_email'].label = (
-                f'Send booking confirmation to {self.client.owner_email}'
-            )
         else:
-            del self.fields['send_confirmation_email']
+            if preferred_service_slug:
+                preferred = service_field.queryset.filter(slug=preferred_service_slug).first()
+                if preferred:
+                    service_field.initial = preferred.pk
+            if self.client and self.client.owner_email:
+                self.fields['send_confirmation_email'].label = (
+                    f'Send booking confirmation to {self.client.owner_email}'
+                )
+            else:
+                del self.fields['send_confirmation_email']
 
     def clean(self):
         cleaned = super().clean()
         start_text = cleaned.get('start_at', '').strip()
-        end_text = cleaned.get('end_at', '').strip()
-        if not start_text or not end_text:
+        end_text = (cleaned.get('end_at') or '').strip()
+        business_service = cleaned.get('business_service')
+        slug = getattr(business_service, 'slug', '') or ''
+
+        if not start_text:
             return cleaned
 
         try:
@@ -148,10 +165,16 @@ class VisitForm(forms.Form):
             self.add_error('start_at', str(exc))
             return cleaned
 
-        try:
-            scheduled_end = parse_datetime_text(end_text, default=scheduled_start)
-        except ValueError as exc:
-            self.add_error('end_at', str(exc))
+        if end_text:
+            try:
+                scheduled_end = parse_datetime_text(end_text, default=scheduled_start)
+            except ValueError as exc:
+                self.add_error('end_at', str(exc))
+                return cleaned
+        elif slug == MEET_GREET_SLUG:
+            scheduled_end = scheduled_start + timedelta(minutes=15)
+        else:
+            self.add_error('end_at', 'Enter an end date and time.')
             return cleaned
 
         if scheduled_end <= scheduled_start:
@@ -162,11 +185,14 @@ class VisitForm(forms.Form):
         cleaned['scheduled_end'] = scheduled_end
 
         if not self.instance:
-            self._validate_standard_stay_readiness()
+            self._validate_stay_readiness(business_service)
             if self.errors:
                 return cleaned
             frequency = cleaned.get('repeat_frequency') or FREQUENCY_NONE
             if frequency != FREQUENCY_NONE:
+                if slug == MEET_GREET_SLUG:
+                    self.add_error('repeat_frequency', 'Meet & Greet does not use repeat series.')
+                    return cleaned
                 ends_text = (cleaned.get('repeat_ends') or '').strip()
                 try:
                     end_type, count, until_dt = parse_repeat_ends(ends_text, scheduled_start)
@@ -182,12 +208,25 @@ class VisitForm(forms.Form):
             return cleaned
         self._validate_occurrence_capacity(
             cleaned['occurrences'],
-            business_service=cleaned.get('business_service'),
+            business_service=business_service,
         )
         return cleaned
 
-    def _validate_standard_stay_readiness(self) -> None:
+    def _validate_stay_readiness(self, business_service) -> None:
         if not self.client:
+            return
+        slug = getattr(business_service, 'slug', '') or ''
+        if slug == MEET_GREET_SLUG:
+            self.add_error(
+                'business_service',
+                'Use Schedule Meet & Greet on the dog profile — not this stay form.',
+            )
+            return
+        if slug == INITIAL_EVALUATION_SLUG:
+            self.add_error(
+                'business_service',
+                'Use Schedule Initial Evaluation on the dog profile — not this stay form.',
+            )
             return
         for message in self.client.standard_stay_blockers():
             self.add_error(None, message)
@@ -330,6 +369,15 @@ class VisitForm(forms.Form):
                 )
                 visit.save(skip_capacity=True)
             created.append(visit)
+
+        if (
+            not self.instance
+            and business_service
+            and business_service.slug == MEET_GREET_SLUG
+            and self.client.pipeline_stage == ClientProfile.PipelineStage.INQUIRY
+        ):
+            self.client.pipeline_stage = ClientProfile.PipelineStage.MEET_GREET
+            self.client.save(update_fields=['pipeline_stage', 'updated_at'])
 
         return created
 

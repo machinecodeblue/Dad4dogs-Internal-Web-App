@@ -5,8 +5,14 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_http_methods, require_POST
 
 from operations.forms import CustomerOwnerForm
-from operations.forms.intake import IntakeWizardForm
+from operations.forms.intake import (
+    EvaluationScheduleForm,
+    IntakeWizardForm,
+    MeetGreetScheduleForm,
+)
 from operations.models import ClientProfile, CustomerOwner
+from operations.services.visit_email import VisitEmailError, send_booking_confirmation
+from operations.views.customers.clients import customer_owner_or_404
 
 
 @login_required
@@ -75,3 +81,61 @@ def dog_create_customer(request, pk):
     else:
         messages.info(request, f'{dog.dog_name} already belongs to {owner.owner_name}.')
     return redirect('operations:customer_detail', pk=owner.pk)
+
+
+@login_required
+@require_http_methods(['GET', 'POST'])
+def schedule_meet_greet(request, pk):
+    """Dedicated one-off Meet & Greet booking (not VisitForm)."""
+    dog = get_object_or_404(ClientProfile, pk=pk)
+    customer_owner_or_404(dog)
+    if request.method == 'POST':
+        form = MeetGreetScheduleForm(request.POST, dog=dog)
+        if form.is_valid():
+            visit = form.save()
+            messages.success(
+                request,
+                f'Meet & Greet booked for {dog.dog_name}: {visit.schedule_display}.',
+            )
+            if form.cleaned_data.get('send_confirmation_email'):
+                try:
+                    send_booking_confirmation(dog, [visit])
+                    messages.success(request, f'Confirmation emailed to {dog.owner_email}.')
+                except VisitEmailError as exc:
+                    messages.warning(request, f'Booked, but email was not sent: {exc}')
+            return redirect('operations:dog_detail', pk=dog.pk)
+    else:
+        form = MeetGreetScheduleForm(dog=dog)
+    return render(request, 'operations/meet_greet_schedule.html', {
+        'dog': dog,
+        'form': form,
+    })
+
+
+@login_required
+@require_http_methods(['GET', 'POST'])
+def schedule_evaluation(request, pk):
+    """Dedicated one-off Initial Evaluation booking (not VisitForm)."""
+    dog = get_object_or_404(ClientProfile, pk=pk)
+    customer_owner_or_404(dog)
+    if request.method == 'POST':
+        form = EvaluationScheduleForm(request.POST, dog=dog)
+        if form.is_valid():
+            visit = form.save()
+            messages.success(
+                request,
+                f'Initial Evaluation booked for {dog.dog_name}: {visit.schedule_display}.',
+            )
+            if form.cleaned_data.get('send_confirmation_email'):
+                try:
+                    send_booking_confirmation(dog, [visit])
+                    messages.success(request, f'Confirmation emailed to {dog.owner_email}.')
+                except VisitEmailError as exc:
+                    messages.warning(request, f'Booked, but email was not sent: {exc}')
+            return redirect('operations:dog_detail', pk=dog.pk)
+    else:
+        form = EvaluationScheduleForm(dog=dog)
+    return render(request, 'operations/evaluation_schedule.html', {
+        'dog': dog,
+        'form': form,
+    })

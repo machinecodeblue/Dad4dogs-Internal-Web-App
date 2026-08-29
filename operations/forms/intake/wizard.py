@@ -10,6 +10,7 @@ from operations.models import BusinessService, ClientProfile, Visit
 from operations.services.contacts import is_valid_dog_name
 from operations.services.context_tenant import get_active_workspace
 from operations.services.datetime_parse import format_datetime_display, parse_datetime_text
+from operations.services.pipeline import MEET_GREET_SLUG
 
 _DATETIME_WIDGET = forms.TextInput(attrs={
     'placeholder': 'e.g. April 11, 2026 5 pm',
@@ -18,7 +19,6 @@ _DATETIME_WIDGET = forms.TextInput(attrs={
     'class': 'datetime-text-input',
 })
 
-MEET_GREET_SLUG = 'meet_greet'
 MEET_GREET_DEFAULT_MINUTES = 15
 
 

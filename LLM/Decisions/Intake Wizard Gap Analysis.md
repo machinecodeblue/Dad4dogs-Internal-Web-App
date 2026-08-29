@@ -1,10 +1,11 @@
 # Decision: Intake Wizard Gap Analysis
 
-**Status:** accepted (Phase 1 landed; Phase 2–3 deferred)  
-**Live spec:** `customers.md` (intake), `scheduling/booking.md`, `scheduling/pricing.md`, `services.md`  
-**What we took:** Dedicated `meet_greet` ($0, capacity exempt) + `initial_evaluation` seed; intake wired to `meet_greet`; 15m default end; capacity probe uses exempt service; no Short Visit fallback.  
-**What we left:** Pipeline automation on checkout; agenda M&G badge; evaluation booking UX.  
-**Why:** M&G was mis-typed as Short Visit and could block on full boarding days / charge $15.
+**Status:** accepted (Phase 1 + Phase 2 landed; Phase 3 deferred)  
+**Live spec:** `customers.md` (pipeline), `scheduling/booking.md`, `scheduling/checkin.md`, `scheduling/pricing.md`, `services.md`  
+**What we took (Phase 1):** Dedicated `meet_greet` / `initial_evaluation` seed; intake wired to M&G; 15m default; capacity exempt; $0 checkout.  
+**What we took (Phase 2):** Explicit Pass M&G → Evaluation + paperwork demand; `evaluation_stay_blockers`; Schedule evaluation; evaluation outcome form (Approve/Reject/Further); no auto-advance on check-out.  
+**What we left:** Agenda M&G/Eval badges (Phase 3).  
+**Why:** M&G was mis-typed as Short Visit; pipeline needed guided paperwork → evaluation → outcome without silent stage changes.
 
 ---
 

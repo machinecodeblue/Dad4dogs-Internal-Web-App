@@ -17,6 +17,15 @@ class Visit(TenantAwareModel):
         COMPLETED = 'completed', 'Completed'
         CANCELLED = 'cancelled', 'Cancelled'
 
+    class EvaluationOutcome(models.TextChoices):
+        APPROVE = 'approve', 'Approve'
+        REJECT = 'reject', 'Reject'
+        FURTHER = 'further', 'Recommend further evaluation'
+
+    class MeetGreetOutcome(models.TextChoices):
+        PASS = 'pass', 'Pass'
+        DECLINE = 'decline', 'Decline'
+
     client = models.ForeignKey(ClientProfile, on_delete=models.CASCADE, related_name='visits')
     business_service = models.ForeignKey(
         'operations.BusinessService',
@@ -46,6 +55,26 @@ class Visit(TenantAwareModel):
     calculated_fee = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True)
     fee_breakdown = models.JSONField(default=list, blank=True)
     notes = models.TextField(blank=True)
+    evaluation_outcome = models.CharField(
+        max_length=20,
+        choices=EvaluationOutcome.choices,
+        blank=True,
+        help_text='Set after Initial Evaluation check-out (approve / reject / further).',
+    )
+    evaluation_notes = models.TextField(
+        blank=True,
+        help_text='How the dog did and outcome rationale for Initial Evaluation.',
+    )
+    meet_greet_outcome = models.CharField(
+        max_length=20,
+        choices=MeetGreetOutcome.choices,
+        blank=True,
+        help_text='Set after Meet & Greet check-out (pass / decline).',
+    )
+    meet_greet_notes = models.TextField(
+        blank=True,
+        help_text='Notes from the Meet & Greet (suitability / decline reason).',
+    )
     confirmation_email_sent_at = models.DateTimeField(
         null=True,
         blank=True,
@@ -204,3 +233,36 @@ class Visit(TenantAwareModel):
     @property
     def accepts_timeline_events(self) -> bool:
         return self.status == self.Status.CHECKED_IN
+
+    @property
+    def service_slug(self) -> str:
+        service = self.business_service
+        return service.slug if service is not None else ''
+
+    @property
+    def is_meet_greet_visit(self) -> bool:
+        from operations.services.pipeline import MEET_GREET_SLUG
+
+        return self.service_slug == MEET_GREET_SLUG
+
+    @property
+    def is_evaluation_visit(self) -> bool:
+        from operations.services.pipeline import INITIAL_EVALUATION_SLUG
+
+        return self.service_slug == INITIAL_EVALUATION_SLUG
+
+    @property
+    def needs_evaluation_outcome(self) -> bool:
+        return (
+            self.is_evaluation_visit
+            and self.status == self.Status.COMPLETED
+            and not self.evaluation_outcome
+        )
+
+    @property
+    def needs_meet_greet_outcome(self) -> bool:
+        return (
+            self.is_meet_greet_visit
+            and self.status == self.Status.COMPLETED
+            and not self.meet_greet_outcome
+        )

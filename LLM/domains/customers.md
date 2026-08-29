@@ -101,7 +101,16 @@ Property: `authorized_pickup_list` — parsed non-empty stripped lines for templ
 
 `INQUIRY` $\rightarrow$ `MEET_GREET` $\rightarrow$ `EVALUATION` $\rightarrow$ `APPROVED`
 
-Method: `advance_pipeline()` on dog screen — returns `False` (no write) if already Approved; the view flashes info, not success. The Advance button is hidden at Approved.
+**Guided path (preferred):**
+
+1. **Schedule Meet & Greet** via `/dogs/<id>/meet-greet/add/` (dedicated form — not stay booking) or intake. Dated visit on Appointments list.
+2. Check out M&G → **Pass / Decline** (`/visits/<id>/meet-greet-outcome/`). **Pass** → `EVALUATION` + paperwork. **Decline** → stay `MEET_GREET`.
+3. When paperwork ready → `/dogs/<id>/evaluation/add/` (dedicated 4h / $15 form).
+4. Evaluation check-out → Approve / Reject / Further (Approve → `APPROVED`; Further allows one more eval).
+
+Helpers: `standard_stay_blockers()`, `evaluation_stay_blockers()` (requires **Passed** M&G), `can_schedule_meet_greet()`. Services: `operations/services/pipeline.py`.
+
+Escape hatch: `advance_pipeline()` under More actions.
 
 ### Customer Feed Credentials
 
@@ -140,7 +149,7 @@ Method: `advance_pipeline()` on dog screen — returns `False` (no write) if alr
 | Customer | `/customers/<id>/` | Three labeled cards. **Primary owner contact:** name + Edit, phone + compact Call, email, address/maps, COI warn or **✓**. **Emergency & Pickups:** name labeled “Emergency contact”, yellow Call beside that phone, authorized pickup listed. **Dogs:** compact rows + Add dog. No More actions, no dedicated COI card, no SMS. |
 | Edit customer | `/customers/<id>/edit/` | Primary + structured address (street / unit / city / province / postal) + emergency |
 | Add dog | `/customers/<id>/add-dog/` | Dog profile + vet contacts; pipeline starts at Inquiry |
-| Dog | `/dogs/<id>/` | Labeled cards. **Dog:** name + Edit, **Vaccinations** link (records page — not the Edit form), owner + Call, drop-off. **Veterinary:** emergency vet + clinic. **Visits** + Schedule stay only when the dog is bookable; each visit shows **emailed** date or **Send email**. Feed / hide / vCard in More actions. |
+| Dog | `/dogs/<id>/` | **Intake pipeline** card (stepper + one primary CTA). **Vaccination & COI** status card. **Appointments & visits** with `MEET & GREET` / `EVALUATION` / `STAY` badges. **Stage management:** Revert + manual Advance. Veterinary / feed / hide as before. |
 | Hide / unhide dog | `POST /dogs/<id>/hide/` · `POST /dogs/<id>/unhide/` | Soft-hide from client list. Legacy `/dogs/<id>/delete/` aliases hide. |
 | Edit dog | `/dogs/<id>/edit/` | Dog profile + veterinary **contacts** only. Link to **Vaccinations** for papers/expiry. |
 | Regenerate feed | `POST /dogs/<id>/feed/regenerate/` | New `feed_secret` — old links stop working |

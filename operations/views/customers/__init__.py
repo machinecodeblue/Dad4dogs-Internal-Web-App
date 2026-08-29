@@ -7,6 +7,8 @@ from operations.views.customers.actions import (
     dog_feed_regenerate,
     dog_hide,
     dog_unhide,
+    pass_meet_greet_view,
+    revert_pipeline,
     update_coi,
 )
 from operations.views.customers.clients import (
@@ -27,6 +29,8 @@ from operations.views.customers.intake import (
     client_create,
     client_intake,
     dog_create_customer,
+    schedule_evaluation,
+    schedule_meet_greet,
 )
 from operations.views.customers.vaccinations import (
     add_vaccination,
@@ -44,6 +48,8 @@ __all__ = [
     'client_intake',
     'client_create',
     'dog_create_customer',
+    'schedule_meet_greet',
+    'schedule_evaluation',
     'dog_vaccinations',
     'add_vaccination',
     'validate_vaccination',
@@ -54,6 +60,8 @@ __all__ = [
     'dog_hide',
     'dog_unhide',
     'advance_pipeline',
+    'pass_meet_greet_view',
+    'revert_pipeline',
     'update_coi',
     'dog_feed_regenerate',
     'client_detail',

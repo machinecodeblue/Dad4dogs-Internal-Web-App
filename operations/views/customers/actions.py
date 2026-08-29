@@ -1,9 +1,11 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.core.exceptions import ValidationError
 from django.shortcuts import get_object_or_404, redirect
 from django.views.decorators.http import require_GET, require_POST
 
-from operations.models import ClientProfile, CustomerOwner
+from operations.models import ClientProfile, CustomerOwner, Visit
+from operations.services.pipeline import revert_pipeline_stage
 from operations.views.customers.clients import customer_owner_or_404
 
 
@@ -43,6 +45,47 @@ def advance_pipeline(request, pk):
             request,
             f'{client.dog_name} is already {client.get_pipeline_stage_display()}.',
         )
+    return redirect('operations:dog_detail', pk=pk)
+
+
+@login_required
+@require_POST
+def pass_meet_greet_view(request, pk):
+    """Deprecated one-click Pass — redirect staff to the M&G outcome form."""
+    dog = get_object_or_404(ClientProfile, pk=pk)
+    visit = (
+        dog.visits.filter(
+            status=Visit.Status.COMPLETED,
+            business_service__slug='meet_greet',
+            meet_greet_outcome='',
+        )
+        .order_by('-actual_departure', '-scheduled_end')
+        .first()
+    )
+    if visit:
+        messages.info(
+            request,
+            'Record Pass or Decline on the Meet & Greet visit (notes required).',
+        )
+        return redirect('operations:meet_greet_outcome', pk=visit.pk)
+    messages.error(
+        request,
+        f'No completed Meet & Greet without an outcome for {dog.dog_name}. '
+        f'Schedule and check out a Meet & Greet first.',
+    )
+    return redirect('operations:dog_detail', pk=pk)
+
+
+@login_required
+@require_POST
+def revert_pipeline(request, pk):
+    dog = get_object_or_404(ClientProfile, pk=pk)
+    try:
+        label = revert_pipeline_stage(dog)
+    except ValidationError as exc:
+        messages.error(request, '; '.join(exc.messages))
+    else:
+        messages.success(request, f'{dog.dog_name} reverted to {label}.')
     return redirect('operations:dog_detail', pk=pk)
 
 

@@ -86,15 +86,19 @@ def customer_detail(request, pk):
 @login_required
 @require_GET
 def dog_detail(request, pk):
+    from operations.services.pipeline import intake_pipeline_context
+
     dog = get_object_or_404(ClientProfile, pk=pk)
     customer_owner = customer_owner_or_404(dog)
-    visits = dog.visits.select_related('series').all()[:20]
+    visits = dog.visits.select_related('series', 'business_service').all()[:20]
+    intake = intake_pipeline_context(dog, customer_owner)
     return render(request, 'operations/dog_detail.html', {
         'dog': dog,
         'customer_owner': customer_owner,
         'visits': visits,
         'feed_url': dog.feed_url(request=request, create=False),
         'feed_stats': feed_access_stats(dog),
+        'intake': intake,
     })
 
 

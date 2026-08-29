@@ -5,12 +5,14 @@ from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
-from django.views.decorators.http import require_GET, require_POST
+from django.views.decorators.http import require_GET, require_http_methods, require_POST
 
 from operations.capacity import assess_capacity
-from operations.models import Visit
+from operations.forms import EvaluationOutcomeForm, MeetGreetOutcomeForm
+from operations.models import ClientProfile, Visit
 from operations.services.agenda import day_bounds
 from operations.services.feed_interactions import build_checkin_feed_activity
+from operations.services.pipeline import apply_evaluation_outcome, apply_meet_greet_outcome
 from operations.views.scheduling.helpers import parse_local_datetime_input
 
 
@@ -26,11 +28,11 @@ def mobile_checkin(request):
     visits = Visit.objects.filter(
         **day_filter,
         status__in=[Visit.Status.SCHEDULED, Visit.Status.CHECKED_IN],
-    ).select_related('client').order_by('scheduled_start')
+    ).select_related('client', 'business_service').order_by('scheduled_start')
     completed_visits = Visit.objects.filter(
         **day_filter,
         status=Visit.Status.COMPLETED,
-    ).select_related('client').order_by('-actual_departure', '-scheduled_end')
+    ).select_related('client', 'business_service').order_by('-actual_departure', '-scheduled_end')
     capacity = assess_capacity(today)
     return render(request, 'operations/mobile_checkin.html', {
         'visits': visits,
@@ -83,17 +85,135 @@ def visit_check_in(request, pk):
 @login_required
 @require_POST
 def visit_check_out(request, pk):
-    visit = get_object_or_404(Visit, pk=pk)
+    visit = get_object_or_404(
+        Visit.objects.select_related('client', 'business_service'),
+        pk=pk,
+    )
     try:
         visit.check_out()
     except ValidationError as e:
         messages.error(request, '; '.join(e.messages))
-    else:
-        messages.success(
-            request,
-            f'{visit.client.dog_name} checked out. Fee: ${visit.calculated_fee} CAD',
-        )
+        return redirect('operations:mobile_checkin')
+
+    messages.success(
+        request,
+        f'{visit.client.dog_name} checked out. Fee: ${visit.calculated_fee} CAD',
+    )
+    visit.refresh_from_db()
+    if visit.needs_meet_greet_outcome:
+        return redirect('operations:meet_greet_outcome', pk=visit.pk)
+    if visit.needs_evaluation_outcome:
+        return redirect('operations:evaluation_outcome', pk=visit.pk)
     return redirect('operations:mobile_checkin')
+
+
+@login_required
+@require_http_methods(['GET', 'POST'])
+def meet_greet_outcome(request, pk):
+    """Required notes + Pass / Decline after Meet & Greet check-out."""
+    visit = get_object_or_404(
+        Visit.objects.select_related('client', 'business_service'),
+        pk=pk,
+    )
+    if not visit.is_meet_greet_visit or visit.status != Visit.Status.COMPLETED:
+        messages.error(request, 'Meet & Greet outcomes apply to completed Meet & Greet visits.')
+        return redirect('operations:mobile_checkin')
+    if visit.meet_greet_outcome:
+        messages.info(request, 'An outcome was already recorded for this Meet & Greet.')
+        return redirect('operations:dog_detail', pk=visit.client_id)
+
+    if request.method == 'POST':
+        form = MeetGreetOutcomeForm(request.POST)
+        if form.is_valid():
+            try:
+                apply_meet_greet_outcome(
+                    visit,
+                    outcome=form.cleaned_data['meet_greet_outcome'],
+                    notes=form.cleaned_data['meet_greet_notes'],
+                )
+            except ValidationError as exc:
+                messages.error(request, '; '.join(exc.messages))
+            else:
+                dog = visit.client
+                outcome = form.cleaned_data['meet_greet_outcome']
+                if outcome == Visit.MeetGreetOutcome.PASS:
+                    messages.success(
+                        request,
+                        f'{dog.dog_name} passed Meet & Greet. Collect vaccination records '
+                        f'and confirm COI before scheduling Initial Evaluation.',
+                    )
+                else:
+                    messages.warning(
+                        request,
+                        f'{dog.dog_name} declined after Meet & Greet — not moving to Evaluation. '
+                        f'Hide under More actions if they should leave the client list.',
+                    )
+                return redirect('operations:dog_detail', pk=dog.pk)
+    else:
+        form = MeetGreetOutcomeForm()
+
+    return render(request, 'operations/meet_greet_outcome.html', {
+        'visit': visit,
+        'dog': visit.client,
+        'form': form,
+    })
+
+
+@login_required
+@require_http_methods(['GET', 'POST'])
+def evaluation_outcome(request, pk):
+    """Required notes + Approve / Reject / Further after Initial Evaluation check-out."""
+    visit = get_object_or_404(
+        Visit.objects.select_related('client', 'business_service'),
+        pk=pk,
+    )
+    if not visit.is_evaluation_visit or visit.status != Visit.Status.COMPLETED:
+        messages.error(request, 'Evaluation outcomes apply to completed Initial Evaluation visits.')
+        return redirect('operations:mobile_checkin')
+    if visit.evaluation_outcome:
+        messages.info(request, 'An outcome was already recorded for this evaluation.')
+        return redirect('operations:dog_detail', pk=visit.client_id)
+
+    if request.method == 'POST':
+        form = EvaluationOutcomeForm(request.POST)
+        if form.is_valid():
+            try:
+                apply_evaluation_outcome(
+                    visit,
+                    outcome=form.cleaned_data['evaluation_outcome'],
+                    notes=form.cleaned_data['evaluation_notes'],
+                )
+            except ValidationError as exc:
+                messages.error(request, '; '.join(exc.messages))
+            else:
+                outcome = form.cleaned_data['evaluation_outcome']
+                dog = visit.client
+                if outcome == Visit.EvaluationOutcome.APPROVE:
+                    messages.success(
+                        request,
+                        f'{dog.dog_name} approved for standard boarding.',
+                    )
+                elif outcome == Visit.EvaluationOutcome.REJECT:
+                    messages.warning(
+                        request,
+                        f'{dog.dog_name} not approved. Dog stays in Evaluation — '
+                        f'use Hide under More actions if they should leave the list.',
+                    )
+                else:
+                    messages.success(
+                        request,
+                        f'{dog.dog_name} recommended for further evaluation. '
+                        f'Schedule another Initial Evaluation when ready.',
+                    )
+                return redirect('operations:dog_detail', pk=dog.pk)
+    else:
+        form = EvaluationOutcomeForm()
+
+    return render(request, 'operations/evaluation_outcome.html', {
+        'visit': visit,
+        'dog': visit.client,
+        'form': form,
+    })
 
 
 @login_required

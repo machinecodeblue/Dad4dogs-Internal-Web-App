@@ -36,7 +36,22 @@ Plus a required **Service** picker (`business_service`) listing active `Business
 
 Clone (`clone_to_date`), calendar approve, and **intake Meet & Greet** (`IntakeWizardForm`) bypass the form gate. Do not put this gate on `Visit.save()`.
 
-**Intake Meet & Greet** is a prerequisite catalog service (`slug=meet_greet`, $0, capacity exempt) — distinct from boarding Short Visit. See `services.md` / customers intake. Evaluation (`initial_evaluation`, $15) is seeded for later booking UX.
+**Intake Meet & Greet** is a prerequisite catalog service (`slug=meet_greet`, $0, capacity exempt) — distinct from boarding Short Visit. See `services.md` / customers intake.
+
+**Visit form readiness (create):**
+
+**Intake one-offs (dedicated screens — never `VisitForm` / `visit_form.html`):**
+
+| Appointment | URL | Form | Duration |
+| --- | --- | --- | --- |
+| Meet & Greet | `/dogs/<id>/meet-greet/add/` | `MeetGreetScheduleForm` | Fixed **+15m**, service locked |
+| Initial Evaluation | `/dogs/<id>/evaluation/add/` | `EvaluationScheduleForm` | Fixed **+4h**, service locked |
+
+No repeat, no clone, no service catalog on those screens. Second evaluation only after prior outcome **Further**.
+
+**Boarding `VisitForm`:** standard stays only (`standard_stay_blockers()`). M&G / Evaluation slugs rejected.
+
+Dog detail CTAs point at the dedicated URLs above.
 
 ---
 

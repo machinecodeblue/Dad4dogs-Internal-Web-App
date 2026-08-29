@@ -1,0 +1,101 @@
+{% extends "operations/base.html" %}
+{% block title %}Schedule Initial Evaluation — {{ dog.dog_name }}{% endblock %}
+{% block content %}
+{% include "operations/components/scheduling/visit_form_styles.html" only %}
+
+<div class="card">
+    <p class="muted"><a href="{% url 'operations:dog_detail' dog.pk %}" style="color:var(--brand)">← {{ dog.dog_name }}</a></p>
+    <h2>Schedule Initial Evaluation — {{ dog.dog_name }}</h2>
+    <p class="muted">4-hour trial stay in the pack. Flat $15. This is a one-off intake appointment — not a recurring stay.</p>
+</div>
+
+<div class="card">
+    <form method="post" id="evaluation-form">
+        {% csrf_token %}
+        {% if form.non_field_errors %}
+        <div style="color:var(--danger);margin-bottom:0.75rem">
+            {% for error in form.non_field_errors %}{{ error }}{% endfor %}
+        </div>
+        {% endif %}
+
+        <div class="datetime-field editing" id="start-field">
+            <label for="{{ form.start_at.id_for_label }}"><strong>Appointment date &amp; start time</strong></label>
+            {{ form.start_at }}
+            <button type="button" class="datetime-preview" id="start-preview" tabindex="0">
+                <span class="label">Start · tap to edit</span>
+                <span class="value"></span>
+            </button>
+            <p class="muted" style="font-size:0.85rem;margin-top:0.25rem">Duration is automatically set to <strong>4 hours</strong>.</p>
+            {% if form.start_at.errors %}
+            <p style="color:var(--danger);font-size:0.85rem">{{ form.start_at.errors.0 }}</p>
+            {% endif %}
+            <p class="parse-error muted" id="start-parse-error" style="color:var(--danger);font-size:0.85rem;display:none"></p>
+        </div>
+
+        <label for="{{ form.notes.id_for_label }}" style="margin-top:1rem;display:block">Notes (optional)</label>
+        {{ form.notes }}
+
+        {% if form.send_confirmation_email %}
+        <div class="email-confirm-card">
+            <label for="{{ form.send_confirmation_email.id_for_label }}">
+                {{ form.send_confirmation_email }}
+                <span><strong>{{ form.send_confirmation_email.label }}</strong></span>
+            </label>
+        </div>
+        {% endif %}
+
+        <div class="actions" style="margin-top:1rem">
+            <button type="submit" class="btn btn-primary">Confirm Initial Evaluation</button>
+            <a href="{% url 'operations:dog_detail' dog.pk %}" class="btn btn-outline">Cancel</a>
+        </div>
+    </form>
+</div>
+
+<script>
+(function () {
+    const parseUrl = '{% url "operations:parse_datetime" %}';
+    const fieldEl = document.getElementById('start-field');
+    const input = document.getElementById('id_start_at');
+    const previewBtn = document.getElementById('start-preview');
+    const errorEl = document.getElementById('start-parse-error');
+    if (!fieldEl || !input || !previewBtn) return;
+    const valueSpan = previewBtn.querySelector('.value');
+
+    async function tryParse() {
+        const text = input.value.trim();
+        if (!text) {
+            fieldEl.classList.remove('confirmed');
+            fieldEl.classList.add('editing');
+            if (errorEl) errorEl.style.display = 'none';
+            return;
+        }
+        try {
+            const resp = await fetch(parseUrl + '?q=' + encodeURIComponent(text));
+            const data = await resp.json();
+            if (data.ok) {
+                valueSpan.textContent = data.display + ' · 4 hours';
+                fieldEl.classList.remove('editing');
+                fieldEl.classList.add('confirmed');
+                if (errorEl) errorEl.style.display = 'none';
+            } else if (errorEl) {
+                errorEl.textContent = data.error;
+                errorEl.style.display = 'block';
+                fieldEl.classList.remove('confirmed');
+                fieldEl.classList.add('editing');
+            }
+        } catch (e) { /* ignore */ }
+    }
+
+    function openEditor() {
+        fieldEl.classList.remove('confirmed');
+        fieldEl.classList.add('editing');
+        input.focus();
+        input.select();
+    }
+
+    input.addEventListener('blur', function () { setTimeout(tryParse, 150); });
+    previewBtn.addEventListener('click', openEditor);
+    if (input.value.trim()) tryParse();
+})();
+</script>
+{% endblock %}

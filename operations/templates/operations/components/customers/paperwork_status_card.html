@@ -1,0 +1,21 @@
+<div class="card">
+    <p class="card-kicker">Vaccination &amp; COI</p>
+    <p>
+        <strong>Vaccinations:</strong>
+        {% if intake.vax_status == 'ok' %}
+        <span class="muted">{{ intake.vax_label }}</span>
+        {% else %}
+        <span class="badge badge-warn">{{ intake.vax_label }}</span>
+        {% endif %}
+        <a href="{% url 'operations:dog_vaccinations' dog.pk %}" class="btn btn-outline btn-sm" style="margin-left:0.5rem">Add / review</a>
+    </p>
+    <p style="margin-top:0.75rem">
+        <strong>Owner COI:</strong>
+        {% if intake.coi_received %}
+        <span class="muted">Confirmed received ✓</span>
+        {% else %}
+        <span class="badge badge-warn">Not confirmed</span>
+        {% endif %}
+        <a href="{% url 'operations:customer_detail' customer_owner.pk %}" class="btn btn-outline btn-sm" style="margin-left:0.5rem">Owner profile</a>
+    </p>
+</div>

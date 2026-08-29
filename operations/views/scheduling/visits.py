@@ -17,7 +17,15 @@ from operations.views.scheduling.helpers import apply_visit_form_errors
 @login_required
 @require_http_methods(['GET', 'POST'])
 def visit_create(request, pk):
+    from operations.services.pipeline import INITIAL_EVALUATION_SLUG, MEET_GREET_SLUG
+
     client = get_object_or_404(ClientProfile, pk=pk)
+    preferred_slug = (request.GET.get('service') or '').strip()
+    if preferred_slug == MEET_GREET_SLUG:
+        return redirect('operations:schedule_meet_greet', pk=client.pk)
+    if preferred_slug == INITIAL_EVALUATION_SLUG:
+        return redirect('operations:schedule_evaluation', pk=client.pk)
+
     client_visits = client.visits.filter(status=Visit.Status.COMPLETED)[:10]
     visit_form = VisitForm(client=client)
 

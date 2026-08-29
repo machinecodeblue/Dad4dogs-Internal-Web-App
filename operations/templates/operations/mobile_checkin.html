@@ -95,6 +95,16 @@
     <p class="muted">{{ visit.client.owner_name }}</p>
     <p>Scheduled: {{ visit.scheduled_start|time:"g:i A" }} – {{ visit.scheduled_end|time:"g:i A" }}</p>
     <p class="muted">${{ visit.calculated_fee }} CAD</p>
+    {% if visit.needs_meet_greet_outcome %}
+    <p style="margin-bottom:0.75rem">
+        <a href="{% url 'operations:meet_greet_outcome' visit.pk %}" class="btn btn-primary btn-sm">Record M&amp;G outcome</a>
+    </p>
+    {% endif %}
+    {% if visit.needs_evaluation_outcome %}
+    <p style="margin-bottom:0.75rem">
+        <a href="{% url 'operations:evaluation_outcome' visit.pk %}" class="btn btn-primary btn-sm">Record evaluation outcome</a>
+    </p>
+    {% endif %}
     <form method="post" action="{% url 'operations:visit_update_actual_times' visit.pk %}" class="actual-times-form">
         {% csrf_token %}
         <div class="time-row">

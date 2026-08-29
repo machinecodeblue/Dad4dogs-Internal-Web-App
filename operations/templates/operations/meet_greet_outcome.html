@@ -1,0 +1,41 @@
+{% extends "operations/base.html" %}
+{% block title %}Meet &amp; Greet outcome — {{ dog.dog_name }}{% endblock %}
+{% block content %}
+<div class="card">
+    <p class="muted"><a href="{% url 'operations:mobile_checkin' %}" style="color:var(--brand)">← Check-In</a></p>
+    <h2>Meet &amp; Greet — {{ dog.dog_name }}</h2>
+    <p class="muted">{{ visit.schedule_display }}</p>
+    <p class="muted">Pass only if you want this dog on the Evaluation track (paperwork, then Initial Evaluation). Decline if you will not continue.</p>
+</div>
+
+<div class="card">
+    <form method="post">
+        {% csrf_token %}
+        {% if form.non_field_errors %}
+        <div style="color:var(--danger);margin-bottom:0.75rem">
+            {% for error in form.non_field_errors %}{{ error }}{% endfor %}
+        </div>
+        {% endif %}
+
+        <label for="{{ form.meet_greet_notes.id_for_label }}"><strong>Notes</strong></label>
+        {{ form.meet_greet_notes }}
+        {% if form.meet_greet_notes.help_text %}
+        <p class="muted" style="font-size:0.85rem">{{ form.meet_greet_notes.help_text }}</p>
+        {% endif %}
+        {% if form.meet_greet_notes.errors %}
+        <p style="color:var(--danger);font-size:0.85rem">{{ form.meet_greet_notes.errors.0 }}</p>
+        {% endif %}
+
+        <p style="margin-top:1rem"><strong>Outcome</strong></p>
+        {{ form.meet_greet_outcome }}
+        {% if form.meet_greet_outcome.errors %}
+        <p style="color:var(--danger);font-size:0.85rem">{{ form.meet_greet_outcome.errors.0 }}</p>
+        {% endif %}
+
+        <div class="actions" style="margin-top:1rem">
+            <button type="submit" class="btn btn-primary">Save outcome</button>
+            <a href="{% url 'operations:dog_detail' dog.pk %}" class="btn btn-outline">Cancel</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

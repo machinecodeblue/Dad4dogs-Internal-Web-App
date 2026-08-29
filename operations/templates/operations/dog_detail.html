@@ -11,7 +11,7 @@
     <div class="card-head">
         <div>
             <h2>{{ dog.dog_name }}</h2>
-            {% include "operations/_pipeline_badge.html" %}
+            <span class="badge badge-warn">{{ dog.get_pipeline_stage_display }}</span>
             <a href="{% url 'operations:dog_vaccinations' dog.pk %}" style="text-decoration:none">{% include "operations/_vax_badge.html" %}</a>
             {% if dog.is_hidden %}
             <span class="badge badge-warn">HIDDEN</span>
@@ -19,9 +19,6 @@
         </div>
         <a href="{% url 'operations:dog_edit' dog.pk %}" class="btn btn-outline btn-sm">Edit</a>
     </div>
-    <p style="margin-top:0.5rem">
-        <a href="{% url 'operations:dog_vaccinations' dog.pk %}" class="tap-call">Vaccinations</a>
-    </p>
     <p class="muted" style="margin-top:0.25rem">Owner · {{ customer_owner.owner_name }}</p>
     {% if customer_owner.owner_phone %}
     <div class="phone-row">
@@ -39,6 +36,9 @@
     {% endif %}
     {% endif %}
 </div>
+
+{% include "operations/components/customers/intake_pipeline_card.html" with dog=dog customer_owner=customer_owner intake=intake only %}
+{% include "operations/components/customers/paperwork_status_card.html" with dog=dog customer_owner=customer_owner intake=intake only %}
 
 {% if dog.emergency_vet_phone or dog.emergency_vet_clinic or dog.vet_clinic_name or dog.vet_clinic_phone or dog.vet_name or dog.vet_care_authorization %}
 <div class="card">
@@ -76,9 +76,13 @@
 
 <div class="card">
     <div class="card-head">
-        <h2>Visits</h2>
-        {% if dog.pipeline_stage == 'approved' and dog.vaccination_status != 'missing' and dog.vaccination_status != 'expired' and customer_owner.coi_status == 'received' %}
+        <h2>Appointments &amp; visits</h2>
+        {% if intake.can_schedule_evaluation %}
+        <a href="{% url 'operations:schedule_evaluation' dog.pk %}" class="btn btn-outline btn-sm">Schedule evaluation</a>
+        {% elif intake.can_schedule_standard %}
         <a href="{% url 'operations:visit_create' dog.pk %}" class="btn btn-outline btn-sm">Schedule stay</a>
+        {% elif intake.can_schedule_meet_greet %}
+        <a href="{% url 'operations:schedule_meet_greet' dog.pk %}" class="btn btn-outline btn-sm">Schedule Meet &amp; Greet</a>
         {% endif %}
     </div>
     {% for visit in visits %}
@@ -88,10 +92,31 @@
         {% else %}
         <span class="title truncate">{{ visit.schedule_display }}</span>
         {% endif %}
-        {% if visit.status == 'checked_in' %}
-        <span class="badge badge-warn">CHECKED IN</span>
+        {% if visit.is_meet_greet_visit %}
+        <span class="badge badge-warn">MEET &amp; GREET</span>
+        {% elif visit.is_evaluation_visit %}
+        <span class="badge badge-warn">EVALUATION</span>
+        {% elif visit.business_service %}
+        <span class="badge">STAY</span>
         {% endif %}
-        {% if visit.calculated_fee %}<span class="muted"> · ${{ visit.calculated_fee }} CAD</span>{% endif %}
+        {% if visit.status == 'scheduled' %}
+        <span class="muted"> · Scheduled</span>
+        {% elif visit.status == 'checked_in' %}
+        <span class="badge badge-warn">CHECKED IN</span>
+        {% elif visit.status == 'completed' %}
+        <span class="muted"> · Completed</span>
+        {% endif %}
+        {% if visit.meet_greet_outcome %}
+        <span class="muted"> · {{ visit.get_meet_greet_outcome_display }}</span>
+        {% elif visit.needs_meet_greet_outcome %}
+        <a href="{% url 'operations:meet_greet_outcome' visit.pk %}" class="book-link">Record M&amp;G outcome</a>
+        {% endif %}
+        {% if visit.evaluation_outcome %}
+        <span class="muted"> · {{ visit.get_evaluation_outcome_display }}</span>
+        {% elif visit.needs_evaluation_outcome %}
+        <a href="{% url 'operations:evaluation_outcome' visit.pk %}" class="book-link">Record outcome</a>
+        {% endif %}
+        {% if visit.calculated_fee != None %}<span class="muted"> · ${{ visit.calculated_fee }} CAD</span>{% endif %}
         {% if visit.confirmation_email_sent_at %}
         <span class="muted"> · emailed {{ visit.confirmation_email_sent_at|date:"M j" }}</span>
         {% elif visit.status != 'cancelled' and dog.owner_email %}
@@ -102,7 +127,7 @@
         {% endif %}
     </div>
     {% empty %}
-    <p class="muted">No visits yet.</p>
+    <p class="muted">No appointments yet.{% if intake.can_schedule_meet_greet %} Use <strong>Schedule Meet &amp; Greet</strong> above to put a date on the calendar.{% endif %}</p>
     {% endfor %}
 </div>
 
@@ -126,15 +151,22 @@
 </details>
 
 <details class="card disclosure admin-drawer">
-    <summary>More actions</summary>
+    <summary>Stage management &amp; more</summary>
     <div class="disclosure-body">
-        <a href="{% url 'operations:client_vcard' dog.pk %}" class="btn btn-outline btn-sm" style="margin-bottom:0.5rem">Export vCard</a>
+        {% if intake.can_revert %}
+        <form method="post" action="{% url 'operations:revert_pipeline' dog.pk %}" style="margin-bottom:0.5rem"
+              onsubmit="return confirm('Revert {{ dog.dog_name }} to the previous pipeline stage? Visits stay on file.');">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-outline btn-sm">Revert to previous stage</button>
+        </form>
+        {% endif %}
         {% if dog.pipeline_stage != 'approved' %}
         <form method="post" action="{% url 'operations:advance_pipeline' dog.pk %}" style="margin-bottom:0.5rem">
             {% csrf_token %}
-            <button type="submit" class="btn btn-outline btn-sm">Advance pipeline</button>
+            <button type="submit" class="btn btn-outline btn-sm">Advance pipeline (manual)</button>
         </form>
         {% endif %}
+        <a href="{% url 'operations:client_vcard' dog.pk %}" class="btn btn-outline btn-sm" style="margin-bottom:0.5rem">Export vCard</a>
         {% if feed_url %}
         <form method="post" action="{% url 'operations:dog_feed_regenerate' dog.pk %}" style="margin-bottom:0.5rem"
               onsubmit="return confirm('Create a new feed link? Old links will stop working.');">

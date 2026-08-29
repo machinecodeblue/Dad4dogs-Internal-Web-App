@@ -26,6 +26,9 @@
     <form method="post" id="visit-form">
         {% csrf_token %}
         <input type="hidden" name="action" value="create">
+        {% if preferred_service %}
+        <input type="hidden" name="preferred_service" value="{{ preferred_service }}">
+        {% endif %}
 
         {% if visit_form.non_field_errors %}
         <div style="color:var(--danger);margin-bottom:0.75rem">
