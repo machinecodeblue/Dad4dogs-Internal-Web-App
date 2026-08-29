@@ -109,4 +109,4 @@ Django admin exposes **Workspace**, **Business profile**, and **Capacity setting
 
 - Multi-tenant schema: Decision `Multi-tenant schema Option B.md`
 - Capacity rationale: Decision `Capacity setting discussion.md`
-- Visit booking capacity guards: `scheduling.md` §7
+- Visit booking capacity guards: `scheduling/capacity.md`

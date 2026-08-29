@@ -134,7 +134,7 @@ Specific feature-level controls live inside the relevant `domains/<domain>.md` s
 * Do **not** append “just one more function” into an already-large module when a split is the honest fix.
 
 
-* Prefer a short package map in the domain `.md` when you add a submodule.
+* Prefer a short package map in the domain `.md` when you add a submodule. Large domain specs may use the same package pattern as code (`domains/<domain>/` + thin shim) — see `scheduling/`.
 
 
 * After a structural split, update the matching `LLM/domains/<domain>.md` paths so the next session does not thrash on deleted monoliths.

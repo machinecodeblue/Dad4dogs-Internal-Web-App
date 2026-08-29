@@ -16,7 +16,7 @@ A **Django 5 application platform** enabling independent pet-care professionals 
 | --- | --- |
 | **Persona** | Independent pet-care operators & retirees. Mobile-first, **one-handed** ergonomics (phone in hand, dogs on leash). |
 | **Production Engine** | Free, community-edition **PostgreSQL** (Postgres 18 local dev) for isolation, analytics, and scale. |
-| **Data Portability** | Target capability: on-demand standalone pre-populated **SQLite (.sqlite3)** export from Postgres (see `domains/billing.md`). |
+| **Data Portability** | Target capability: on-demand standalone pre-populated **SQLite (.sqlite3)** export from Postgres (see `domains/billing/roadmap.md` B5). |
 | **Timezone** | `America/Toronto` |
 | **Compliance Posture** | SOC 2 Criteria (Security, Confidentiality, Processing Integrity, Privacy). |
 
@@ -36,10 +36,10 @@ A **Django 5 application platform** enabling independent pet-care professionals 
 * `customers.md` — Owners, dogs, COI, vaccinations, emergency/vet contacts.
 
 
-* `scheduling.md` — Visits, repeat series, dashboard, check-in/out status guards, capacity checks, agenda.
+* `scheduling.md` + `scheduling/` — Visits package: booking, check-in, capacity, dashboard, pricing, calendar/email (load one topic at a time).
 
 
-* `billing.md` — Statements, billing ledger, portable SQLite export.
+* `billing.md` + `billing/` — Statements package: compile, email send, unbilled, roadmap (load one topic at a time).
 
 
 * `services.md` — BusinessService catalog, rate types, behavior rules, capacity exemptions.
@@ -78,7 +78,7 @@ All core layers (`models/`, `forms/`, `views/`, `services/`) are organized into 
 * `operations/views/`: `__init__.py` (re-exports subpackages for urls.py), `customers/` (clients, intake, vaccinations, actions), `scheduling/` (dashboard, checkin, visits, timeline, calendar, helpers), `feed/` (private, public, helpers), `billing/` (list, detail, actions, helpers), `services/` (catalog, edit, rules, actions, helpers), `business.py`, `pwa.py`.
 
 
-* `operations/services/`: `context_tenant.py`, `timeline_media/` (image, video, capture, forwarding), `feed_interactions/` (access, emojis, slugs, reactions, comments, sharing, polling), `contacts/` (schemas, parsers, heuristics, matching, importers, session, vcard), `pricing_engine.py`, `statements.py`, `addresses.py`, `phones.py`, `geolocation.py`, `visit_email.py`, `gmail_send.py`, `gmail_sync.py`.
+* `operations/services/`: `context_tenant.py`, `timeline_media/` (image, video, capture, forwarding), `feed_interactions/` (access, emojis, slugs, reactions, comments, sharing, polling), `contacts/` (schemas, parsers, heuristics, matching, importers, session, vcard), `pricing_engine.py`, `statements/` (compile, format, send, unbilled, weeks), `addresses.py`, `phones.py`, `geolocation.py`, `visit_email.py`, `gmail_send.py`, `gmail_sync.py`.
 
 
 * Legacy/Scheduling Root Modules: `pricing.py` (legacy fee engine), `capacity.py` (daily occupancy math).
@@ -125,13 +125,13 @@ Dad4dogs Internal Web App/
 | Vaccination Expiry Tracking | **Done**<br> | `domains/customers.md`<br> |
 | Structured Address Parsing | **Done**<br> | `domains/customers.md`<br> |
 | Soft-Hide Dogs (`is_hidden`) | **Done**<br> | `domains/customers.md`<br> |
-| Visit Booking (Natural Language) | **Done**<br> | `domains/scheduling.md`<br> |
-| Repeat Series Engine | **Done**<br> | `domains/scheduling.md`<br> |
-| Dashboard Month & Daily Agenda | **Done**<br> | `domains/scheduling.md`<br> |
-| Mobile Check-In/Out & Status Guards | **Done**<br> | `domains/scheduling.md`<br> |
-| Booking Confirmation Email (OAuth) | **Done**<br> | `domains/scheduling.md`<br> |
+| Visit Booking (Natural Language) | **Done**<br> | `domains/scheduling/booking.md`<br> |
+| Repeat Series Engine | **Done**<br> | `domains/scheduling/booking.md`<br> |
+| Dashboard Month & Daily Agenda | **Done**<br> | `domains/scheduling/dashboard.md`<br> |
+| Mobile Check-In/Out & Status Guards | **Done**<br> | `domains/scheduling/checkin.md`<br> |
+| Booking Confirmation Email (OAuth) | **Done**<br> | `domains/scheduling/calendar_email.md`<br> |
 | Google Contacts CSV Import & vCard | **Done**<br> | `domains/contacts.md`<br> |
-| Outbound iCal Feed (`/ical/`) | **Done**<br> | `domains/scheduling.md`<br> |
+| Outbound iCal Feed (`/ical/`) | **Done**<br> | `domains/scheduling/calendar_email.md`<br> |
 | Contemporaneous Timeline Media | **Done**<br> | `domains/feed.md`<br> |
 | Customer Photo Feed (Capability URLs) | **Done**<br> | `domains/feed.md`<br> |
 | Feed Reactions, Comments & Share Link | **Done**<br> | `domains/feed.md`<br> |
@@ -141,11 +141,11 @@ Dad4dogs Internal Web App/
 | Multi-Tenant Schema Partitioning (Phase 1) | **Done**<br> | `domains/admin.md` |
 | `CapacitySettings` Model & Logic Split | **Done**<br> | `domains/admin.md` |
 | Services Catalog Scaffolding (Phase 1) | **Done**<br> | `domains/services.md`<br> |
-| Weekly Statement Send Automation | **Partial**<br> | `domains/billing.md`<br> |
-| Calendar Inbound `.ics` Sync | **Partial**<br> | `domains/scheduling.md`<br> |
+| Weekly Statement Send Automation | **Done**<br> | `domains/billing/email.md`<br> |
+| Calendar Inbound `.ics` Sync | **Partial**<br> | `domains/scheduling/calendar_email.md`<br> |
 | Services Phase 2 (Engine Cutover) | **Done**<br> | `domains/services.md`<br> |
 | Default Tenant QuerySet / Middleware (Phase 2) | **Planned**<br> | `domains/admin.md` |
-| Portable SQLite Operator Export | **Planned**<br> | `domains/billing.md`<br> |
+| Portable SQLite Operator Export | **Planned**<br> | `domains/billing/roadmap.md` (B5)<br> |
 | Multi-Tenant Auth & Membership | **Planned**<br> | `domains/admin.md` |
 
 ---

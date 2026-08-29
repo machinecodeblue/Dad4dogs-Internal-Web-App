@@ -1,15 +1,12 @@
 # Define the base relative path
-$basePath = "operations/models/scheduling"
+$basePath = "operations/forms/scheduling"
 
 # Define the files to create
 $files = @(
     "__init__.py",
-    "series.py",
     "visits.py",
-    "media.py",
-    "timeline.py",
-    "interactions.py",
-    "calendar.py"
+    "timelines.py"
+
 )
 
 # Ensure the directory exists

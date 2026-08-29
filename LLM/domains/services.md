@@ -8,9 +8,9 @@
 - `operations/models/services.py` — `BusinessService`, `ServiceBehaviorRule` (`TenantAwareModel`)
 - `operations/forms/services.py` — `BusinessServiceForm`, `ServiceBehaviorRuleForm`
 - `operations/views/services/` — catalog / edit / rules / actions / helpers
-- `operations/services/pricing_engine.py` — **stub**; not wired to `Visit.check_out()`
+- `operations/services/pricing_engine.py` — used by `Visit._price_stay` when `business_service` is set (DOG boarding parity with `pricing.py`)
 
-**Live pricing today:** `scheduling.md` / `operations/pricing.py` (Short $15 / Daytime $25 / Overnight $37.50).
+**Live pricing:** `scheduling/pricing.md` — legacy `operations/pricing.py` when service is null; catalog path via `pricing_engine` when linked (Short $15 / Daytime $25 / Overnight $37.50 for classic DOG boarding).
 
 ---
 
@@ -80,7 +80,7 @@ Seeded defaults for Dad4dogs: Short Visit $15, Daytime Visit $25, Overnight Stay
 | **2a (done)** | `Visit.business_service` + required booking picker + plan summary/description on form |
 | **2b (done)** | Checkout / fee correction uses `pricing_engine` when service set; DOG boarding ≡ `pricing.py` overnight-first |
 | **2c (done)** | `capacity_exempt` or non-DOG skips facility capacity (overlap still enforced) |
-| **3** | Billing service-aware statement lines |
+| **3 (done)** | Billing service-aware statement lines (`scheduling` fees + `billing/statements` snapshot) |
 
 ---
 

@@ -128,6 +128,7 @@ __all__ = [
     'service_list',
     'service_toggle_active',
     'statement_detail',
+    'statement_send_email',
     'statements_list',
     'update_coi',
     'validate_vaccination',

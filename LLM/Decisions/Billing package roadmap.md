@@ -1,11 +1,15 @@
-# Proposed: Billing package roadmap
+# Decision: Billing package roadmap
 
-**Status:** Open — scaffolding landed; feature slices wait on **services**  
-**Live spec today:** `LLM/billing.md`  
-**Depends on:** `LLM/services.md` (next major build); multi-tenant schema Phase 1 (done)  
-**Philosophy:** `applicationphilosophy.md` — keep `views/billing/` thin; orchestration in `services/`
+**Status:** accepted (Phase 0 + B1–B3 landed; B4–B6 still deferred)  
+**Live spec:** `LLM/domains/billing.md` (shim) + `LLM/domains/billing/` (`index`, `statements`, `email`, `roadmap`)  
+**What we took:** Docs package; `services/statements/` split; Gmail statement send; unbilled summary; service-aware line snapshots. Services gate lifted once catalog + `pricing_engine` were live.  
+**What we left:** B4 adhoc generate, B5 portable SQLite, B6 e-Transfer automation.  
+**Why:** Same packaging discipline as scheduling; statement product could move once checkout already owned catalog fees.
 
 ---
+
+# Historical proposal body
+
 
 ## 1. Goal
 

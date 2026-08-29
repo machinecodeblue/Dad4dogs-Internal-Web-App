@@ -3,6 +3,7 @@ from django.shortcuts import render
 from django.views.decorators.http import require_GET
 
 from operations.models import AccountStatement
+from operations.services.statements import get_workspace_unbilled_summary
 
 
 @login_required
@@ -17,6 +18,8 @@ def statements_list(request):
         .select_related('client')
         .order_by('-week_start', 'client__dog_name')
     )
+    unbilled = get_workspace_unbilled_summary()
     return render(request, 'operations/statements.html', {
         'statements': statements,
+        'unbilled': unbilled,
     })

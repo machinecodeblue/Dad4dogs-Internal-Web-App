@@ -4,7 +4,7 @@ Inbox of **ideas under discussion** — not standing product spec.
 
 Drop a markdown file here when something is proposed for the app. Assistants must **not** implement from this folder unless David asks to evaluate or apply a specific proposal.
 
-Everyday coding uses `PROJECT.md` and the domain files (`customers.md`, `scheduling.md`, `platform.md`, …).
+Everyday coding uses `PROJECT.md` and the domain files (`customers.md`, `scheduling.md` + `scheduling/`, `billing.md` + `billing/`, `platform.md`, …).
 
 After a decision (accept, reject, or partial):
 

@@ -74,6 +74,7 @@ urlpatterns = [
     path('calendar/pending/<int:pk>/reject/', views.reject_pending_event, name='reject_pending_event'),
     path('statements/', views.statements_list, name='statements'),
     path('statements/<int:pk>/', views.statement_detail, name='statement_detail'),
+    path('statements/<int:pk>/send/', views.statement_send_email, name='statement_send'),
     path('settings/', views.business_settings, name='business_settings'),
     path('settings/services/', views.service_list, name='service_list'),
     path('settings/services/add/', views.service_create, name='service_create'),

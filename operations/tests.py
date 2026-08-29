@@ -26,7 +26,9 @@ from operations.forms import (
     VisitForm,
 )
 from operations.models import (
+    AccountStatement,
     BusinessProfile,
+    BusinessService,
     CapacitySettings,
     ClientProfile,
     CustomerOwner,
@@ -114,7 +116,13 @@ from operations.services.contacts import (
     suggest_client_fields,
 )
 from operations.services.phones import normalize_phone
-from operations.services.statements import format_statement_email
+from operations.services.statements import (
+    format_statement_email,
+    generate_weekly_statements,
+    get_unbilled_summary_for_client,
+    send_statement_email,
+    StatementEmailError,
+)
 
 TZ = ZoneInfo('America/Toronto')
 
@@ -4066,4 +4074,107 @@ class FeedInteractionTests(TestCase):
         dog_bucket = payload['dogs'][str(self.dog.pk)]
         self.assertEqual(dog_bucket['dog_name'], 'Lulu')
         self.assertTrue(any(item['text'] == 'Love this!' for item in dog_bucket['items']))
+
+
+class StatementBillingTests(TestCase):
+    def setUp(self):
+        self.owner = CustomerOwner.objects.create(
+            owner_name='Jane Doe',
+            owner_email='jane-billing@example.com',
+            address_street='191 Grey Street',
+            address_city='London',
+            address_province='ON',
+            address_postal_code='N6B 1G2',
+        )
+        self.dog = ClientProfile.objects.create(
+            dog_name='Rex',
+            owner_name=self.owner.owner_name,
+            owner_email=self.owner.owner_email,
+        )
+        self.service = BusinessService.objects.get(pk=_default_service_pk())
+        arrival = datetime(2026, 8, 18, 9, 0, tzinfo=TZ)
+        departure = datetime(2026, 8, 18, 12, 0, tzinfo=TZ)
+        self.visit = Visit.objects.create(
+            client=self.dog,
+            business_service=self.service,
+            scheduled_start=arrival,
+            scheduled_end=departure,
+            status=Visit.Status.COMPLETED,
+            actual_arrival=arrival,
+            actual_departure=departure,
+            calculated_fee=Decimal('15.00'),
+            fee_breakdown=[{'tier': 'Short Visit', 'amount': '15.00'}],
+        )
+
+    def test_generate_weekly_statements_includes_service(self):
+        statements = generate_weekly_statements(week_start=date(2026, 8, 17))
+        self.assertEqual(len(statements), 1)
+        item = statements[0].line_items[0]
+        self.assertEqual(item['visit_id'], self.visit.pk)
+        self.assertEqual(item['service_name'], self.service.name)
+        self.assertEqual(item['service_slug'], self.service.slug)
+        body = format_statement_email(statements[0])
+        self.assertIn(self.service.name, body)
+
+    def test_unbilled_summary_before_and_after_compile(self):
+        summary = get_unbilled_summary_for_client(self.dog.pk)
+        self.assertEqual(summary['count'], 1)
+        self.assertEqual(summary['total'], Decimal('15.00'))
+        generate_weekly_statements(week_start=date(2026, 8, 17))
+        summary = get_unbilled_summary_for_client(self.dog.pk)
+        self.assertEqual(summary['count'], 0)
+        self.assertEqual(summary['total'], Decimal('0.00'))
+
+    @patch('operations.services.statements.send.send_gmail')
+    def test_send_statement_email_marks_sent(self, mock_send):
+        mock_send.return_value = {'id': 'msg-1'}
+        statement = generate_weekly_statements(week_start=date(2026, 8, 17))[0]
+        send_statement_email(statement)
+        statement.refresh_from_db()
+        self.assertEqual(statement.send_status, AccountStatement.SendStatus.SENT)
+        self.assertIsNotNone(statement.sent_at)
+        mock_send.assert_called_once()
+
+    @patch('operations.services.statements.send.send_gmail')
+    def test_send_statement_email_failure_leaves_status(self, mock_send):
+        from operations.services.gmail_send import GmailSendError
+
+        mock_send.side_effect = GmailSendError('token missing')
+        statement = generate_weekly_statements(week_start=date(2026, 8, 17))[0]
+        with self.assertRaises(StatementEmailError):
+            send_statement_email(statement)
+        statement.refresh_from_db()
+        self.assertEqual(statement.send_status, AccountStatement.SendStatus.QUEUED)
+        self.assertIsNone(statement.sent_at)
+
+    @patch('operations.services.statements.send.send_gmail')
+    def test_statement_send_view(self, mock_send):
+        mock_send.return_value = {'id': 'msg-1'}
+        statement = generate_weekly_statements(week_start=date(2026, 8, 17))[0]
+        user = get_user_model().objects.create_user('david', 'd@example.com', 'pass')
+        self.client.force_login(user)
+        url = reverse('operations:statement_send', kwargs={'pk': statement.pk})
+        response = self.client.post(url)
+        self.assertEqual(response.status_code, 302)
+        statement.refresh_from_db()
+        self.assertEqual(statement.send_status, AccountStatement.SendStatus.SENT)
+
+    def test_statements_list_shows_unbilled_hint(self):
+        user = get_user_model().objects.create_user('david', 'd@example.com', 'pass')
+        self.client.force_login(user)
+        response = self.client.get(reverse('operations:statements'))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Unbilled completed visits')
+
+    def test_statement_detail_shows_service_and_send(self):
+        statement = generate_weekly_statements(week_start=date(2026, 8, 17))[0]
+        user = get_user_model().objects.create_user('david', 'd@example.com', 'pass')
+        self.client.force_login(user)
+        response = self.client.get(
+            reverse('operations:statement_detail', kwargs={'pk': statement.pk}),
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, self.service.name)
+        self.assertContains(response, 'Send email')
+        self.assertContains(response, reverse('operations:statement_send', kwargs={'pk': statement.pk}))
 

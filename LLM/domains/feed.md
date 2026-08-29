@@ -3,7 +3,7 @@
 **Covers:** David's staff timeline (capture during check-in) and the **customer-facing photo feed** (read-only, no password).
 
 **Code packages:**
-- `operations/models/scheduling.py` — `TimelineMediaAsset`, `VisitTimelineEvent`
+- `operations/models/scheduling/` — `TimelineMediaAsset` (`media.py`), `VisitTimelineEvent` (`timeline.py`)
 - `operations/models/customers.py` — `feed_secret`, `feed_dog_slug`, `FeedAccessLog`
 - `operations/views/scheduling/timeline.py` — `visit_timeline`, `visit_timeline_forward` (staff)
 - `operations/views/scheduling/checkin.py` — `checkin_feed_activity` (staff poll)
