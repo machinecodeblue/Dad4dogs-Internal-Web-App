@@ -1,342 +1,178 @@
-### Dad4dogs Internal Web App — LLM Project Guide
+# Dad4dogs Internal Web App — Tactical Architecture & Project Map
 
 **Owner:** David — Dad4dogs
-**Last updated:** August 2026
-**Audience:** LLM assistants and future maintainers 
+**Status:** Live Development & Multi-Tenant Architecture
+**Audience:** LLM assistants and maintainers
 
-This is the **single entry point** for understanding this codebase. Domain-specific detail lives in separate files — read those when working in that area. 
+This document is the **tactical entry point and map** for the codebase. Domain specifications live in `LLM/domains/`, code governance lives in `LLM/PHILOSOPHY.md`, and proposal workflows live in `LLM/proposals/` and `LLM/decisions/`.
 
-### 1. What This App Is
+---
 
-A **Django 5 application service platform** designed to enable independent pet-care professionals and retirees to run highly controlled, secure, and operationally free dog sitting businesses. It scales fluidly from a localized validation proof-of-concept into a robust, multi-tenant software architecture engineered for eventual enterprise acquisition. 
+## 1. System Identity & Environment
 
-Principle 
+A **Django 5 application platform** enabling independent pet-care professionals and retirees to run highly controlled, secure, and operationally free dog care operations. Scales from single-operator validation into a partitioned multi-tenant architecture.
 
-Detail 
-
-
-| **Dimension** | **Specification** |
-| :--- | :--- |
+| Dimension | Specification |
+| --- | --- |
 | **Persona** | Independent pet-care operators & retirees. Mobile-first, **one-handed** ergonomics (phone in hand, dogs on leash). |
-| **Production Engine** | Free, community-edition **PostgreSQL** to handle multi-tenant isolation, enterprise analytics, search concurrency, and scale. |
-| **Data Portability** | **Target capability (not built yet):** operators will generate a standalone pre-populated **SQLite (.sqlite3)** of their data context from Postgres. Keep schemas relationally clean for that pipeline (see `billing.md` section 8). |
-| **Timezone** | America/Toronto |
-| **Scale & Compliance** | Engineered out-of-the-box for **SOC 2 Compliance** (Security, Confidentiality, Processing Integrity, and Privacy Criteria). |
-
-
-**Core domains:** 
-
-| Domain | Covers |
-|--------|--------|
-| **Customers** | Owners, dogs, COI, vaccinations, Google Contacts import |
-| **Scheduling** | Visits, repeat series, dashboard, check-in/out, pricing, calendar |
-| **Billing** | Weekly statements, checkout fees (pricing engine lives in scheduling); portable SQLite export **future** |
-| **Admin** | Business baseline — identity, address, hours, phone numbers, documents (planned) |
-| **Feed** | Staff timeline capture + customer photo feed (secret link, no password; visitor cookie `dad4dogs_feed_vid` today — see `feed.md`) |
+| **Production Engine** | Free, community-edition **PostgreSQL** (Postgres 18 local dev) for isolation, analytics, and scale. |
+| **Data Portability** | Target capability: on-demand standalone pre-populated **SQLite (.sqlite3)** export from Postgres (see `domains/billing.md`). |
+| **Timezone** | `America/Toronto` |
+| **Compliance Posture** | SOC 2 Criteria (Security, Confidentiality, Processing Integrity, Privacy). |
 
 ---
 
 ## 2. Read Order for LLM Sessions
 
-1. **This file** (PROJECT.md) — context and file map
-2. **applicationphilosophy.md** — how we shape code (small files, domain packages, no god modules). Read before structural or large feature work.
-3. **Domain file** for the area you are changing: 
+1. **`LLM/PROJECT.md`** (This file) — Tactical map, source tree, live status, and commands.
 
-  * customers.md — owners, dogs, COI, vax, emergency/vet contacts
-  * contacts.md — Google CSV import + vCard service package (`services/contacts/`)
-  * scheduling.md — visits, agenda, check-in/out guards, pricing, email confirmations
-  * billing.md — statements; portable SQLite export (future)
-  * admin.md — business settings, baseline contact info, documents (planned)
-  * feed.md — timeline capture, customer photo feed, speakable URLs, visitor fingerprinting
-  * services.md — Phase 1 catalog scaffolding under `/settings/services/`; checkout still on `pricing.py`
-4. **platform.md** — dev server, HTTPS, ngrok, Gmail OAuth, PWA, **detail-screen labeled-card policy**, testing. Any customer/dog/list/dashboard/check-in template change must follow those rules.
 
-Do **not** treat Proposed work/ or Decisions/ as the live spec. Open proposals are evaluation-only; decided notes are history. Standing rules live in this file, `applicationphilosophy.md`, and the domain markdown. 
+2. **`LLM/PHILOSOPHY.md`** — Code governance, small file thresholds (~150–200 lines), package conventions, and import layering. Read before writing any code.
 
-Do **not** change pricing tiers, pipeline stages, or visit status guards unless David explicitly asks. Daily capacity (standard + insurance max) is edited on **Settings** — do not hardcode 8/10 in templates or capacity.py checks. 
 
-### 3. Domain Package Layout (Code)
+3. **`LLM/domains/<domain>.md`** — The Single Source of Truth for the specific domain being modified:
 
-All core layers (views, models, forms) must be organized as **modular Python packages**: 
 
-```
-operations/
-├── models/
-│   ├── __init__.py      # Re-exports all models
-│   ├── customers.py     # CustomerOwner, ClientProfile, VaccinationRecord
-│   ├── scheduling.py    # VisitSeries, Visit, TimelineMediaAsset, VisitTimelineEvent, MediaComment, MediaReaction
-│   ├── billing.py       # AccountStatement
-│   ├── services.py      # BusinessService, ServiceBehaviorRule
-│   ├── tenant.py        # Workspace (thin tenant root)
-│   ├── base.py          # TenantAwareModel
-│   └── business.py      # BusinessProfile + CapacitySettings (1:1 to Workspace)
-├── forms/
-│   ├── __init__.py      # Re-exports all forms
-│   ├── customers.py     # CustomerOwnerForm, DogProfileForm, VaccinationRecordForm
-│   ├── intake.py        # IntakeWizardForm (new client & dog)
-│   ├── scheduling.py    # VisitForm, TimelineMomentForm, TimelineForwardForm
-│   └── business.py      # BusinessProfileForm
-├── views/
-│   ├── __init__.py      # urls.py imports from here (re-exports all sub-packages)
-│   ├── customers/       # Domain package for customer workflows
-│   │   ├── __init__.py  # Re-exports clients, intake, vaccinations, actions
-│   │   ├── clients.py   # client_list, customer/dog detail, edits
-│   │   ├── intake.py    # client_intake, client_create, dog_create_customer
-│   │   ├── vaccinations.py # dog_vaccinations, add_vaccination, validate_vaccination
-│   │   ├── contacts.py  # contact sync/export (legacy)
-│   │   └── actions.py   # dog_hide, dog_unhide, update_coi, pipeline, feed regenerate
-│   ├── scheduling/      # dashboard, checkin, visits, timeline, calendar, helpers
-│   │   ├── __init__.py  # Re-exports public view callables
-│   │   ├── dashboard.py, checkin.py, visits.py, timeline.py, calendar.py, helpers.py
-│   ├── feed/            # Customer photo feed + public share
-│   │   ├── __init__.py
-│   │   ├── private.py   # customer_feed, react, comment, redirect (secret URL)
-│   │   ├── public.py    # public share / react / comment / download
-│   │   └── helpers.py
-│   ├── billing/         # Statements list/detail scaffolding
-│   │   ├── __init__.py  # Re-exports statements_list, statement_detail, statement_send_email
-│   │   ├── list.py, detail.py, actions.py (send stub), helpers.py (unbilled stub)
-│   ├── services/        # Settings catalog CRUD (Phase 1)
-│   │   ├── __init__.py, catalog.py, edit.py, rules.py, actions.py, helpers.py
-│   ├── business.py      # Business settings
-│   └── pwa.py           # manifest.webmanifest, sw.js
-├── services/            # Pure business logic — prefer adding here over bloating views
-│   ├── timeline_media/  # staff capture: imaging, assets, attach, moments
-│   ├── timeline_visits.py, geolocation.py   # geolocation shared (not feed-only)
-│   ├── feed_interactions/  # feed surface: access, emojis, slugs, share, reactions…
-│   │   ├── access.py, emojis.py, slugs.py, share_preview.py, sharing.py, …
-│   ├── contacts/        # Google CSV import + vCard (see contacts.md)
-│   │   ├── __init__.py, schemas.py, parsers.py, heuristics.py
-│   │   ├── matching.py, importers.py, session.py, vcard.py
-│   ├── addresses.py, phones.py, statements.py
-│   ├── context_tenant.py # get_active_workspace() single-operator bridge
-│   ├── pricing_engine.py # catalog fees (DOG boarding parity with pricing.py)
-│   └── visit_email.py, gmail_send.py, gmail_sync.py
-├── pricing.py           # Tiered fee engine (scheduling domain)
-├── capacity.py          # Daily dog count guards (scheduling domain)
-└── templates/operations/
-├── includes/            # Reusable partials (navigation, social widgets, share sheets)
-└── 
-```
+* `customers.md` — Owners, dogs, COI, vaccinations, emergency/vet contacts.
 
-**Rule for new code:** add to the matching domain file. If a file grows past ~150 lines, split further within that domain directory package — do not merge domains. 
+
+* `scheduling.md` — Visits, repeat series, dashboard, check-in/out status guards, capacity checks, agenda.
+
+
+* `billing.md` — Statements, billing ledger, portable SQLite export.
+
+
+* `services.md` — BusinessService catalog, rate types, behavior rules, capacity exemptions.
+
+
+* `feed.md` — Staff timeline capture, customer photo feed, speakable URLs, visitor tracking.
+
+
+* `contacts.md` — Google Contacts CSV import + vCard service package (`services/contacts/`).
+
+
+* `admin.md` — Business settings, baseline identity, capacity limits (`CapacitySettings`).
+
+
+* `platform.md` — Dev server, HTTPS, ngrok, PWA, labeled-card UI policy, testing standards.
+
+
+
+
+4. **`LLM/proposals/`** — Read **only** when explicitly instructed to evaluate or refine open proposals. Never implement code directly from proposals.
+
+
 
 ---
-### 4.1 Project Tree (source only)
 
-Regenerate with: tree /F /A > project_schema.txt from project root. 
+## 3. Domain Package Layout (Code Tree)
 
+All core layers (`models/`, `forms/`, `views/`, `services/`) are organized into modular domain packages with stable `__init__.py` re-exports:
+
+* `operations/models/`: `__init__.py`, `tenant.py` (Workspace root), `base.py` (TenantAwareModel), `business.py` (BusinessProfile + CapacitySettings), `customers.py`, `scheduling.py`, `billing.py`, `services.py`.
+
+
+* `operations/forms/`: `__init__.py`, `customers.py`, `intake.py`, `scheduling.py`, `services.py`, `business.py`.
+
+
+* `operations/views/`: `__init__.py` (re-exports subpackages for urls.py), `customers/` (clients, intake, vaccinations, actions), `scheduling/` (dashboard, checkin, visits, timeline, calendar, helpers), `feed/` (private, public, helpers), `billing/` (list, detail, actions, helpers), `services/` (catalog, edit, rules, actions, helpers), `business.py`, `pwa.py`.
+
+
+* `operations/services/`: `context_tenant.py`, `timeline_media/` (image, video, capture, forwarding), `feed_interactions/` (access, emojis, slugs, reactions, comments, sharing, polling), `contacts/` (schemas, parsers, heuristics, matching, importers, session, vcard), `pricing_engine.py`, `statements.py`, `addresses.py`, `phones.py`, `geolocation.py`, `visit_email.py`, `gmail_send.py`, `gmail_sync.py`.
+
+
+* Legacy/Scheduling Root Modules: `pricing.py` (legacy fee engine), `capacity.py` (daily occupancy math).
+
+
+* `operations/templates/operations/`: includes/ (reusable partials) and screen templates.
+
+
+
+---
+
+## 4. Root Project Layout
 ```
 Dad4dogs Internal Web App/
-├── config/                 # Django settings, root URLs
-├── operations/             # All business logic (see §3)
-├── LLM/                    # Instruction sets (this folder)
-├── O-Auth Key/             # Gmail OAuth credentials + token (gitignored)
-├── certs/                  # mkcert HTTPS certs (gitignored)
-├── scripts/                # setup-certs.ps1, run-dev-tunnel.ps1
-├── Data samples/           # google_contacts.csv reference
-├── oauth_setup.py          # One-time Gmail OAuth browser flow
+├── config/                  # Django settings, root URLs, WSGI/ASGI
+├── operations/              # Application business packages (see §3)
+├── LLM/                     # Authoritative instruction and specification architecture
+│   ├── README.md            # Directory index and reading rules
+│   ├── PROJECT.md           # Tactical map (this file)
+│   ├── PHILOSOPHY.md        # Code governance and architecture philosophy
+│   ├── domains/             # Live domain specifications (single source of truth)
+│   ├── proposals/           # Open RFC sandbox
+│   └── decisions/           # Historical decisions archive
+├── O-Auth Key/              # Gmail API OAuth client secrets & tokens (gitignored)
+├── certs/                   # mkcert HTTPS certificates (gitignored)
+├── scripts/                 # setup-certs.ps1, run-dev-tunnel.ps1
+├── Data samples/            # google_contacts.csv reference fixture
+├── oauth_setup.py           # First-time Gmail OAuth interactive desktop consent flow
 ├── manage.py
 └── requirements.txt
+
 ```
-### 4.2 LLM Coding & Architectural Rules
 
-### Rule A: Directory Packages & Max File Length
 
-* Full philosophy (why, audit habit, LLM expectations): **`applicationphilosophy.md`**.
-* If any file exceeds ~150–200 lines, split it into submodules within its domain directory package — proactively, before it becomes a god module.
-* Always expose public functions, models, and forms in `__init__.py` so that external imports and urls.py routes remain uninterrupted. Pattern: `views/scheduling/`, `views/customers/`, `views/feed/`.
-
-### Rule B: Template Modularity & Explicit Context Wiring
-
-* Base templates (base.html, customer_base.html) must remain minimal shells; navigation, alert messaging, PWA dialogs, and modals must live in templates/operations/includes/.
-* When including reusable action components (e.g., moment_interactions.html), **explicitly map all required endpoints** (react_url, comment_url, asset_id, etc.) via {% include "..." with ... %}. Never rely on implicit context or pass unmapped parent objects.
-
-### Rule C: Multi-Tenancy Data Separation & Portability
-
-* **Tenant Scope Isolation**: Data layers must partition access based on the active user scope. Global un-filtered database iterations are forbidden to safeguard customer confidentiality.
-* **Portability Pipeline**: Feature updates must map cleanly to relational schema tables, maintaining baseline architectural compatibility for on-demand conversion into download-ready standalone SQLite binaries.
-
-### Rule D: Abuse Defense and Non-Repudiation (SOC 2)
-
-* Public-facing workflows without passwords (photo feed, comments) must identify visitors. **Live:** cookie `dad4dogs_feed_vid` (`feed.md`). **Target:** stronger `visitor_hash` (SHA-256 of IP + User-Agent + cookie) — not implemented yet.
-* Raw PII must never leak into application logging systems, tracing blocks, or error console feeds.
-
-### Rule E: Visit Status & Transition Guards
-
-* Transitions: scheduled → checked_in → completed (or cancelled).
-* check_in() only from scheduled; check_out() only from checked_in with no existing calculated_fee.
-* Illegal transitions raise ValidationError. Never bypass methods by setting timestamps directly in views. Correct late tap times only via update_actual_times().
-* Do not pass skip_capacity=True except from VisitForm.save_all().
 
 ---
-### 5. Business Rules Summary (do not change casually)
 
-### Pipeline (per dog)
+## 5. Implementation Status
 
-Inquiry → Meet & Greet → Evaluation → Approved 
+| Feature / Subsystem | Status | Reference Specification |
+| --- | --- | --- |
+| Customer/Dog Split & Pipelines | **Done**<br> | `domains/customers.md`<br> |
+| New Client & Dog Intake Wizard | **Done**<br> | `domains/customers.md`<br> |
+| Vaccination Expiry Tracking | **Done**<br> | `domains/customers.md`<br> |
+| Structured Address Parsing | **Done**<br> | `domains/customers.md`<br> |
+| Soft-Hide Dogs (`is_hidden`) | **Done**<br> | `domains/customers.md`<br> |
+| Visit Booking (Natural Language) | **Done**<br> | `domains/scheduling.md`<br> |
+| Repeat Series Engine | **Done**<br> | `domains/scheduling.md`<br> |
+| Dashboard Month & Daily Agenda | **Done**<br> | `domains/scheduling.md`<br> |
+| Mobile Check-In/Out & Status Guards | **Done**<br> | `domains/scheduling.md`<br> |
+| Booking Confirmation Email (OAuth) | **Done**<br> | `domains/scheduling.md`<br> |
+| Google Contacts CSV Import & vCard | **Done**<br> | `domains/contacts.md`<br> |
+| Outbound iCal Feed (`/ical/`) | **Done**<br> | `domains/scheduling.md`<br> |
+| Contemporaneous Timeline Media | **Done**<br> | `domains/feed.md`<br> |
+| Customer Photo Feed (Capability URLs) | **Done**<br> | `domains/feed.md`<br> |
+| Feed Reactions, Comments & Share Link | **Done**<br> | `domains/feed.md`<br> |
+| Feed Visitor Tracking (`dad4dogs_feed_vid`) | **Done**<br> | `domains/feed.md`<br> |
+| PWA Mobile Manifest & Worker | **Done**<br> | `domains/platform.md`<br> |
+| PostgreSQL Operational Engine | **Done**<br> | `domains/platform.md`<br> |
+| Multi-Tenant Schema Partitioning (Phase 1) | **Done**<br> | `domains/admin.md` |
+| `CapacitySettings` Model & Logic Split | **Done**<br> | `domains/admin.md` |
+| Services Catalog Scaffolding (Phase 1) | **Done**<br> | `domains/services.md`<br> |
+| Weekly Statement Send Automation | **Partial**<br> | `domains/billing.md`<br> |
+| Calendar Inbound `.ics` Sync | **Partial**<br> | `domains/scheduling.md`<br> |
+| Services Phase 2 (Engine Cutover) | **Done**<br> | `domains/services.md`<br> |
+| Default Tenant QuerySet / Middleware (Phase 2) | **Planned**<br> | `domains/admin.md` |
+| Portable SQLite Operator Export | **Planned**<br> | `domains/billing.md`<br> |
+| Multi-Tenant Auth & Membership | **Planned**<br> | `domains/admin.md` |
 
-### Dynamic Services & Pricing Model
-*   **Decoupled Rates:** Financial pricing matrices, exact dollar figures, and hour boundaries are completely stripped from application source parameters. 
-*   **Database Configurations:** Rates and rules are defined as transactional rows inside the `BusinessService` model layer, editable directly via management screens.
-*   **Behavior Engine:** The checkout calculation framework evaluates pricing tiers dynamically based on relational behavioral rule triggers (`HOURLY` scaling, `OVERNIGHT` window crossings, or `CAPACITY_EXEMPT` drop-in visits).
+---
+
+## 6. Quick Commands
+
+* **Database & Setup:** `pip install -r requirements.txt`, `python manage.py migrate`, `python manage.py createsuperuser`.
 
 
-### Customer vs dog (critical)
+* **Run HTTPS Dev Server:** `python manage.py runserver_https 9000`.
 
-* **Customer** (CustomerOwner) = one per owner_email; owns COI
-* **Dog** (ClientProfile) = owner_email + dog_name; owns pipeline, visits, vaccinations
-* A customer may have **zero dogs** until David adds one
-* Never invent a dog from the owner's first name on import
-* **Standard stays (VisitForm create):** dog must be Approved, have current validated vaccination, and owner COI received — see customers.md / scheduling.md
 
-### Visit status transitions (critical)
+* **Gmail OAuth Authentication:** `python oauth_setup.py`, `python manage.py gmail_auth --test you@email.com`.
 
-scheduled → checked_in → completed (or cancelled). 
 
-* check_in() only from scheduled; check_out() only from checked_in with no existing calculated_fee
-* Illegal transition calls raise ValidationError and must not overwrite actual_arrival, actual_departure, or calculated_fee
-* After a late tap, update_actual_times() may correct arrival (checked-in) or arrival+departure (completed) and **does** recalculate fee when completed — intentional overwrite, not a second check-out
+* **Test Suite:** `python manage.py test operations`.
 
-* check_out() refreshes from the DB first so a stale instance cannot re-price a finalized visit
-* Views catch that error and redirect — no 500 on a mobile double-tap
-* Do not set those fields (or status) in views to bypass the methods
-* Capacity is enforced on booking saves, not on check-in/out/time-correction update_fields — a full day must not block checkout
-* VisitForm.save_all() may pass skip_capacity=True after clean() already checked every occurrence; clone/admin/direct save() must not
 
-------------------------------
-## 6. Implementation Status
-
-| Feature | Status |
-|---|---|
-| Customer/dog split UI | Done |
-| New Client & Dog intake | Done — /clients/intake/, optional Meet & Greet visit |
-| Vaccination expiry tracking | Done — dashboard 30-day / expired cards; /clients/?vax= |
-| Structured owner address | Done — street / unit / city / province / postal; Maps + statements + vCard |
-| Soft-hide dogs | Done — is_hidden; no UI hard-delete (visits/photos stay) |
-| Pipeline per dog, COI per customer | Done |
-| Visit booking (natural-language Start/End) | Done |
-| Repeat series (daily/weekly/weekdays/monthly) | Done |
-| Dashboard month calendar + daily agenda | Done |
-| Mobile check-in/out + auto pricing | Done — status guards; correct late tap times via update_actual_times() |
-| Booking confirmation email (Gmail OAuth) | Done |
-| Google Contacts selective import + vCard | Done |
-| iCal outbound /ical/ | Done |
-| HTTPS dev server + ngrok | Done |
-| Business settings (/settings/) | Done — identity, address, hours, phones, daily capacity |
-| Booking iCal LOCATION + ORGANIZER from settings | Done — BusinessProfile → visit_email.py |
-| Contemporaneous timeline (staff capture) | Done — photo/video, GPS, multi-dog, forward |
-| Customer photo feed (secret link) | Done — /feed/<secret>/<dog>/, full history |
-| Owner emergency + per-dog vet contacts | Done — see customers.md §2 |
-| Feed access stats (visitor cookie) | Done — views + distinct browsers on dog detail |
-| PWA install (David's phone) | Done — manifest, service worker, install banner |
-| Business document uploads (COI, etc.) | Not started |
-| Calendar inbound .ics import command | Partial — file-based, not live Gmail |
-| Weekly statement email send | Partial — generates + formats; send not wired |
-| Feed reactions, comments, public share (re-share, download) | Done — /feed/share/<token>/, dad4dogs_<uuid>.jpg — see feed.md |
-| Feed push notifications | Planned |
-| GoDaddy inquiry parsing | Not started |
-| e-Transfer automation | Not started |
-| Operational database PostgreSQL | Done — local Postgres 18; see platform.md |
-| Schema multi-tenancy (Workspace + tenant FKs + CapacitySettings) | Done — Phase 1; single-operator bridge `get_active_workspace()` |
-| Services catalog scaffolding (`BusinessService`, Settings CRUD) | Done — Phase 1 |
-| Services Phase 2 (visit FK, engine cutover, capacity_exempt) | Done — booking requires service; DOG fees ≡ classic overnight-first |
-| Default tenant QuerySet / middleware | Not started — Phase 2 |
-| Portable SQLite export (operator download) | Not started — future; billing.md section 8 |
-| Multi-tenant auth / workspace membership | Not started — single-operator today |
-
-------------------------------
-## 7. Quick Commands
-
-# Prerequisites: PostgreSQL running; copy .env.example → .env (POSTGRES_PASSWORD required)
-pip install -r requirements.txt
-python manage.py migrate
-python manage.py createsuperuser
-python manage.py runserver_https 9000          # local HTTPS
-python oauth_setup.py                          # first-time Gmail token
-python manage.py gmail_auth --test you@email.com
-python manage.py test operations
-
-Set feed links in booking emails (ngrok or production):
-
-$env:PUBLIC_SITE_URL = ""
-
-------------------------------
-## 8. LLM Session Checklist & Architectural Rules
-
-### 8.1 LLM Session Checklist
-
-   1. Identify the domain before editing (customers / scheduling / billing / admin / feed / platform). For structure or a large new domain, read `applicationphilosophy.md` first.
-   2. Open the matching LLM/<domain>.md file. Services catalog is Phase 1 scaffolding — do not swap checkout off `pricing.py` unless asked.
-   3. Keep mobile-first, one-handed UX. Standing rules in platform.md:
-   * Lists (clients, statements, pending calendar, agenda, nested dogs/visits): minimize real estate. Flat rows, hairline dividers, name is the link, text-link actions. No per-item cards. Check-in stays a working surface with large CTAs.
-      * Detail screens (customer, dog, future records) follow the labeled-card policy: each card named by job; Edit beside the name; .phone-row Calls; address visible; admin in More actions. Customer: Primary owner / Emergency & Pickups / Dogs. Dog: Dog / Veterinary / Visits.
-      * Client list specifically: dense owner-first (Last, First), browser search, text Book. No Customer-only or Google Sync on that page.
-   4. Visit booking stays two free-text fields (Start/End) — no multi-step pickers.
-   5. No bulk Google contact import without preview + checkboxes.
-   6. Extend operations/services/ for new business logic.
-   7. Add tests in operations/tests.py for pricing, capacity, forms, or imports you touch. Capacity occupancy/blocks must follow Settings (capacity_limits()), not hardcoded 8/10.
-   8. Do not bypass Visit.check_in() / check_out() status guards. Correct late tap times only via update_actual_times() (not by assigning timestamps in a view).
-   9. Do not re-run full_clean() / capacity on check-in, check-out, or actual-time correction saves.
-   10. Do not pass skip_capacity=True except from VisitForm.save_all().
-   11. Never commit O-Auth Key/, certs/, or live client PII.
-
-------------------------------
-## 8.2 Architectural Guardrails & Coding Standards
-
-   1. Package Domain Structure: Follow **`applicationphilosophy.md`**. Any file approaching ~150–200 lines must be split into a domain subdirectory package with an `__init__.py` re-export layer so external imports and urls.py routes remain uninterrupted. Reference: `views/scheduling/`, `views/customers/`, `views/feed/`.
-   2. Explicit Template Context Wiring: Reusable action includes (e.g., moment_interactions.html) must receive all explicit endpoint variables (react_url, comment_url, asset_id, etc.) via {% include ... with ... %}. Never rely on implicit context inheritance for form actions.
-   3. Database Architecture Strategy: Operational engine is PostgreSQL. Design for eventual multi-tenant isolation and optional compile-to-SQLite portability (`billing.md` section 8) — single-operator today; do not invent tenancy/export code unless asked.
-   4. No In-Memory Table Aggregations: Views must not perform raw grouping loops across whole tables (e.g., defaultdict over entire querysets). Delegate filtering, grouping, and aggregations to custom QuerySet / Manager methods or service modules.
-
-------------------------------
-## 9. Domain Instruction Files
-
-| File | Contents |
-|---|---|
-| customers.md | Owners, dogs, COI, vaccinations, emergency/vet contacts, pipeline UI |
-| contacts.md | Google CSV import + vCard — `operations/services/contacts/` package |
-| scheduling.md | Visits, repeat, dashboard, check-in/out status guards, pricing, capacity limits from Settings, calendar, booking email |
-| billing.md | Weekly statements, checkout totals; `views/billing/` scaffolding; portable SQLite export (future); full cycle waits on services |
-| admin.md | Business settings, baseline contact info, daily capacity (standard + insurance max), documents |
-| feed.md | Staff timeline, customer feed, speakable URLs, access logging |
-| platform.md | Dev environment, HTTPS, ngrok, PWA, Gmail, cognitive-load UX, testing |
-| applicationphilosophy.md | How we develop: small auditable files, domain packages, convention over configuration, anti-god-module — separate from product rules |
-| services.md | Phase 1 catalog CRUD (`/settings/services/`). Live checkout still `pricing.py`. Phase 2 = engine cutover + capacity_exempt. |
-| Proposed work/ | Inbox of proposals — evaluate only; not standing spec. Empty of a topic means that idea is not on the table. See Proposed work/README.md. |
-| Decisions/ | Archive of accepted, rejected, or partial proposals. History only. Live rules stay in the domain files named in each Decision header. |
-
-------------------------------
-## 9.1 SOC 2 Compliance Controls (Active Mapping Instructions)
-
-### Multi-Tenant Access Boundaries (Confidentiality & Privacy Criteria) — **target / not fully implemented**
-
-*Today the app is single-operator.* The bullets below are standing **design targets** for multi-tenant production. Do not invent workspace FKs unless David asks. Live feed visitor behavior is documented in `feed.md` (cookie `dad4dogs_feed_vid`).
-
-* Active Isolation Enforcement: Data queries inside all operational views must enforce strict workspace boundaries tied to the authenticated operator's account context. Direct, global, un-scoped iterations across shared production tables are barred to secure tenant separation.
-* Dynamic Export Compilation Strategy (**future**): Keep database layers structurally clean. Relational tables must map symmetrically so a tenant's isolated data rows can later be queried from production PostgreSQL and built into a standalone downloadable `.sqlite3` on demand (see `billing.md` section 8).
-
-## Non-Repudiation, Verification, and Abuse Defense (Security Criterion)
-
-* Visitor tracking (**live today**): Public feed interactions use a persistent cookie visitor id (`dad4dogs_feed_vid`). See `feed.md` for the real implementation.
-* Visitor hash blend (**target / not implemented**): A future `visitor_hash` may SHA-256 blend IP + User-Agent + cookie for stronger non-repudiation. Do not treat that as current code.
-* Anonymized Tracing Limits: Raw PII or raw visitor metadata must never bleed into system-level tracing logs or application console outputs.
-
-------------------------------
-## 10. Proposed work and Decisions 
-LLM/Proposed work/ is a list of ideas we might put in the app. Read it only when David asks to evaluate a proposal. Do not code from it on a normal change.
-When a proposal is decided (yes, no, or partial):
-
-   1. Write any accepted rules into the matching domain file (platform.md, customers.md, …). That file becomes the live spec.
-   2. Move the markdown into LLM/Decisions/, keeping the original filename (no accepted- / 1_ prefixes).
-   3. Add a Decision header at the top: status, what we took, what we left, why, and where the live spec lives.
-   4. Delete it from Proposed work so the inbox only holds open ideas.
-
-*Notes*
-
-   * **Partial work**  uses the same folder: the header says partial and lists what landed vs what did not. Rejected notes also go here with status rejected — one archive, not two.
-
-   * Do not edit a Decisions file to change the product. Edit the domain file named in its header.
+* **Public Domain Variable:** Set `$env:PUBLIC_SITE_URL = "[https://your-tunnel-domain.ngrok-free.app](https://your-tunnel-domain.ngrok-free.app)"` to test feed sharing.
 
 
 
+---
+
+## 7. RFC Protocol: Proposals vs. Decisions
+
+* **`LLM/proposals/` is an RFC Sandbox:** New features, major schema alterations, or cross-domain refactors are drafted here first. LLMs may read across all `domains/` files to evaluate impacts and debate tradeoffs. **No code or migrations are executed from this directory**.
+
+
+* **Acceptance Protocol:** When David accepts a proposal, live architectural rules and schema changes are written into the respective `LLM/domains/<domain>.md` file(s). The proposal is moved to `LLM/decisions/` with a standardized header indicating Status (`Accepted`, `Rejected`, or `Partial`), Summary (what landed vs what was left), and Live Spec Location (`domains/*.md`). The draft is removed from `LLM/proposals/` so the open queue stays clean.
