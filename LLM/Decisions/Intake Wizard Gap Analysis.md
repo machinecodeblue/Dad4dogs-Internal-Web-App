@@ -1,11 +1,13 @@
 # Decision: Intake Wizard Gap Analysis
 
-**Status:** accepted (Phase 1 + Phase 2 landed; Phase 3 deferred)  
-**Live spec:** `customers.md` (pipeline), `scheduling/booking.md`, `scheduling/checkin.md`, `scheduling/pricing.md`, `services.md`  
-**What we took (Phase 1):** Dedicated `meet_greet` / `initial_evaluation` seed; intake wired to M&G; 15m default; capacity exempt; $0 checkout.  
-**What we took (Phase 2):** Explicit Pass M&G → Evaluation + paperwork demand; `evaluation_stay_blockers`; Schedule evaluation; evaluation outcome form (Approve/Reject/Further); no auto-advance on check-out.  
-**What we left:** Agenda M&G/Eval badges (Phase 3).  
-**Why:** M&G was mis-typed as Short Visit; pipeline needed guided paperwork → evaluation → outcome without silent stage changes.
+**Status:** accepted (complete for product scope)  
+**Live spec:** `customers.md` (pipeline / dog profile), `scheduling/booking.md`, `scheduling/checkin.md`, `scheduling/pricing.md`, `services.md`  
+**What we took:**
+- Phase 1: `meet_greet` / `initial_evaluation` catalog; intake wired to M&G; capacity exempt; $0 / $15 via `pricing_engine`
+- Phase 2: Pass/Decline + evaluation outcomes; `evaluation_stay_blockers` vs `standard_stay_blockers`; dog intake pipeline board; revert stage
+- Follow-on: dedicated M&G / Evaluation schedule screens (not `VisitForm`)
+**What we left / wontfix:** Agenda/dashboard M&G badges (original Phase 3.1) — **wontfix** unless a new proposal reopens them.  
+**Why:** Prerequisite appointments needed catalog typing, gated progression, and a separate booking UI from recurring stays.
 
 ---
 
