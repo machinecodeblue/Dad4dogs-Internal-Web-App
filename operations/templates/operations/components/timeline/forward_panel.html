@@ -1,0 +1,15 @@
+<div class="forward-box">
+    <strong>Share with other checked-in dogs</strong>
+    <form method="post" action="{% url 'operations:visit_timeline_forward' visit.pk event.pk %}">
+        {% csrf_token %}
+        <div class="visit-checkboxes">
+            {% for choice in forward_form.visit_ids %}
+            <div>
+                {{ choice.tag }}
+                <label for="{{ choice.id_for_label }}">{{ choice.choice_label }}</label>
+            </div>
+            {% endfor %}
+        </div>
+        <button type="submit" class="btn btn-outline btn-sm">Forward Moment</button>
+    </form>
+</div>

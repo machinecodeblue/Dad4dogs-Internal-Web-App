@@ -2,7 +2,8 @@
 
 **Load for:** create/edit visit, repeat series, clone, stay blockers.  
 **Related:** [`capacity.md`](capacity.md), [`pricing.md`](pricing.md), [`calendar_email.md`](calendar_email.md)  
-**Forms:** `operations/forms/scheduling/visits.py` (`VisitForm` / `VisitScheduleForm`)
+**Forms:** `operations/forms/scheduling/visits.py` (`VisitForm` / `VisitScheduleForm`)  
+**Templates:** `visit_form.html` shell + `components/scheduling/` (datetime, repeat, service plans, email confirm, clone)
 
 David books per **dog**. Two free-text fields only — **no multi-step date/time pickers**.
 
@@ -34,6 +35,8 @@ Plus a required **Service** picker (`business_service`) listing active `Business
 - Dog is **hidden** (`is_hidden`) — cannot book a new stay; existing visits still check in/out
 
 Clone (`clone_to_date`), calendar approve, and **intake Meet & Greet** (`IntakeWizardForm`) bypass the form gate. Do not put this gate on `Visit.save()`.
+
+**Intake Meet & Greet** is a prerequisite catalog service (`slug=meet_greet`, $0, capacity exempt) — distinct from boarding Short Visit. See `services.md` / customers intake. Evaluation (`initial_evaluation`, $15) is seeded for later booking UX.
 
 ---
 

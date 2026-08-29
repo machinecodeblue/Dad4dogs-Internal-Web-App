@@ -1,0 +1,48 @@
+<p class="muted">Camera, gallery photo, or gallery video. Location is recorded automatically.</p>
+<p class="gps-status" id="gps-status">Waiting for GPS…</p>
+
+<form method="post" enctype="multipart/form-data" id="timeline-form" class="capture-actions">
+    {% csrf_token %}
+    <input type="hidden" name="latitude" id="latitude-field" value="">
+    <input type="hidden" name="longitude" id="longitude-field" value="">
+
+    {% if eligible_visits.count > 1 %}
+    <h3 style="font-size:0.95rem;margin-bottom:0.35rem">Log for these dogs</h3>
+    <div class="visit-checkboxes">
+        {% for checkbox in form.visit_ids %}
+        <div>
+            {{ checkbox.tag }}
+            <label for="{{ checkbox.id_for_label }}">{{ checkbox.choice_label }}</label>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    {% for choice in form.visit_ids %}{{ choice }}{% endfor %}
+    {% endif %}
+
+    <label class="btn btn-primary">
+        Capture Moment (camera)
+        {{ form.photo_camera }}
+    </label>
+
+    <label class="btn btn-outline">
+        Choose Photo (gallery)
+        {{ form.photo_gallery }}
+    </label>
+
+    <label class="btn btn-outline">
+        Attach Video (gallery)
+        {{ form.video }}
+    </label>
+
+    <div id="media-preview" class="media-preview-wrap" hidden>
+        <p class="media-preview-label" id="media-preview-label">Preview</p>
+        <img id="media-preview-image" alt="Captured moment preview" hidden>
+        <video id="media-preview-video" controls playsinline preload="metadata" hidden></video>
+    </div>
+
+    <label for="{{ form.caption_notes.id_for_label }}">Notes (optional)</label>
+    {{ form.caption_notes }}
+
+    <button type="submit" class="btn btn-success" id="timeline-submit" disabled>Save Moment</button>
+</form>

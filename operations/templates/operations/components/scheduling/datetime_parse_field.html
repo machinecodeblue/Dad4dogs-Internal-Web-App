@@ -1,0 +1,23 @@
+<div class="datetime-field editing" id="{{ field_id }}"{% if margin_top %} style="margin-top:{{ margin_top }}"{% endif %}>
+    {% if bound_field %}
+    <label for="{{ bound_field.id_for_label }}">{{ label }}</label>
+    {{ bound_field }}
+    {% else %}
+    <label for="{{ input_id }}">{{ label }}</label>
+    <input type="text" name="{{ input_name }}" id="{{ input_id }}" class="datetime-text-input"
+           placeholder="{{ placeholder }}" autocomplete="off" spellcheck="false"{% if required %} required{% endif %}>
+    {% endif %}
+    {% if hidden_id %}
+    <input type="hidden" name="{{ hidden_name }}" id="{{ hidden_id }}">
+    {% endif %}
+    <button type="button" class="datetime-preview" id="{{ preview_id }}" tabindex="0">
+        <span class="label">{{ preview_label }} · tap to edit</span>
+        <span class="value"></span>
+    </button>
+    {% if bound_field and bound_field.errors %}
+    <p style="color:var(--danger);font-size:0.85rem">{{ bound_field.errors.0 }}</p>
+    {% endif %}
+    {% if error_id %}
+    <p class="parse-error muted" id="{{ error_id }}" style="color:var(--danger);font-size:0.85rem;display:none"></p>
+    {% endif %}
+</div>

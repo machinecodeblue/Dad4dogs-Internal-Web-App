@@ -1,0 +1,21 @@
+<div class="card">
+    <h2>Clone Past Visit</h2>
+    <p class="muted">Copy a completed visit's duration and time-of-day to a new start date.</p>
+    <form method="post">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="clone">
+
+        <label for="visit_id">Select Past Visit</label>
+        <select name="visit_id" id="visit_id" required>
+            {% for past_visit in visits %}
+            <option value="{{ past_visit.pk }}">
+                {{ past_visit.schedule_display }} ({{ past_visit.duration_hours|floatformat:1 }}h)
+            </option>
+            {% endfor %}
+        </select>
+
+        {% include "operations/components/scheduling/datetime_parse_field.html" with field_id="clone-date-field" input_id="new_date_text" input_name="new_date_text" label="New Start Date" placeholder="e.g. April 15, 2026" preview_id="clone-date-preview" preview_label="New start date" hidden_id="new_date" hidden_name="new_date" margin_top="0.5rem" only %}
+
+        <button type="submit" class="btn btn-outline" style="margin-top:0.75rem">Clone Visit</button>
+    </form>
+</div>

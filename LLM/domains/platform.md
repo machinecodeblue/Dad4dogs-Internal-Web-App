@@ -178,6 +178,26 @@ Each card has one job. A kicker (`.card-kicker`) or `h2` names that job so the p
 - Check-in: Check In, or Log Moment + Check Out; emergency (else clinic) as tap-to-call, not a third button.
 - Shared CSS in `base.html`: `.app-header` / `.app-primary-nav` / `.nav-drawer` (top nav), `.client-row` / `.compact-row` (dense lists), `.list-toolbar`, `.card-head`, `.card-kicker`, `.phone-row`, `.truncate`, `details.disclosure`, `details.coi-mark`, `.admin-drawer`. Shared badges: `_pipeline_badge.html`, `_vax_badge.html` (warn/danger only).
 
+### Template packages (`includes/` vs `components/`)
+
+Same packaging idea as Python: prefer small templates with one job. Screen shells stay thin; reusable product UI lives in named partials.
+
+| Location | Use for |
+|----------|---------|
+| `operations/templates/operations/includes/` | App chrome and feed social already wired: nav, messages, PWA modals, `moment_interactions`, share sheets |
+| `operations/templates/operations/components/<domain>/` | **New** product UI partials (scheduling forms, staff timeline capture/cards). Prefer this over new root `_*.html` files |
+| Root `_pipeline_badge.html`, `_vax_badge.html`, `_address_fields.html` | Legacy shared badges/fields — keep working; do not add more root partials |
+
+**Rules for LLMs**
+
+1. Explicit context: `{% include "operations/components/…" with … only %}` — no magic inheritance for action endpoints (`PHILOSOPHY.md`).
+2. Split when a screen approaches ~150–200 lines or ~10 KB (e.g. former `visit_timeline` / `visit_form` monoliths).
+3. Partials first; move CSS/JS to `static/operations/` only when **two or more** screens share it.
+4. Do not redesign UX while extracting — preserve IDs/classes the page scripts rely on.
+
+**Staff timeline:** `components/timeline/` (`capture_form`, `moment_card`, `forward_panel`, styles/script includes).  
+**Visit booking form:** `components/scheduling/` (datetime, repeat, service plans, email confirm, clone).
+
 ### Progressive Web App (PWA) — David's admin app only
 Install to home screen for standalone mode (no browser address bar). Customer feed is a normal web page — they can bookmark or add to home screen manually.
 

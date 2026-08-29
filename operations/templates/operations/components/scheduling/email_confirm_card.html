@@ -1,0 +1,9 @@
+{% if visit_form.send_confirmation_email %}
+<div class="email-confirm-card">
+    <label for="{{ visit_form.send_confirmation_email.id_for_label }}">
+        {{ visit_form.send_confirmation_email }}
+        <span><strong>{{ visit_form.send_confirmation_email.label }}</strong></span>
+    </label>
+    <p class="hint">Check this to email the customer after you schedule. Leave unchecked to book without notifying them.</p>
+</div>
+{% endif %}

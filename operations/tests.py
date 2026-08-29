@@ -640,14 +640,37 @@ class IntakeWizardTests(TestCase):
         self.assertIn('Meet & Greet', visit.notes)
         self.assertEqual(timezone.localtime(visit.scheduled_start).hour, 14)
 
+    def test_intake_wizard_assigns_meet_greet_service(self):
+        form = IntakeWizardForm(data=self._base(
+            meet_greet_start='April 11, 2026 2 pm',
+            meet_greet_end='April 11, 2026 2:15 pm',
+        ))
+        self.assertTrue(form.is_valid(), form.errors)
+        _, _, visit = form.save()
+        self.assertIsNotNone(visit.business_service_id)
+        self.assertEqual(visit.business_service.slug, 'meet_greet')
+        self.assertTrue(visit.business_service.capacity_exempt)
+        self.assertEqual(visit.business_service.base_rate, Decimal('0.00'))
+
+    def test_intake_wizard_defaults_fifteen_minutes(self):
+        form = IntakeWizardForm(data=self._base(
+            meet_greet_start='April 11, 2026 2 pm',
+        ))
+        self.assertTrue(form.is_valid(), form.errors)
+        _, _, visit = form.save()
+        start = timezone.localtime(visit.scheduled_start)
+        end = timezone.localtime(visit.scheduled_end)
+        self.assertEqual((end - start).total_seconds(), 15 * 60)
+
     def test_rejects_dog_name_same_as_owner_first(self):
         form = IntakeWizardForm(data=self._base(dog_name='Jane'))
         self.assertFalse(form.is_valid())
         self.assertIn('dog_name', form.errors)
 
-    def test_rejects_partial_meet_greet(self):
-        form = IntakeWizardForm(data=self._base(meet_greet_start='April 11, 2026 2 pm'))
+    def test_rejects_end_without_start(self):
+        form = IntakeWizardForm(data=self._base(meet_greet_end='April 11, 2026 2:15 pm'))
         self.assertFalse(form.is_valid())
+        self.assertIn('meet_greet_start', form.errors)
 
     def test_intake_page_loads(self):
         user = get_user_model().objects.create_user(username='david', password='testpass123')
@@ -659,8 +682,9 @@ class IntakeWizardTests(TestCase):
         self.assertContains(response, 'Meet &amp; Greet')
         self.assertContains(response, 'Postal code')
         self.assertContains(response, 'Street')
+        self.assertContains(response, '15 minutes')
 
-    def test_capacity_block_creates_nothing(self):
+    def test_intake_wizard_succeeds_when_facility_at_capacity(self):
         now = timezone.now()
         start = datetime(2026, 4, 11, 14, 0, tzinfo=TZ)
         end = datetime(2026, 4, 11, 15, 0, tzinfo=TZ)
@@ -681,11 +705,32 @@ class IntakeWizardTests(TestCase):
         Visit.objects.bulk_create(extra)
         form = IntakeWizardForm(data=self._base(
             meet_greet_start='April 11, 2026 2 pm',
-            meet_greet_end='April 11, 2026 3 pm',
+            meet_greet_end='April 11, 2026 2:15 pm',
         ))
-        self.assertFalse(form.is_valid())
-        self.assertFalse(CustomerOwner.objects.filter(owner_email='jane-intake@example.com').exists())
-        self.assertFalse(ClientProfile.objects.filter(owner_email='jane-intake@example.com').exists())
+        self.assertTrue(form.is_valid(), form.errors)
+        owner, dog, visit = form.save()
+        self.assertIsNotNone(visit)
+        self.assertEqual(visit.business_service.slug, 'meet_greet')
+        self.assertTrue(CustomerOwner.objects.filter(owner_email='jane-intake@example.com').exists())
+        self.assertEqual(dog.pipeline_stage, ClientProfile.PipelineStage.MEET_GREET)
+
+    def test_meet_greet_checkout_fee_is_zero(self):
+        form = IntakeWizardForm(data=self._base(
+            meet_greet_start='April 11, 2026 2 pm',
+        ))
+        self.assertTrue(form.is_valid(), form.errors)
+        _, _, visit = form.save()
+        arrival = visit.scheduled_start
+        departure = visit.scheduled_end
+        with patch('operations.models.scheduling.visits.timezone.now') as mock_now:
+            mock_now.return_value = arrival
+            visit.check_in()
+            mock_now.return_value = departure
+            visit.check_out()
+        visit.refresh_from_db()
+        self.assertEqual(visit.calculated_fee, Decimal('0.00'))
+        self.assertEqual(visit.fee_breakdown[0]['amount'], '0.00')
+        self.assertEqual(visit.fee_breakdown[0]['service_slug'], 'meet_greet')
 
 
 class DogProfileFormTests(TestCase):

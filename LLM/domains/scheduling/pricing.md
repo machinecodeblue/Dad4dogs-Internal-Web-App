@@ -20,7 +20,8 @@ Classic tier table: `PROJECT.md` §5.
 ### Catalog engine behaviour
 
 - **DOG boarding** (not capacity-exempt): overnight-first parity with `pricing.py`; breakdown tiers annotated with service name/slug
-- **Other / capacity-exempt:** flat `service.base_rate` for the stay window
+- **Other / capacity-exempt:** flat `service.base_rate` for the stay window (e.g. **Meet & Greet** `meet_greet` → **$0.00**)
+- **Initial Evaluation** (`initial_evaluation`): flat **$15** (DOG, not exempt) when used — seeded; intake wires M&G only today
 
 ---
 

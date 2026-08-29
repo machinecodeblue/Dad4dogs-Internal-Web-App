@@ -1,0 +1,161 @@
+<script>
+(function () {
+    const form = document.getElementById('timeline-form');
+    const cameraInput = form.querySelector('.timeline-photo-camera-input');
+    const galleryInput = form.querySelector('.timeline-photo-gallery-input');
+    const videoInput = form.querySelector('.timeline-video-input');
+    const submitBtn = document.getElementById('timeline-submit');
+    const latField = document.getElementById('latitude-field');
+    const lngField = document.getElementById('longitude-field');
+    const gpsStatus = document.getElementById('gps-status');
+    const previewWrap = document.getElementById('media-preview');
+    const previewLabel = document.getElementById('media-preview-label');
+    const previewImage = document.getElementById('media-preview-image');
+    const previewVideo = document.getElementById('media-preview-video');
+    const submitDefaultLabel = submitBtn.textContent;
+    let gpsReady = false;
+    let submitting = false;
+    let previewObjectUrl = null;
+
+    function hasMedia() {
+        return [cameraInput, galleryInput, videoInput].some(
+            (input) => input.files && input.files.length
+        );
+    }
+
+    function updateSubmitState() {
+        submitBtn.disabled = submitting || !(hasMedia() && gpsReady);
+    }
+
+    function revokePreviewUrl() {
+        if (previewObjectUrl) {
+            URL.revokeObjectURL(previewObjectUrl);
+            previewObjectUrl = null;
+        }
+    }
+
+    function clearPreview() {
+        revokePreviewUrl();
+        previewWrap.hidden = true;
+        previewImage.hidden = true;
+        previewImage.removeAttribute('src');
+        previewVideo.hidden = true;
+        previewVideo.pause();
+        previewVideo.removeAttribute('src');
+    }
+
+    function showPreview(file) {
+        clearPreview();
+        if (!file) {
+            return;
+        }
+        previewObjectUrl = URL.createObjectURL(file);
+        previewWrap.hidden = false;
+        if (file.type && file.type.startsWith('video/')) {
+            previewLabel.textContent = 'Video preview — tap Save Moment when ready';
+            previewVideo.src = previewObjectUrl;
+            previewVideo.hidden = false;
+        } else {
+            previewLabel.textContent = 'Photo preview — tap Save Moment when ready';
+            previewImage.src = previewObjectUrl;
+            previewImage.hidden = false;
+        }
+    }
+
+    function beginSaving() {
+        if (submitting) {
+            return false;
+        }
+        submitting = true;
+        form.classList.add('is-saving');
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Saving…';
+        submitBtn.setAttribute('aria-busy', 'true');
+        return true;
+    }
+
+    function markGpsReady(message) {
+        gpsStatus.textContent = message;
+        gpsReady = true;
+        updateSubmitState();
+    }
+
+    function clearOtherMedia(activeInput) {
+        [cameraInput, galleryInput, videoInput].forEach(function (input) {
+            if (input !== activeInput) {
+                input.value = '';
+            }
+        });
+    }
+
+    function onMediaSelected(activeInput) {
+        if (activeInput.files && activeInput.files.length) {
+            clearOtherMedia(activeInput);
+            showPreview(activeInput.files[0]);
+        } else {
+            clearPreview();
+        }
+        updateSubmitState();
+    }
+
+    if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+            function (pos) {
+                latField.value = pos.coords.latitude;
+                lngField.value = pos.coords.longitude;
+                markGpsReady('GPS locked — ready to log moments.');
+            },
+            function () {
+                latField.value = '';
+                lngField.value = '';
+                markGpsReady('GPS unavailable — site fallback will be used on save.');
+            },
+            { enableHighAccuracy: true, timeout: 12000, maximumAge: 60000 }
+        );
+    } else {
+        markGpsReady('GPS not supported — site fallback will be used on save.');
+    }
+
+    cameraInput.addEventListener('change', function () {
+        onMediaSelected(cameraInput);
+    });
+    galleryInput.addEventListener('change', function () {
+        onMediaSelected(galleryInput);
+    });
+    videoInput.addEventListener('change', function () {
+        onMediaSelected(videoInput);
+    });
+
+    form.addEventListener('submit', function (event) {
+        if (submitting) {
+            event.preventDefault();
+            return;
+        }
+        if (!gpsReady || !hasMedia()) {
+            event.preventDefault();
+            return;
+        }
+        if (!beginSaving()) {
+            event.preventDefault();
+            return;
+        }
+        if (!navigator.geolocation || (latField.value && lngField.value)) {
+            return;
+        }
+        event.preventDefault();
+        navigator.geolocation.getCurrentPosition(
+            function (pos) {
+                latField.value = pos.coords.latitude;
+                lngField.value = pos.coords.longitude;
+                form.submit();
+            },
+            function () {
+                latField.value = '';
+                lngField.value = '';
+                form.submit();
+            },
+            { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 }
+        );
+    });
+})();
+</script>

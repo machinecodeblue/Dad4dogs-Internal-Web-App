@@ -1,0 +1,36 @@
+<article class="timeline-event">
+    {% if event.media_type == 'photo' and event.photo_thumbnail %}
+    <img src="{{ event.photo_thumbnail.url }}" alt="Timeline photo for {{ dog.dog_name }}">
+    {% elif event.media_type == 'video' and event.video_file %}
+    <video controls preload="metadata" src="{{ event.video_file.url }}"></video>
+    {% endif %}
+    <div class="timeline-meta">
+        <time datetime="{{ event.captured_at|date:'c' }}">Captured {{ event.captured_at|date:"M j, Y g:i A" }}</time>
+        {% if event.is_forward %}
+        <span class="badge badge-ok">Shared {{ event.shared_at|date:"g:i A" }}</span>
+        {% if event.source_event %}
+        <span class="muted">from {{ event.source_event.visit.client.dog_name }}</span>
+        {% endif %}
+        {% endif %}
+        {% if event.location_used_fallback %}
+        <span class="badge badge-warn">Site location</span>
+        {% else %}
+        <span class="badge badge-ok">GPS</span>
+        {% endif %}
+        <p class="muted" style="margin-top:0.35rem">
+            {{ event.latitude }}, {{ event.longitude }}
+            {% if event.location_fallback_label and event.location_used_fallback %}
+            · {{ event.location_fallback_label }}
+            {% endif %}
+        </p>
+        {% if event.caption_notes %}
+        <p style="margin-top:0.35rem">{{ event.caption_notes }}</p>
+        {% endif %}
+
+        {% for item in forward_forms %}
+        {% if item.event.pk == event.pk %}
+        {% include "operations/components/timeline/forward_panel.html" with visit=visit event=event forward_form=item.form only %}
+        {% endif %}
+        {% endfor %}
+    </div>
+</article>

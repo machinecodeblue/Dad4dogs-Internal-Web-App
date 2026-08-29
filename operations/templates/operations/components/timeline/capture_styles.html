@@ -1,0 +1,73 @@
+<style>
+    .timeline-stream { display: flex; flex-direction: column; gap: 0.75rem; }
+    .timeline-event {
+        background: #f8f9fa;
+        border-radius: var(--radius);
+        overflow: hidden;
+        border-left: 4px solid var(--brand-light);
+    }
+    .timeline-event img { width: 100%; display: block; background: #e9ecef; }
+    .timeline-event video { width: 100%; display: block; }
+    .timeline-meta { padding: 0.75rem; font-size: 0.85rem; }
+    .timeline-meta time { font-weight: 600; color: var(--brand); }
+    .capture-actions { display: flex; flex-direction: column; gap: 0.5rem; }
+    .capture-actions label.btn {
+        display: block;
+        cursor: pointer;
+        margin: 0;
+    }
+    .capture-actions input[type="file"] {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        opacity: 0;
+        overflow: hidden;
+    }
+    .visit-checkboxes {
+        display: flex;
+        flex-direction: column;
+        gap: 0.35rem;
+        margin-bottom: 0.75rem;
+    }
+    .visit-checkboxes label {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-weight: 500;
+        margin: 0;
+    }
+    .visit-checkboxes input[type="checkbox"] {
+        width: 1.1rem;
+        height: 1.1rem;
+        margin: 0;
+    }
+    .forward-box {
+        margin-top: 0.75rem;
+        padding-top: 0.75rem;
+        border-top: 1px solid #dee2e6;
+    }
+    .gps-status { font-size: 0.8rem; color: var(--muted); margin-bottom: 0.5rem; }
+    .media-preview-wrap {
+        margin: 0.75rem 0;
+        border-radius: var(--radius);
+        overflow: hidden;
+        background: #e9ecef;
+        border: 2px solid var(--brand-light);
+    }
+    .media-preview-wrap img,
+    .media-preview-wrap video {
+        width: 100%;
+        display: block;
+    }
+    .media-preview-label {
+        padding: 0.5rem 0.75rem 0;
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: var(--brand);
+        margin: 0;
+    }
+    #timeline-form.is-saving .capture-actions label.btn {
+        pointer-events: none;
+        opacity: 0.55;
+    }
+</style>

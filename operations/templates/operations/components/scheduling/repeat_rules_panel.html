@@ -1,0 +1,23 @@
+<div class="repeat-card" id="repeat-section">
+    <label for="{{ visit_form.repeat_frequency.id_for_label }}"><strong>Repeat</strong></label>
+    {{ visit_form.repeat_frequency }}
+
+    <div id="repeat-options" style="display:none;margin-top:0.75rem">
+        <div id="repeat-interval-row">
+            <label for="{{ visit_form.repeat_interval.id_for_label }}">Every</label>
+            <div style="display:flex;align-items:center;gap:0.5rem">
+                {{ visit_form.repeat_interval }}
+                <span id="repeat-interval-unit" class="muted">days</span>
+            </div>
+        </div>
+        <p id="repeat-weekly-hint" class="muted" style="font-size:0.85rem;display:none;margin-top:0.35rem"></p>
+
+        <label for="{{ visit_form.repeat_ends.id_for_label }}" style="margin-top:0.75rem"><strong>Ends</strong></label>
+        {{ visit_form.repeat_ends }}
+        <p class="muted" style="font-size:0.85rem;margin-top:0.25rem">Type a number (e.g. <em>5</em>) or an end date (e.g. <em>April 15, 2026</em>).</p>
+        <p id="repeat-ends-hint" class="muted" style="font-size:0.85rem;margin-top:0.25rem;display:none"></p>
+        {% if visit_form.repeat_ends.errors %}
+        <p style="color:var(--danger);font-size:0.85rem">{{ visit_form.repeat_ends.errors.0 }}</p>
+        {% endif %}
+    </div>
+</div>

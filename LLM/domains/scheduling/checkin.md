@@ -59,4 +59,4 @@ Refused transition = error, not silent success (unless David asks otherwise). Te
 
 ## Staff timeline (pointer)
 
-While `checked_in`, David logs photo/video at `/visits/<id>/timeline/`. Forms: `forms/scheduling/timelines.py`. Full rules, customer feed, security: [`../feed.md`](../feed.md). Services: `timeline_media/`, `feed_interactions/`.
+While `checked_in`, David logs photo/video at `/visits/<id>/timeline/`. Forms: `forms/scheduling/timelines.py`. Templates: `visit_timeline.html` shell + `components/timeline/` (`capture_form`, `moment_card`, `forward_panel`). Full rules, customer feed, security: [`../feed.md`](../feed.md). Services: `timeline_media/`, `feed_interactions/`.

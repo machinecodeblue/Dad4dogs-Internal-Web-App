@@ -68,7 +68,9 @@ Unique: `(tenant, slug)`.
 | `threshold_value` | Hours or window parameter |
 | `modified_rate` | CAD when trigger matches |
 
-Seeded defaults for Dad4dogs: Short Visit $15, Daytime Visit $25, Overnight Stay $37.50 (DOG / FLAT) — mirror classic tiers for catalog presence only.
+Seeded defaults for Dad4dogs:
+- Boarding: Short Visit $15, Daytime Visit $25, Overnight Stay $37.50 (DOG / FLAT, not capacity-exempt)
+- Intake prerequisites: **Meet & Greet** (`meet_greet`, $0, `capacity_exempt=True`), **Initial Evaluation** (`initial_evaluation`, $15, not exempt) — migration `0026_seed_intake_services`
 
 ---
 

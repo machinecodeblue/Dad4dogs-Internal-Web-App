@@ -1,0 +1,187 @@
+<script>
+(function () {
+    const parseUrl = '{% url "operations:parse_datetime" %}';
+
+    function wireDatetimeField(fieldEl, input, previewBtn, errorEl, getDefault) {
+        if (!fieldEl || !input || !previewBtn) return;
+        const valueSpan = previewBtn.querySelector('.value');
+
+        async function tryParse() {
+            const text = input.value.trim();
+            if (!text) {
+                fieldEl.classList.remove('confirmed');
+                fieldEl.classList.add('editing');
+                if (errorEl) { errorEl.style.display = 'none'; }
+                return false;
+            }
+            let url = parseUrl + '?q=' + encodeURIComponent(text);
+            const def = getDefault ? getDefault() : '';
+            if (def) url += '&default=' + encodeURIComponent(def);
+            try {
+                const resp = await fetch(url);
+                const data = await resp.json();
+                if (data.ok) {
+                    valueSpan.textContent = data.display;
+                    input.dataset.iso = data.iso;
+                    fieldEl.classList.remove('editing');
+                    fieldEl.classList.add('confirmed');
+                    if (errorEl) { errorEl.style.display = 'none'; }
+                    return true;
+                }
+                if (errorEl) {
+                    errorEl.textContent = data.error;
+                    errorEl.style.display = 'block';
+                }
+                fieldEl.classList.remove('confirmed');
+                fieldEl.classList.add('editing');
+                return false;
+            } catch (e) {
+                return false;
+            }
+        }
+
+        function openEditor() {
+            fieldEl.classList.remove('confirmed');
+            fieldEl.classList.add('editing');
+            input.focus();
+            input.select();
+        }
+
+        input.addEventListener('blur', function () {
+            setTimeout(function () { tryParse().then(function () { syncRepeatUi(); }); }, 150);
+        });
+        previewBtn.addEventListener('click', openEditor);
+        previewBtn.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openEditor(); }
+        });
+
+        if (input.value.trim()) tryParse();
+        return { tryParse, openEditor };
+    }
+
+    const freqSelect = document.getElementById('id_repeat_frequency');
+    const repeatOptions = document.getElementById('repeat-options');
+    const intervalRow = document.getElementById('repeat-interval-row');
+    const intervalUnit = document.getElementById('repeat-interval-unit');
+    const weeklyHint = document.getElementById('repeat-weekly-hint');
+    const startInput = document.getElementById('id_start_at');
+
+    function syncRepeatUi() {
+        if (!freqSelect || !repeatOptions) return;
+        const freq = freqSelect.value;
+        const show = freq && freq !== 'none';
+        repeatOptions.style.display = show ? 'block' : 'none';
+        if (intervalRow) {
+            intervalRow.style.display = (freq === 'weekdays') ? 'none' : 'block';
+        }
+        if (intervalUnit) {
+            const n = document.getElementById('id_repeat_interval');
+            const num = n ? parseInt(n.value, 10) || 1 : 1;
+            const units = {
+                daily: num === 1 ? 'day' : 'days',
+                weekly: num === 1 ? 'week' : 'weeks',
+                monthly: num === 1 ? 'month' : 'months',
+            };
+            intervalUnit.textContent = units[freq] || 'days';
+        }
+        if (weeklyHint) {
+            if (freq === 'weekly' && startInput && startInput.dataset.iso) {
+                const d = new Date(startInput.dataset.iso);
+                const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+                const wk = document.getElementById('id_repeat_interval');
+                weeklyHint.textContent = 'Repeats every ' + (wk ? wk.value || '1' : '1') + ' week(s) on ' + days[d.getDay()] + 's';
+                weeklyHint.style.display = 'block';
+            } else if (freq === 'weekdays') {
+                weeklyHint.textContent = 'Repeats Monday through Friday only.';
+                weeklyHint.style.display = 'block';
+            } else {
+                weeklyHint.style.display = 'none';
+            }
+        }
+    }
+
+    const endsInput = document.getElementById('id_repeat_ends');
+    const endsHint = document.getElementById('repeat-ends-hint');
+
+    async function syncEndsHint() {
+        if (!endsInput || !endsHint) return;
+        const text = endsInput.value.trim();
+        if (!text) { endsHint.style.display = 'none'; return; }
+        if (/^\d+\s*(?:times?|occurrences?|visits?)?$/i.test(text)) {
+            endsHint.textContent = '→ ' + parseInt(text, 10) + ' visits in the series';
+            endsHint.style.display = 'block';
+            return;
+        }
+        let url = parseUrl + '?q=' + encodeURIComponent(text);
+        if (startInput && startInput.dataset.iso) {
+            url += '&default=' + encodeURIComponent(startInput.dataset.iso);
+        }
+        try {
+            const resp = await fetch(url);
+            const data = await resp.json();
+            if (data.ok) {
+                endsHint.textContent = '→ ends on ' + data.display;
+                endsHint.style.display = 'block';
+            } else {
+                endsHint.style.display = 'none';
+            }
+        } catch (e) {
+            endsHint.style.display = 'none';
+        }
+    }
+
+    if (freqSelect) {
+        freqSelect.addEventListener('change', syncRepeatUi);
+        const intervalInput = document.getElementById('id_repeat_interval');
+        if (intervalInput) intervalInput.addEventListener('input', syncRepeatUi);
+        syncRepeatUi();
+    }
+    if (endsInput) {
+        endsInput.addEventListener('blur', syncEndsHint);
+        endsInput.addEventListener('input', syncEndsHint);
+    }
+
+    const endInput = document.getElementById('id_end_at');
+    wireDatetimeField(
+        document.getElementById('start-field'),
+        startInput,
+        document.getElementById('start-preview'),
+        document.getElementById('start-parse-error'),
+        null,
+    );
+    wireDatetimeField(
+        document.getElementById('end-field'),
+        endInput,
+        document.getElementById('end-preview'),
+        document.getElementById('end-parse-error'),
+        function () { return startInput && startInput.dataset.iso ? startInput.dataset.iso : ''; },
+    );
+
+    const cloneInput = document.getElementById('new_date_text');
+    const cloneHidden = document.getElementById('new_date');
+    const cloneField = document.getElementById('clone-date-field');
+    if (cloneInput && cloneHidden) {
+        wireDatetimeField(
+            cloneField,
+            cloneInput,
+            document.getElementById('clone-date-preview'),
+            null,
+            null,
+        );
+        const cloneForm = cloneField.closest('form');
+        if (cloneForm) {
+            cloneForm.addEventListener('submit', function (e) {
+                const iso = cloneInput.dataset.iso;
+                if (iso) {
+                    cloneHidden.value = iso.slice(0, 10);
+                } else if (cloneInput.value.trim()) {
+                    e.preventDefault();
+                    cloneField.classList.remove('confirmed');
+                    cloneField.classList.add('editing');
+                    cloneInput.focus();
+                }
+            });
+        }
+    }
+})();
+</script>

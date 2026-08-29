@@ -1,3 +1,13 @@
+# Decision: HTML monolith file review
+
+**Status:** accepted (conventions + phased splits)  
+**Live spec:** `LLM/domains/platform.md` § Template packages; components under `operations/templates/operations/components/`  
+**What we took:** `components/` tree for product UI; keep `includes/` for chrome/feed social; timeline then visit form; partials before static CSS/JS.  
+**What we left:** Full redesign of badges; forcing staff/customer moment cards to share one partial; splitting every sub-10KB template.  
+**Why:** Match Python packaging — small, auditable UI units and consistent chrome.
+
+---
+
 That audit table shows the next round of architectural drift. While Python backend services, models, and forms were modularized, **frontend templates (`visit_form.html` at 17.3 KB and `visit_timeline.html` at 12.6 KB)** have grown into monolithic HTML files.
 
 In Django applications with dynamic mobile forms and staff timelines, templates inflate because they inline:
