@@ -2,7 +2,9 @@
 
 **Covers:** owners, dogs, COI, vaccinations, emergency contacts, veterinary contacts, pipeline per dog; Google Contacts import / vCard — see **[`contacts.md`](https://www.google.com/search?q=contacts.md)**.
 
-**Code packages:** `operations/models/customers/` (`owners.py`, `dogs.py`, `vaccinations.py`, `telemetry.py`, `constants.py`, `__init__.py`), `forms/customers.py`, `operations/views/customers/` (`clients.py`, `intake.py`, `vaccinations.py`, `contacts.py`, `actions.py`, `__init__.py`)
+**Code packages:** `operations/models/customers/` (`owners.py`, `dogs/` package, `vaccinations.py`, `telemetry.py`, `constants.py`, `__init__.py`), `forms/customers.py`, `operations/views/customers/` (`clients.py`, `intake.py`, `vaccinations.py`, `contacts.py`, `actions.py`, `__init__.py`)
+
+**Dog model package:** `operations/models/customers/dogs/` — `base.py` (fields), `querysets.py`, `pipeline.py`, `vaccinations.py` (status helpers), `feed.py`
 
 **Services:** `operations/services/contacts/` (see `contacts.md`), `addresses.py`, `phones.py`; feed secrets/slugs via `feed_interactions/` (see `feed.md`)
 
@@ -17,7 +19,7 @@ All models inherit from `TenantAwareModel` (`tenant_id` foreign key).
 | Model | Submodule | Unique Key | Owns |
 | --- | --- | --- | --- |
 | `CustomerOwner` | `owners.py` | `tenant` + `owner_email` | COI, primary owner contact, emergency/pickup contacts |
-| `ClientProfile` | `dogs.py` | `tenant` + `owner_email` + `dog_name` | Pipeline, visits, notes, **per-dog vet contacts**, feed URL credentials |
+| `ClientProfile` | `dogs/` | `tenant` + `owner_email` + `dog_name` | Pipeline, visits, notes, **per-dog vet contacts**, feed URL credentials |
 | `VaccinationRecord` | `vaccinations.py` | PK (FK $\rightarrow$ `ClientProfile`) | Vet papers, expiry date, validation timestamp |
 | `FeedAccessLog` | `telemetry.py` | PK (FK $\rightarrow$ `ClientProfile`) | Anonymous feed page views (visitor cookie logging) |
 
@@ -67,7 +69,7 @@ Display helpers on `CustomerOwner`: `formatted_address` (multiline), `address_on
 
 Property: `authorized_pickup_list` — parsed non-empty stripped lines for templates.
 
-### 2.3 Medical & Veterinary Contact (`ClientProfile` — `dogs.py`)
+### 2.3 Medical & Veterinary Contact (`ClientProfile` — `dogs/base.py`)
 
 | Field | Purpose |
 | --- | --- |

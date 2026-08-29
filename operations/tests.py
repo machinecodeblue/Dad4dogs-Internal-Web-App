@@ -508,7 +508,7 @@ class CognitiveLoadUXTests(TestCase):
         self.assertContains(response, 'Vaccinations')
         self.assertNotContains(response, 'Schedule stay')
         self.assertContains(response, reverse('operations:dog_edit', args=[self.dog.pk]))
-        self.assertContains(response, '<summary>More actions</summary>')
+        self.assertContains(response, '<summary>Stage management &amp; more</summary>')
         self.assertContains(response, 'Hide dog')
         self.assertNotContains(response, 'Vaccination records')
 
