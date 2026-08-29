@@ -2,6 +2,35 @@
 
 **Covers:** visits, repeat series, dashboard agenda, check-in/out, pricing, capacity, calendar sync, booking confirmation email.
 
+**Code packages:** `operations/models/scheduling/` (`visits.py`, `series.py`, `media.py`, `timeline.py`, `interactions.py`, `calendar.py`, `__init__.py`), `forms/scheduling.py`, `operations/views/scheduling/` (`dashboard.py`, `checkin.py`, `visits.py`, `timeline.py`, `calendar.py`, `helpers.py`, `__init__.py`)
+
+**Root modules:** `operations/pricing.py`, `operations/capacity.py`
+
+**Services:** `operations/services/timeline_media/`, `operations/services/feed_interactions/`, `agenda.py`, `datetime_parse.py`, `visit_repeat.py`, `visit_email.py`, `gmail_send.py`, `ical_feed.py`, `gmail_sync.py`, `timeline_visits.py`, `geolocation.py`
+
+**Customer feed:** see [`feed.md`](https://www.google.com/search?q=feed.md) — public read-only view of timeline media
+
+---
+
+## 1.1 Data Model (`operations/models/scheduling/`)
+
+All models inherit from `TenantAwareModel` (`tenant_id` foreign key).
+
+| Model | Submodule | Purpose |
+| --- | --- | --- |
+| `Visit`<br> | `visits.py` | Single scheduled/checked-in/completed stay; status guards, invariant validation, pricing recalculation |
+| `VisitSeries`<br> | `series.py` | Groups recurring visits created in one booking |
+| `TimelineMediaAsset`<br> | `media.py` | Immutable photo/video capture (GPS, caption, timestamps) |
+| `VisitTimelineEvent`<br> | `timeline.py` | Links media asset to a visit; supports forwarding across pack members |
+| `MediaReaction`<br> | `interactions.py` | Per-browser emoji reactions on timeline moments (no login required) |
+| `MediaComment`<br> | `interactions.py` | Visitor comments on timeline moments |
+| `SharedMediaLink`<br> | `interactions.py` | Single-moment public share link generation and view telemetry |
+| `PendingCalendarEvent`<br> | `calendar.py` | Inbound calendar events awaiting David's review |
+
+# Domain: Scheduling
+
+**Covers:** visits, repeat series, dashboard agenda, check-in/out, pricing, capacity, calendar sync, booking confirmation email.
+
 **Code packages:** `operations/models/scheduling.py`, `forms/scheduling.py`, `operations/views/scheduling/` (`dashboard.py`, `checkin.py`, `visits.py`, `timeline.py`, `calendar.py`, `helpers.py`, `__init__.py`)  
 **Root modules:** `operations/pricing.py`, `operations/capacity.py`  
 **Services:** `agenda.py`, `datetime_parse.py`, `visit_repeat.py`, `visit_email.py`, `gmail_send.py`, `ical_feed.py`, `gmail_sync.py`, `timeline_media.py`, `timeline_visits.py`, `geolocation.py`  
