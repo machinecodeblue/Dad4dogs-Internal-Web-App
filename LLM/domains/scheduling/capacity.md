@@ -25,11 +25,14 @@ Both live on `CapacitySettings` for the active workspace (`/settings/`). Default
 | standard < count ≤ insurance | Warning |
 | > insurance | Block (new bookings) |
 
-Counts distinct `client_id` with overlapping `scheduled` / `checked_in` / `completed` visits. Keep tenant-scoped Visit indexes on `status`, `scheduled_start`, `scheduled_end`.
+Counts distinct `client_id` with overlapping `scheduled` / `checked_in` / `completed` visits that **occupy facility capacity**. Keep tenant-scoped Visit indexes on `status`, `scheduled_start`, `scheduled_end`.
 
 ### Catalog exemption
 
-`check_visit_capacity(visit)` returns ok (count 0) when `business_service` is set and (`capacity_exempt` **or** `target_category != 'DOG'`). **Same-dog overlap still runs** in `Visit.clean()` / form clean.
+- **Meet & Greet** (`capacity_exempt=True`): does **not** count in dashboard/check-in occupancy (`count_dogs_on_day` / `assess_capacity` exclude `business_service__capacity_exempt=True`). Booking gate also skips via `check_visit_capacity`.
+- **Initial Evaluation** and boarding: **do** count toward capacity.
+- `check_visit_capacity(visit)` returns ok when `capacity_exempt` **or** `target_category != 'DOG'`.
+- **Same-dog overlap still runs** for M&G (a dog cannot double-book themselves) — overlap uses visits without the facility-capacity exclude.
 
 ---
 

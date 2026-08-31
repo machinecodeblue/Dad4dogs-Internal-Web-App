@@ -53,7 +53,13 @@ def _day_bounds(day: date):
     return start, end
 
 
-def _overlapping_visits(span_start, span_end, exclude_visit_id: int | None = None):
+def _overlapping_visits(
+    span_start,
+    span_end,
+    exclude_visit_id: int | None = None,
+    *,
+    for_facility_capacity: bool = False,
+):
     from .models import Visit
 
     qs = Visit.objects.filter(
@@ -63,6 +69,10 @@ def _overlapping_visits(span_start, span_end, exclude_visit_id: int | None = Non
     )
     if exclude_visit_id:
         qs = qs.exclude(pk=exclude_visit_id)
+    # Meet & Greet (capacity_exempt) must not inflate facility occupancy.
+    # Same-dog overlap checks keep for_facility_capacity=False so M&G still clashes with itself.
+    if for_facility_capacity:
+        qs = qs.exclude(business_service__capacity_exempt=True)
     return qs
 
 
@@ -88,9 +98,14 @@ def count_dogs_on_day(
     exclude_visit_id: int | None = None,
     include_client_id: int | None = None,
 ) -> int:
-    """Count distinct dogs with an active visit overlapping the given calendar day."""
+    """Count distinct dogs occupying facility capacity on a calendar day.
+
+    Excludes capacity-exempt services (Meet & Greet). Evaluation and boarding count.
+    """
     day_start, day_end = _day_bounds(day)
-    qs = _overlapping_visits(day_start, day_end, exclude_visit_id)
+    qs = _overlapping_visits(
+        day_start, day_end, exclude_visit_id, for_facility_capacity=True,
+    )
     if include_client_id is not None:
         agg = qs.aggregate(
             total=Count('client_id', distinct=True),
@@ -211,7 +226,7 @@ def _daily_dog_counts(
             client_ids.add(include_client_id)
 
     others = _overlapping_visits(
-        span_start, span_end, exclude_visit_id,
+        span_start, span_end, exclude_visit_id, for_facility_capacity=True,
     ).only('client_id', 'scheduled_start', 'scheduled_end')
 
     for other in others:

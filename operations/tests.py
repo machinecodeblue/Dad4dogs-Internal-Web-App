@@ -2872,6 +2872,37 @@ class CapacityTimezoneTests(TestCase):
         self.assertEqual(count_dogs_on_day(date(2026, 4, 11)), 1)
         self.assertEqual(count_dogs_on_day(date(2026, 4, 9)), 0)
 
+    def test_meet_greet_does_not_count_toward_facility_capacity(self):
+        from operations.services.context_tenant import get_active_workspace
+        from operations.services.pipeline import INITIAL_EVALUATION_SLUG, MEET_GREET_SLUG
+
+        workspace = get_active_workspace()
+        meet = BusinessService.objects.get(tenant=workspace, slug=MEET_GREET_SLUG)
+        evaluation = BusinessService.objects.get(tenant=workspace, slug=INITIAL_EVALUATION_SLUG)
+        self.assertTrue(meet.capacity_exempt)
+        self.assertFalse(evaluation.capacity_exempt)
+
+        Visit.objects.create(
+            client=self.dog,
+            business_service=meet,
+            scheduled_start=datetime(2026, 6, 1, 10, 0, tzinfo=TZ),
+            scheduled_end=datetime(2026, 6, 1, 10, 15, tzinfo=TZ),
+        )
+        self.assertEqual(count_dogs_on_day(date(2026, 6, 1)), 0)
+
+        other = ClientProfile.objects.create(
+            dog_name='EvalDog',
+            owner_name='Eval Owner',
+            owner_email='eval-cap@example.com',
+        )
+        Visit.objects.create(
+            client=other,
+            business_service=evaluation,
+            scheduled_start=datetime(2026, 6, 1, 10, 0, tzinfo=TZ),
+            scheduled_end=datetime(2026, 6, 1, 14, 0, tzinfo=TZ),
+        )
+        self.assertEqual(count_dogs_on_day(date(2026, 6, 1)), 1)
+
     def test_naive_datetimes_do_not_crash_capacity(self):
         visit = Visit(
             client=self.dog,
