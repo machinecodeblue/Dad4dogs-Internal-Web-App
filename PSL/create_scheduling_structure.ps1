@@ -1,18 +1,13 @@
 # Define the base relative path
-$basePath = "operations/forms/scheduling"
+$basePath = "operations/capacity"
 
 # Define the files to create
 $files = @(
     "__init__.py",
-    "visits.py",
-    "timelines.py"
-
+    "limits.py",
+    "spans.py",
+    "engine.py"
 )
-
-# Ensure the directory exists
-if (-not (Test-Path $basePath)) {
-    New-Item -ItemType Directory -Path $basePath -Force | Out-Null
-}
 
 # Create each file inside the directory
 foreach ($file in $files) {
