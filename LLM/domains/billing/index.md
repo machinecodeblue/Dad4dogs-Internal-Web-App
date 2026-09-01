@@ -87,4 +87,4 @@ Prefer `tenant=get_active_workspace()` on new billing queries when convenient. S
 
 ## Tests
 
-Dedicated statement send / compile / unbilled tests in `operations/tests.py` as slices land. Pricing/checkout suites stay green.
+`StatementBillingTests` lives in `operations/tests/feed/test_pwa.py` (current home until a dedicated billing test module exists). Pricing/checkout suites in `operations/tests/scheduling/test_pricing.py` stay green.

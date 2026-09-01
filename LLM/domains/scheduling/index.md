@@ -24,7 +24,7 @@
 - `operations/models/scheduling/` — `visits`, `series`, `media`, `timeline`, `interactions`, `calendar`
 - `operations/forms/scheduling/` — `visits.py`, `timelines.py`
 - `operations/views/scheduling/` — `dashboard`, `checkin`, `visits`, `timeline`, `calendar`, `helpers`
-- Root: `operations/pricing.py`, `operations/capacity.py`
+- Root: `operations/pricing.py`; capacity package: `operations/capacity/` (`limits`, `spans`, `engine`)
 - Services: `timeline_media/`, `feed_interactions/`, `pricing_engine.py`, `agenda.py`, `datetime_parse.py`, `visit_repeat.py`, `visit_email.py`, `gmail_send.py`, `ical_feed.py`, `gmail_sync.py`, `timeline_visits.py`, `geolocation.py`
 
 Do **not** recreate monoliths `operations/models/scheduling.py` or `operations/forms/scheduling.py`.
@@ -96,14 +96,21 @@ Wrong HTTP verbs → **405**. Full behavior lives in topic files.
 
 ## Tests
 
-`VisitFormTests`, `DatetimeParseTests`, `AgendaTests`, `DashboardViewTests`, `PricingEngineTests`, `VisitCheckOutTests`, `VisitCheckInOutViewTests`, `VisitCapacitySaveTests`, `PendingEventApproveTests`, `VisitIndexTests`, `VisitCloneToDateTests`, `VisitEmailTests`, `TimelineTests` in `operations/tests.py`.
+Tests live in `operations/tests/scheduling/`:
+- `test_visits.py`: `VisitFormTests`, `VisitRepeatTests`, `VisitCloneToDateTests`, `VisitIndexTests`
+- `test_checkin.py`: `VisitCheckOutTests`, `VisitCheckInOutViewTests`
+- `test_capacity.py`: `VisitCapacitySaveTests`, `CapacityTimezoneTests`
+- `test_agenda.py`: `AgendaTests`, `DashboardViewTests`, `DatetimeParseTests`
+- `test_pricing.py`: `PricingEngineTests`
+- `test_calendar.py`: `PendingEventApproveTests`, `VisitEmailTests`, `GmailSendTests`
 
 ## Not yet built
 
 - Live Gmail calendar read (inbound)
 - Edit/delete entire repeat series at once
 - Booking METHOD:UPDATE/CANCEL
-- Billing service-aware statement lines (see `services.md` Phase 3)
+
+Service-aware statement lines are **Done** (billing B3 / services Phase 3) — see `billing/roadmap.md`.
 
 ## LLM packaging rules
 

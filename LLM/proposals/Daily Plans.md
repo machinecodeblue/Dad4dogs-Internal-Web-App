@@ -4,9 +4,9 @@
 
 Core operator loop is **live and Done** per `LLM/PROJECT.md` §5: customers/intake/pipeline, vaccinations, visit booking + repeats, dashboard agenda, check-in/out, confirmation email + outbound `/ical/`, feed + PWA, tenant schema Phase 1, capacity settings, services catalog Phase 1–3 (pricing engine, capacity exempt, statement service lines), weekly statements B1–B3, Meet & Greet / Evaluation booking screens.
 
-**Open queue:** `LLM/proposals/` is empty (README only). Recent commits landed intake, M&G, billing modularization, and the `dogs/` package split.
+**Open queue:** this file (`Daily Plans.md`) plus `README.md`. Recent commits landed intake, M&G, billing modularization, and the `dogs/` package split. Capacity logic now lives in `operations/capacity/`; tests are splitting into `operations/tests/`.
 
-**Uncommitted (this branch):** `operations/capacity.py` + tests + `LLM/domains/scheduling/capacity.md` — Meet & Greet (`capacity_exempt`) excluded from facility occupancy while still participating in same-dog overlap. Worth committing (and a small doc fix: `services.md` still says “capacity.py not wired yet” though Phase 2c is Done; `scheduling/index.md` still lists “service-aware statement lines” under Not yet built though B3 is Done).
+**Hygiene (David):** commit capacity package + M&G occupancy behaviour; remove legacy `operations/tests.py` monolith once the package is the runner. **Doc drift (agent):** done — live domains/PROJECT no longer claim exempt/B3 unbuilt; paths point at `capacity/` and `tests/`.
 
 ---
 
@@ -18,12 +18,12 @@ Ranked for **single-operator daily boarding first**, then platform hardening, th
 
 ## P0 — Hygiene (hours, not a product epic)
 
-| Item | Why | Refs |
+| Item | Why | Status |
 | --- | --- | --- |
-| Commit capacity-exempt occupancy fix | Behavior matches product rule; tests already updated | `capacity.py`, uncommitted |
-| Doc drift cleanup | Status matrix / “Not yet built” contradict live code | `services.md` §2 `capacity_exempt` note; `scheduling/index.md` billing line; optional PROJECT §5 refresh |
+| Commit capacity package + M&G occupancy | Behavior matches product rule | **David** — `operations/capacity/`, delete legacy `tests.py` when ready |
+| Doc drift cleanup | Status / paths contradicted live code | **Done** — services, scheduling index, admin, PROJECT, platform, contacts, billing, feed, capacity.md |
 
-No new feature work required.
+No new feature work required for P0.
 
 ---
 

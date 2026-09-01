@@ -206,7 +206,12 @@ Organized as a domain package:
 
 ## 9. Tests
 
-`CustomerOwnerFormTests`, `AddressHandlingTests`, `CognitiveLoadUXTests`, `DogProfileFormTests`, `IntakeWizardTests`, `ContactDataTests`, `CustomerEditTests`, `CustomerViewsHttpTests`, `ContactSyncTests`, `ComplianceTests`, `VaccinationExpiryViewTests`, `FeedSlugTests`, `CustomerFeedTests` in `operations/tests.py`.
+Tests live in `operations/tests/customers/`:
+- `test_forms.py`: `CustomerOwnerFormTests`, `DogProfileFormTests`
+- `test_views.py`: `CognitiveLoadUXTests`, `CustomerEditTests`, `CustomerViewsHttpTests`
+- `test_compliance.py`: `AddressHandlingTests`, `ComplianceTests`, `VaccinationExpiryViewTests`
+- `test_contacts.py`: `ContactSyncTests`, `NeedsDogNameTests`, `ContactDataTests`
+- `test_intake.py`: `IntakeWizardTests`, `PipelinePhase2Tests`
 
 ---
 

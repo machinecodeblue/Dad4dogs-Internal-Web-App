@@ -97,4 +97,4 @@ Wrong HTTP verbs → 405. `selected_rows` skip non-integers (no 500).
 
 ## 6. Tests
 
-`ContactSyncTests`, `ContactDataTests`, and related coverage in `operations/tests.py`. Keep green when touching parsers/matching/importers/vcard.
+`ContactSyncTests`, `NeedsDogNameTests`, and `ContactDataTests` live in `operations/tests/customers/test_contacts.py`. Keep green when touching parsers/matching/importers/vcard.

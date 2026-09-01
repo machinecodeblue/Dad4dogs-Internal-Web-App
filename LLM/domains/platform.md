@@ -297,9 +297,15 @@ To prevent template bloat, avoid "God scripts," and ensure browser-level CSS cac
 python manage.py test operations
 ```
 
-All tests in `operations/tests.py`. Update tests when changing:
-- Pricing, capacity (booking vs check-in/out saves), visit forms, check-in/out status guards, agenda, contacts, compliance, Gmail helpers, business settings, timeline, customer feed, PWA endpoints
-- List/detail/dashboard/check-in templates — keep `CognitiveLoadUXTests` green (compact rows, no green OK badges, address in a disclosure, ≤2 primary CTAs)
+Tests live in the `operations/tests/` package (not a single monolith):
+
+| Package | Coverage |
+| --- | --- |
+| `operations/tests/customers/` | Forms, views/UX, intake/pipeline, contacts, compliance/vax |
+| `operations/tests/scheduling/` | Visits/repeats, check-in, capacity, agenda, pricing, calendar/email |
+| `operations/tests/feed/` | Timeline, feed interactions, PWA / geolocation / business settings / statement smoke |
+
+Update the matching module when changing pricing, capacity (booking vs check-in/out saves), visit forms, status guards, agenda, contacts, compliance, Gmail helpers, business settings, timeline, customer feed, or PWA endpoints. Keep `CognitiveLoadUXTests` green (compact rows, no green OK badges, address in a disclosure, ≤2 primary CTAs).
 
 ---
 

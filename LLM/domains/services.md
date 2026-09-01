@@ -1,8 +1,8 @@
 # Domain: Services & Offerings
 
-**Status:** Phase 2 **in progress / landing** — visits link to `BusinessService`; checkout uses `pricing_engine` when a service is set (DOG boarding parity with `pricing.py`); capacity skips for exempt / non-DOG.
+**Status:** Phases 1–3 **Done** — visits link to `BusinessService`; checkout uses `pricing_engine` when a service is set (DOG boarding parity with `pricing.py`); capacity skips for exempt / non-DOG; statement lines snapshot service name/slug.
 
-**Covers:** Dynamic business services, customizable rates, categories, behavior rules; future capacity-exempt / pricing-engine cutover.
+**Covers:** Dynamic business services, customizable rates, categories, behavior rules; capacity-exempt / pricing-engine cutover (live).
 
 **Code packages:**
 - `operations/models/services.py` — `BusinessService`, `ServiceBehaviorRule` (`TenantAwareModel`)
@@ -52,7 +52,7 @@ Operators manage a commercial catalog without code changes — dog boarding, sma
 | `rate_type` | FLAT / HOURLY / DAILY |
 | `base_rate` | CAD |
 | `is_active` | Soft-hide from future booking dropdowns |
-| `capacity_exempt` | Column ready; **capacity.py not wired yet** (Phase 2) |
+| `capacity_exempt` | When true (or non-DOG category), facility occupancy / booking caps skip this visit; same-dog overlap still applies — see `scheduling/capacity.md` |
 
 Unique: `(tenant, slug)`.
 

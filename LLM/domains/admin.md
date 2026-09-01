@@ -46,7 +46,7 @@ Brand / contact baseline. Access via `BusinessProfile.load()` (active workspace)
 
 ### `CapacitySettings` (OneToOne → Workspace)
 
-Facility capacity numbers only. Logic stays in `operations/capacity.py`.
+Facility capacity numbers only. Logic stays in `operations/capacity/` (`limits`, `spans`, `engine`).
 
 | Field | Purpose |
 |-------|---------|
@@ -62,7 +62,7 @@ Access via `CapacitySettings.load()` or `capacity.capacity_limits()`.
 2. Do not add per-customer fields here; customer data stays in `customers` domain.
 3. Free-text `address` and `hours_of_operation` — mobile-friendly, voice-to-text compatible.
 4. When wiring into emails or PDFs, read from `BusinessProfile.load()`; do not hardcode David's details.
-5. Daily capacity is **not** a constant in `capacity.py`. Booking, dashboard, and check-in must call `capacity.capacity_limits()` (or use the `standard` / `ceiling` keys on an `assess_capacity` result). Module defaults 8 / 10 only when no usable `CapacitySettings` row.
+5. Daily capacity is **not** a constant in `operations/capacity/`. Booking, dashboard, and check-in must call `capacity.capacity_limits()` (or use the `standard` / `ceiling` keys on an `assess_capacity` result). Package defaults 8 / 10 only when no usable `CapacitySettings` row.
 6. Do not put capacity orchestration methods on `Workspace` or `CapacitySettings`.
 
 ### Daily capacity (purpose)
@@ -74,13 +74,13 @@ Access via `CapacitySettings.load()` or `capacity.capacity_limits()`.
 
 Insurance max must be ≥ standard (form `clean()` and model `clean()`). Both are 1–50. Change them on `/settings/` — do not ship a new hardcoded 8 or 10.
 
-How it is read at runtime (`operations/capacity.py`):
+How it is read at runtime (`operations/capacity/`):
 
 1. `capacity_limits()` reads `CapacitySettings` for `get_active_workspace()` via `values_list` (no unnecessary `load()` writes on hot paths beyond workspace ensure).
 2. Missing row or invalid values fall back to 8 / 10. If insurance < standard in the row, insurance is raised to standard for that check only.
-3. `_capacity_status` / `assess_capacity` / `check_visit_capacity` use those two numbers. Dashboard and check-in templates show `{{ capacity.count }} / {{ capacity.standard }}` plus the status message.
+3. `format_capacity_status` / `assess_capacity` / `check_visit_capacity` use those two numbers. Dashboard and check-in templates show `{{ capacity.count }} / {{ capacity.standard }}` plus the status message.
 
-**Future** (not Phase 1): weekday staff overrides, isolation buffer, weather modes — see Decision *Capacity setting discussion*. Off-site / non-dog **`capacity_exempt`** belongs on future services catalog (`services.md`).
+**Future** (not Phase 1): weekday staff overrides, isolation buffer, weather modes — see Decision *Capacity setting discussion*. Catalog **`capacity_exempt`** / non-DOG skips are already live (`services.md` Phase 2c; `scheduling/capacity.md`).
 
 ---
 

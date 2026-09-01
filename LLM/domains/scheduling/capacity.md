@@ -72,4 +72,4 @@ Capacity is a **booking** rule, not a day-of-ops lock:
 
 Do not `full_clean()` from check-in/out. Do not pass `skip_capacity=True` from views/clone/admin — only `VisitForm.save_all()`.
 
-**Tests:** `VisitCapacitySaveTests`, `CapacityTimezoneTests`, settings form/dashboard capacity display tests.
+**Tests:** `operations/tests/scheduling/test_capacity.py` (`VisitCapacitySaveTests`, `CapacityTimezoneTests`); settings form/dashboard capacity display in `operations/tests/feed/test_pwa.py`.

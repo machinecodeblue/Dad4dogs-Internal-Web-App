@@ -294,12 +294,14 @@ When `PUBLIC_SITE_URL` is set, `format_booking_confirmation()` appends the feed 
 
 ## 8. Tests
 
-`VisitTimelineTests`, `TimelineUploadPathTests`, `TimelineMediaAssetCapturedAtTests`, `FeedSlugTests`, `CustomerFeedTests`, `FeedInteractionTests` in `operations/tests.py`.
+Tests live in `operations/tests/feed/`:
+- `test_timeline.py`: `TimelineMomentFormTests`, `VisitTimelineTests`, `TimelineUploadPathTests`, `TimelineMediaAssetCapturedAtTests`
+- `test_interactions.py`: `FeedSlugTests`, `CustomerFeedTests`, `FeedInteractionTests`
+- `test_pwa.py`: `PwaTests`, `GeolocationTests`, `BusinessProfileTests`, `BusinessSettingsViewTests`, `StatementBillingTests`
 
 `FeedInteractionTests` covers: feed react/comment, public share isolation from feed secret, compact share/comment icons, public share react without comment, public share download filename (`dad4dogs_<uuid>.jpg`), check-in feed activity poll.
 
-`VisitEmailTests.test_format_confirmation_includes_feed_url_when_public_site_set`
-
+Cross-domain email test: `operations/tests/scheduling/test_calendar.py` (`VisitEmailTests.test_format_confirmation_includes_feed_url_when_public_site_set`).
 ---
 
 ## 9. Migrations

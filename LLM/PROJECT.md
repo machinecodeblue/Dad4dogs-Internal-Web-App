@@ -81,7 +81,7 @@ All core layers (`models/`, `forms/`, `views/`, `services/`) are organized into 
 * `operations/services/`: `context_tenant.py`, `timeline_media/` (image, video, capture, forwarding), `feed_interactions/` (access, emojis, slugs, reactions, comments, sharing, polling), `contacts/` (schemas, parsers, heuristics, matching, importers, session, vcard), `pricing_engine.py`, `statements/` (compile, format, send, unbilled, weeks), `addresses.py`, `phones.py`, `geolocation.py`, `visit_email.py`, `gmail_send.py`, `gmail_sync.py`.
 
 
-* Legacy/Scheduling Root Modules: `pricing.py` (legacy fee engine), `capacity.py` (daily occupancy math).
+* Legacy/Scheduling Root Modules: `pricing.py` (legacy fee engine), `capacity/` package (`limits`, `spans`, `engine` — daily occupancy math).
 
 
 * `operations/templates/operations/`: includes/ (reusable partials) and screen templates.
