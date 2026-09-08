@@ -74,7 +74,8 @@ ngrok http https://127.0.0.1:9000
 Or: `scripts/run-dev-tunnel.ps1`
 
 `ALLOWED_HOSTS` includes `.ngrok-free.app`, `.ngrok-free.dev`, `.ngrok.io`  
-`NgrokCsrfMiddleware` trusts ngrok origins in dev.
+`NgrokCsrfMiddleware` trusts ngrok origins in dev.  
+`TEMPLATES` must include `django.template.context_processors.csrf`. Partials included with `only` that render `{% csrf_token %}` must also receive `csrf_token=csrf_token` (timeline capture/forward forms).
 
 ---
 

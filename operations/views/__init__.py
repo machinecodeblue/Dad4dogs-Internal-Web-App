@@ -62,6 +62,7 @@ from operations.views.customers import (
 )
 from operations.views.scheduling import (
     approve_pending_event,
+    booking_manage,
     checkin_feed_activity,
     dashboard,
     duplicate_visit,
@@ -92,6 +93,7 @@ __all__ = [
     'evaluation_outcome',
     'meet_greet_outcome',
     'approve_pending_event',
+    'booking_manage',
     'checkin_feed_activity',
     'client_add_dog',
     'client_create',

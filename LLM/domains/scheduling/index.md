@@ -106,11 +106,10 @@ Tests live in `operations/tests/scheduling/`:
 
 ## Not yet built
 
-- Live Gmail calendar read (inbound)
-- Edit/delete entire repeat series at once
-- Booking METHOD:UPDATE/CANCEL
+- Unidirectional client calendar confirm (manage page, Email A/B/C, SEQUENCE UPDATE/CANCEL, staff immediate-ICS override) — **spec accepted**, implementation C1–C5 — see [`calendar_email.md`](calendar_email.md)
+- Edit/delete entire repeat series at once (ops UX; distinct from series “confirm all” on the client manage page)
 
-Service-aware statement lines are **Done** (billing B3 / services Phase 3) — see `billing/roadmap.md`.
+Inbound live Gmail calendar read is **wontfix** for client sync (parked `PendingCalendarEvent` import only). Service-aware statement lines are **Done** (billing B3) — see `billing/roadmap.md`.
 
 ## LLM packaging rules
 

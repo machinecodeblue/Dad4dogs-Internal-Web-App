@@ -179,6 +179,30 @@ class VisitTimelineTests(TestCase):
         self.assertContains(response, 'Log Moment')
         self.assertContains(response, 'capture="environment"', html=False)
         self.assertContains(response, 'Choose Photo (gallery)')
+        # capture_form is included with `only` — must still receive csrf_token
+        self.assertContains(response, 'name="csrfmiddlewaretoken"', html=False)
+
+    def test_timeline_post_with_csrf_enforced_saves_moment(self):
+        """Regression: include … only without csrf_token caused 403 on Save Moment."""
+        csrf_client = DjangoTestClient(enforce_csrf_checks=True)
+        self.assertTrue(csrf_client.login(username='david', password='testpass123'))
+        url = reverse('operations:visit_timeline', args=[self.visit.pk])
+        page = csrf_client.get(url)
+        self.assertEqual(page.status_code, 200)
+        token = page.context['csrf_token']
+        response = csrf_client.post(
+            url,
+            {
+                'csrfmiddlewaretoken': token,
+                'caption_notes': 'CSRF ok',
+                'visit_ids': [str(self.visit.pk)],
+                'latitude': '43.01',
+                'longitude': '-81.23',
+                'photo_gallery': test_image_file(),
+            },
+        )
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(self.visit.timeline_events.count(), 1)
 
     def test_timeline_get_does_not_query_forward_targets_per_event(self):
         for caption in ('One', 'Two', 'Three'):

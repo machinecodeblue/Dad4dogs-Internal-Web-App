@@ -28,6 +28,7 @@ from operations.views.scheduling.visits import (
     visit_edit,
     visit_send_confirmation,
 )
+from operations.views.scheduling.booking_manage import booking_manage
 
 __all__ = [
     'dashboard',
@@ -50,4 +51,5 @@ __all__ = [
     'visit_timeline',
     'visit_timeline_forward',
     'ical_feed',
+    'booking_manage',
 ]

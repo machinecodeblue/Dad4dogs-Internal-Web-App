@@ -49,6 +49,7 @@ urlpatterns = [
     path('feed/share/<str:share_token>/comment/', views.public_feed_share_comment, name='public_feed_share_comment'),
     path('feed/share/<str:share_token>/download/', views.public_feed_share_download, name='public_feed_share_download'),
     path('feed/share/<str:share_token>/', views.public_feed_share, name='public_feed_share'),
+    path('bookings/manage/<str:token>/', views.booking_manage, name='booking_manage'),
     path('feed/<slug:feed_secret>/<slug:feed_dog_slug>/', views.customer_feed, name='customer_feed'),
     path('feed/<slug:feed_secret>/', views.customer_feed_redirect, name='customer_feed_redirect'),
     path(

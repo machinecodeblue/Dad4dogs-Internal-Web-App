@@ -15,7 +15,7 @@
 
 <div class="card">
     <h2>Log Moment</h2>
-    {% include "operations/components/timeline/capture_form.html" with form=form eligible_visits=eligible_visits only %}
+    {% include "operations/components/timeline/capture_form.html" with form=form eligible_visits=eligible_visits csrf_token=csrf_token only %}
 </div>
 
 <div class="card">
@@ -23,7 +23,7 @@
     {% if events %}
     <div class="timeline-stream">
         {% for event in events %}
-        {% include "operations/components/timeline/moment_card.html" with event=event dog=dog visit=visit forward_forms=forward_forms only %}
+        {% include "operations/components/timeline/moment_card.html" with event=event dog=dog visit=visit forward_forms=forward_forms csrf_token=csrf_token only %}
         {% endfor %}
     </div>
     {% else %}

@@ -1,0 +1,130 @@
+{% extends "operations/customer_base.html" %}
+{% block title %}{{ dog.dog_name }} — Booking — Dad4dogs{% endblock %}
+{% block header_title %}{{ dog.dog_name }}{% endblock %}
+{% block header_subtitle %}Manage your Dad4dogs booking{% endblock %}
+
+{% block extra_head %}
+<style>
+    .btn {
+        display: inline-block;
+        border: none;
+        border-radius: 8px;
+        padding: 0.65rem 1rem;
+        font-size: 1rem;
+        font-weight: 600;
+        background: #e9ecef;
+        color: var(--text);
+        cursor: pointer;
+        width: 100%;
+    }
+    .btn-primary { background: var(--brand); color: #fff; }
+    .btn-danger { background: #c1121f; color: #fff; }
+    input[type=text] {
+        width: 100%;
+        padding: 0.6rem;
+        border: 1px solid #ced4da;
+        border-radius: 8px;
+        font-size: 1rem;
+        margin-top: 0.25rem;
+    }
+    .error { color: #c1121f; font-size: 0.85rem; }
+    .success { color: var(--brand); }
+    .warning { color: #b08900; }
+</style>
+{% endblock %}
+
+{% block content %}
+{% if messages %}
+<div class="card">
+    {% for message in messages %}
+    <p{% if message.tags %} class="{{ message.tags }}"{% endif %}>{{ message }}</p>
+    {% endfor %}
+</div>
+{% endif %}
+
+<div class="card">
+    <h2>Booking details</h2>
+    <p><strong>When:</strong> {{ schedule_label }}</p>
+    {% if service %}<p><strong>Service:</strong> {{ service.name }}</p>{% endif %}
+    <p><strong>Status:</strong>
+        {% if state == 'awaiting_confirm' %}Awaiting your confirmation
+        {% elif state == 'invite_issued' %}Confirmed
+        {% elif state == 'awaiting_change_confirm' %}Please approve the updated schedule
+        {% elif state == 'cancelled_invite' %}Cancelled
+        {% else %}{{ state }}{% endif %}
+    </p>
+</div>
+
+{% if state == 'awaiting_confirm' %}
+<div class="card">
+    <h2>Confirm this booking</h2>
+    <p>Review the times above. Confirming does not add anything to your calendar until we email you an invite.</p>
+    <form method="post">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="confirm">
+        <button type="submit" class="btn btn-primary">Confirm &amp; add to calendar</button>
+    </form>
+    {% if can_confirm_series %}
+    <form method="post" style="margin-top: 0.75rem;">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="confirm_series">
+        <button type="submit" class="btn">Confirm all {{ series_awaiting|length|add:1 }} visits in this series</button>
+    </form>
+    <p class="muted" style="margin-top: 0.5rem; font-size: 0.85rem;">
+        Includes {{ series_awaiting|length }} other day{{ series_awaiting|length|pluralize }} still waiting for confirmation.
+    </p>
+    {% endif %}
+</div>
+{% endif %}
+
+{% if state == 'awaiting_change_confirm' %}
+<div class="card">
+    <h2>Approve schedule change</h2>
+    <p>Dad4dogs updated this booking. Approve to accept the new times, or reschedule / cancel below.</p>
+    <form method="post">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="approve_change">
+        <button type="submit" class="btn btn-primary">Approve update</button>
+    </form>
+</div>
+{% endif %}
+
+{% if state == 'awaiting_confirm' or state == 'invite_issued' or state == 'awaiting_change_confirm' %}
+{% if visit.status == 'scheduled' %}
+<div class="card">
+    <h2>Reschedule</h2>
+    <form method="post">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="reschedule">
+        <p>
+            <label for="id_start_text">{{ reschedule_form.start_text.label }}</label><br>
+            {{ reschedule_form.start_text }}
+            {% if reschedule_form.start_text.errors %}<span class="error">{{ reschedule_form.start_text.errors|join:", " }}</span>{% endif %}
+        </p>
+        <p>
+            <label for="id_end_text">{{ reschedule_form.end_text.label }}</label><br>
+            {{ reschedule_form.end_text }}
+            {% if reschedule_form.end_text.errors %}<span class="error">{{ reschedule_form.end_text.errors|join:", " }}</span>{% endif %}
+        </p>
+        {% if reschedule_form.non_field_errors %}<p class="error">{{ reschedule_form.non_field_errors|join:", " }}</p>{% endif %}
+        <button type="submit" class="btn">Save new times</button>
+    </form>
+</div>
+
+<div class="card">
+    <h2>Cancel</h2>
+    <form method="post" onsubmit="return confirm('Cancel this booking?');">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="cancel">
+        <button type="submit" class="btn btn-danger">Cancel booking</button>
+    </form>
+</div>
+{% endif %}
+{% endif %}
+
+{% if state == 'cancelled_invite' or visit.status == 'cancelled' %}
+<div class="card">
+    <p>This booking is cancelled. Contact Dad4dogs if you need a new appointment.</p>
+</div>
+{% endif %}
+{% endblock %}

@@ -171,7 +171,7 @@ class VisitEmailTests(TestCase):
             a for a in attendees if 'alexagreen4@outlook.com' in str(a)
         )
         self.assertEqual(client_attendee.params.get('RSVP'), 'TRUE')
-        self.assertEqual(client_attendee.params.get('PARTSTAT'), 'NEEDS-ACTION')
+        self.assertEqual(client_attendee.params.get('PARTSTAT'), 'ACCEPTED')
         organizer = event.get('organizer')
         self.assertEqual(organizer.params.get('CN'), 'David Lundquist (Dad 4 Dogs)')
 
@@ -229,9 +229,9 @@ class VisitEmailTests(TestCase):
         )
         self.assertIn('attachment', attachment.get('Content-Disposition', ''))
 
-    @patch('operations.services.visit_email.send_gmail_booking_invite')
-    def test_send_booking_confirmation_marks_visits(self, mock_send_invite):
-        mock_send_invite.return_value = {'id': 'msg-123'}
+    @patch('operations.services.visit_email.send_gmail')
+    def test_send_booking_confirmation_sends_review_link(self, mock_send):
+        mock_send.return_value = {'id': 'msg-123'}
         visits = [
             Visit.objects.create(
                 client=self.dog,
@@ -245,15 +245,20 @@ class VisitEmailTests(TestCase):
             ),
         ]
         send_booking_confirmation(self.dog, visits)
-        mock_send_invite.assert_called_once()
-        kwargs = mock_send_invite.call_args.kwargs
+        mock_send.assert_called_once()
+        kwargs = mock_send.call_args.kwargs
         self.assertEqual(kwargs['to'], 'alexagreen4@outlook.com')
-        self.assertIn('2 bookings', kwargs['body'])
-        self.assertIn('Winston', kwargs['subject'])
-        self.assertTrue(kwargs['ics_bytes'].startswith(b'BEGIN:VCALENDAR'))
+        self.assertIn('Confirm', kwargs['subject'])
+        self.assertIn('/bookings/manage/', kwargs['body'])
+        self.assertNotIn('ics_bytes', kwargs)
         for visit in visits:
             visit.refresh_from_db()
-            self.assertIsNotNone(visit.confirmation_email_sent_at)
+            self.assertEqual(
+                visit.calendar_invite_state,
+                Visit.CalendarInviteState.AWAITING_CONFIRM,
+            )
+            self.assertIsNotNone(visit.calendar_review_sent_at)
+            self.assertTrue(visit.calendar_manage_token)
 
     def test_create_form_includes_email_checkbox(self):
         form = VisitForm(client=self.dog)
@@ -300,7 +305,7 @@ class VisitEmailTests(TestCase):
         self.assertContains(response, 'emailed Apr 10')
         self.assertNotContains(response, 'Send email')
 
-    @patch('operations.views.scheduling.visits.send_booking_confirmation')
+    @patch('operations.views.scheduling.visits.send_booking_review_link')
     def test_send_confirmation_view_calls_email(self, mock_send):
         visit = Visit.objects.create(
             client=self.dog,
@@ -318,13 +323,14 @@ class VisitEmailTests(TestCase):
         self.assertEqual(args[0], self.dog)
         self.assertEqual(list(args[1]), [visit])
 
-    @patch('operations.views.scheduling.visits.send_booking_confirmation')
+    @patch('operations.views.scheduling.visits.send_booking_review_link')
     def test_send_confirmation_view_skips_if_already_sent(self, mock_send):
         visit = Visit.objects.create(
             client=self.dog,
             scheduled_start=datetime(2026, 4, 11, 13, 0, tzinfo=TZ),
             scheduled_end=datetime(2026, 4, 11, 18, 0, tzinfo=TZ),
-            confirmation_email_sent_at=datetime(2026, 4, 10, 12, 0, tzinfo=TZ),
+            calendar_invite_state=Visit.CalendarInviteState.AWAITING_CONFIRM,
+            calendar_review_sent_at=datetime(2026, 4, 10, 12, 0, tzinfo=TZ),
         )
         user = get_user_model().objects.create_user('david-skip', 'e4@example.com', 'pass')
         self.client.force_login(user)

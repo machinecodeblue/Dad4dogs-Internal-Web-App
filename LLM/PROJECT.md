@@ -142,7 +142,8 @@ Dad4dogs Internal Web App/
 | `CapacitySettings` Model & Logic Split | **Done**<br> | `domains/admin.md` |
 | Services Catalog Scaffolding (Phase 1) | **Done**<br> | `domains/services.md`<br> |
 | Weekly Statement Send Automation | **Done**<br> | `domains/billing/email.md`<br> |
-| Calendar Inbound `.ics` Sync | **Partial**<br> | `domains/scheduling/calendar_email.md`<br> |
+| Client calendar confirm (unidirectional ICS) | **Spec accepted**<br>(impl C1–C5) | `domains/scheduling/calendar_email.md`<br> |
+| Calendar Inbound `.ics` (staff file import) | **Parked**<br> | `domains/scheduling/calendar_email.md`<br> |
 | Services Phase 2 (Engine Cutover) | **Done**<br> | `domains/services.md`<br> |
 | Default Tenant QuerySet / Middleware (Phase 2) | **Planned**<br> | `domains/admin.md` |
 | Portable SQLite Operator Export | **Planned**<br> | `domains/billing/roadmap.md` (B5)<br> |
@@ -162,6 +163,8 @@ Dad4dogs Internal Web App/
 
 
 * **Test Suite:** `python manage.py test operations`.
+
+* **Demo data:** `python manage.py seed_demo_data --no-input` — flushes owners/dogs/visits for the active workspace, then loads 25 owners / 30 dogs with pipeline and scheduling scenarios. `--flush-only` wipes without reseeding.
 
 
 * **Public Domain Variable:** Set `$env:PUBLIC_SITE_URL = "[https://your-tunnel-domain.ngrok-free.app](https://your-tunnel-domain.ngrok-free.app)"` to test feed sharing.

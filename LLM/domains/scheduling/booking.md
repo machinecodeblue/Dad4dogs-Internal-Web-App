@@ -77,11 +77,18 @@ Select completed visit + new start date → copies duration, **local** time-of-d
 
 ---
 
-## Booking confirmation (opt-in)
+## Booking confirmation (opt-in) — unidirectional client confirm
 
-- Checkbox on create: **Send booking confirmation to {email}** — unchecked by default
-- Sends via Gmail OAuth; one email for a whole repeat series; stamps `confirmation_email_sent_at`
-- Dog Visits list: muted **emailed M j**, or **Send email** → `POST /visits/<id>/send-confirmation/` (already-sent = no-op)
+**Live target:** [`calendar_email.md`](calendar_email.md) (accepted architecture). Legacy path still emails ICS immediately until slices C3+ land.
+
+**Target staff UX:**
+
+- Create checkbox: **Send review & confirm link** (default **off**) → Email A only (no `.ics`)
+- Client confirms on public manage page → Email B (`METHOD:REQUEST`, `SEQUENCE:0`)
+- Series: one token per visit; manage page may **Confirm all in series** in one click; each VEVENT still carries that visit’s manage URL
+- After invite issued, staff edit/cancel (default) → Email C (review change); ICS only after client approve
+- Staff edit override: **Send updated calendar invite immediately** (default off) → skip Email C; bump SEQUENCE and send REQUEST/CANCEL now
+- Client may reschedule on the manage page (capacity + overlap); cancel supported
 - OAuth failures → `GmailSendError` / `VisitEmailError`; **visit stays booked**; never 500
 
-MIME / VEVENT / iCal details: [`calendar_email.md`](calendar_email.md).
+Do not stamp a single `confirmation_email_sent_at` for both review and ICS — use invite lifecycle fields in `calendar_email.md`.

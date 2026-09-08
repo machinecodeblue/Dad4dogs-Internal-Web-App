@@ -9,7 +9,7 @@ from django.views.decorators.http import require_http_methods, require_POST
 from operations.forms import VisitForm
 from operations.models import ClientProfile, Visit
 from operations.services.datetime_parse import parse_datetime_text
-from operations.services.visit_email import VisitEmailError, send_booking_confirmation
+from operations.services.visit_email import VisitEmailError, send_booking_review_link
 from operations.services.visit_repeat import FREQUENCY_NONE, repeat_summary
 from operations.views.scheduling.helpers import apply_visit_form_errors
 
@@ -46,10 +46,16 @@ def visit_create(request, pk):
                         messages.success(request, f'Scheduled {client.dog_name}: {visits[0].schedule_display}')
                     if visit_form.cleaned_data.get('send_confirmation_email'):
                         try:
-                            send_booking_confirmation(client, visits)
-                            messages.success(request, f'Confirmation email sent to {client.owner_email}.')
+                            send_booking_review_link(client, visits)
+                            messages.success(
+                                request,
+                                f'Review & confirm link sent to {client.owner_email}.',
+                            )
                         except VisitEmailError as exc:
-                            messages.warning(request, f'Visit booked, but confirmation email was not sent: {exc}')
+                            messages.warning(
+                                request,
+                                f'Visit booked, but review email was not sent: {exc}',
+                            )
                     return redirect('operations:dog_detail', pk=client.pk)
                 except ValidationError as e:
                     apply_visit_form_errors(visit_form, e)
@@ -130,14 +136,14 @@ def visit_send_confirmation(request, pk):
     if visit.status == Visit.Status.CANCELLED:
         messages.error(request, 'Cancelled visits cannot be emailed.')
         return redirect('operations:dog_detail', pk=dog_pk)
-    if visit.confirmation_email_sent_at:
-        messages.info(request, 'Confirmation email was already sent for this visit.')
+    if visit.calendar_review_sent_at or visit.calendar_invite_state != Visit.CalendarInviteState.NONE:
+        messages.info(request, 'A review or calendar email was already started for this visit.')
         return redirect('operations:dog_detail', pk=dog_pk)
     try:
-        send_booking_confirmation(visit.client, [visit])
-        messages.success(request, f'Confirmation email sent to {visit.client.owner_email}.')
+        send_booking_review_link(visit.client, [visit])
+        messages.success(request, f'Review & confirm link sent to {visit.client.owner_email}.')
     except VisitEmailError as exc:
-        messages.warning(request, f'Confirmation email was not sent: {exc}')
+        messages.warning(request, f'Review email was not sent: {exc}')
     return redirect('operations:dog_detail', pk=dog_pk)
 
 

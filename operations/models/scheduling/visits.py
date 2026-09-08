@@ -78,7 +78,47 @@ class Visit(TenantAwareModel):
     confirmation_email_sent_at = models.DateTimeField(
         null=True,
         blank=True,
-        help_text='When the customer was emailed this booking confirmation.',
+        help_text='Legacy: when a booking confirmation email was sent. Prefer calendar_review_sent_at / calendar_invite_sent_at.',
+    )
+
+    class CalendarInviteState(models.TextChoices):
+        NONE = 'none', 'None'
+        AWAITING_CONFIRM = 'awaiting_confirm', 'Awaiting client confirm'
+        INVITE_ISSUED = 'invite_issued', 'Calendar invite issued'
+        AWAITING_CHANGE_CONFIRM = 'awaiting_change_confirm', 'Awaiting change confirm'
+        CANCELLED_INVITE = 'cancelled_invite', 'Calendar invite cancelled'
+
+    calendar_manage_token = models.CharField(
+        max_length=64,
+        unique=True,
+        null=True,
+        blank=True,
+        help_text='Capability token for the public booking manage URL.',
+    )
+    ics_uid = models.CharField(
+        max_length=255,
+        blank=True,
+        help_text='Stable iCalendar UID for this visit’s outbound invites.',
+    )
+    ics_sequence = models.PositiveIntegerField(
+        default=0,
+        help_text='Last SEQUENCE value included in an outbound ICS payload.',
+    )
+    calendar_invite_state = models.CharField(
+        max_length=32,
+        choices=CalendarInviteState.choices,
+        default=CalendarInviteState.NONE,
+        help_text='Client calendar invite lifecycle (orthogonal to Visit.status).',
+    )
+    calendar_review_sent_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text='When the last review/confirm link email (no ICS) was sent.',
+    )
+    calendar_invite_sent_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text='When the last ICS REQUEST/CANCEL email was sent.',
     )
     cloned_from = models.ForeignKey(
         'self', null=True, blank=True, on_delete=models.SET_NULL, related_name='clones',

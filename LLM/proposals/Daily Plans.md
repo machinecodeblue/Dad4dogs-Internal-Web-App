@@ -29,25 +29,15 @@ No new feature work required for P0.
 
 ## P1 — Daily ops gaps (highest product value)
 
-### 1. Calendar inbound completion (Partial → Done)
+### 1–2. Unidirectional client calendar confirm (replaces old P1.1 inbound + P1.2 auto-UPDATE)
 
-**Today:** File import → `PendingCalendarEvent` → review/approve at `/calendar/pending/`. Helpers in `gmail_sync.py`; **no live Gmail calendar read**.
+**Accepted:** `LLM/decisions/calendar_sync_architecture_plan.md` → live `scheduling/calendar_email.md`.
 
-**Next slices (smallest first):**
-1. Live Gmail calendar poll / pull into pending (same approve UX).
-2. Harden approve path edge cases (capacity ValidationError already caught).
+**Shape:** Staff books → Email A (review link, no ICS) → client manage page POST confirm (optional **confirm all series**) → Email B `REQUEST`/`SEQUENCE:0`. Later changes: Email C then approve, **or** staff checkbox **Send updated calendar invite immediately**. Client reschedule on manage page in MVP. Per-visit tokens; inbound Gmail read **wontfix**.
 
-**Why first:** Reduces double-entry between Google Calendar and the app. Spec already partial; infrastructure half-built.
+**Slices:** C1–C3 **landed** (model/token, manage page, Email A/B). Next: C4 staff edit → Email C + immediate-ICS override; C5 polish/tests/badges.
 
-**Refs:** `PROJECT.md` (Partial), `scheduling/calendar_email.md` Inbound, `gmail_sync.py`.
-
-### 2. Booking calendar METHOD:UPDATE / CANCEL
-
-**Today:** Confirmations send `METHOD:REQUEST` only. Reschedule/cancel does not update the client’s calendar invite.
-
-**Why:** Stops stale invites after real schedule changes — high trust issue with owners.
-
-**Refs:** `scheduling/calendar_email.md`, `scheduling/index.md` Not yet built.
+**Refs:** `scheduling/calendar_email.md`, `scheduling/booking.md`.
 
 ### 3. Edit / delete entire repeat series
 

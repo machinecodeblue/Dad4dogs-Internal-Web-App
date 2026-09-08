@@ -36,7 +36,7 @@ class EvaluationScheduleForm(forms.Form):
         }),
     )
     send_confirmation_email = forms.BooleanField(
-        label='Send booking confirmation email',
+        label='Send review & confirm link',
         required=False,
         initial=False,
     )
@@ -46,7 +46,7 @@ class EvaluationScheduleForm(forms.Form):
         self.dog = dog
         if dog.owner_email:
             self.fields['send_confirmation_email'].label = (
-                f'Send booking confirmation to {dog.owner_email}'
+                f'Send review & confirm link to {dog.owner_email}'
             )
         else:
             del self.fields['send_confirmation_email']

@@ -11,7 +11,7 @@ from operations.forms.intake import (
     MeetGreetScheduleForm,
 )
 from operations.models import ClientProfile, CustomerOwner
-from operations.services.visit_email import VisitEmailError, send_booking_confirmation
+from operations.services.visit_email import VisitEmailError, send_booking_review_link
 from operations.views.customers.clients import customer_owner_or_404
 
 
@@ -99,10 +99,10 @@ def schedule_meet_greet(request, pk):
             )
             if form.cleaned_data.get('send_confirmation_email'):
                 try:
-                    send_booking_confirmation(dog, [visit])
-                    messages.success(request, f'Confirmation emailed to {dog.owner_email}.')
+                    send_booking_review_link(dog, [visit])
+                    messages.success(request, f'Review & confirm link sent to {dog.owner_email}.')
                 except VisitEmailError as exc:
-                    messages.warning(request, f'Booked, but email was not sent: {exc}')
+                    messages.warning(request, f'Booked, but review email was not sent: {exc}')
             return redirect('operations:dog_detail', pk=dog.pk)
     else:
         form = MeetGreetScheduleForm(dog=dog)
@@ -128,10 +128,10 @@ def schedule_evaluation(request, pk):
             )
             if form.cleaned_data.get('send_confirmation_email'):
                 try:
-                    send_booking_confirmation(dog, [visit])
-                    messages.success(request, f'Confirmation emailed to {dog.owner_email}.')
+                    send_booking_review_link(dog, [visit])
+                    messages.success(request, f'Review & confirm link sent to {dog.owner_email}.')
                 except VisitEmailError as exc:
-                    messages.warning(request, f'Booked, but email was not sent: {exc}')
+                    messages.warning(request, f'Booked, but review email was not sent: {exc}')
             return redirect('operations:dog_detail', pk=dog.pk)
     else:
         form = EvaluationScheduleForm(dog=dog)

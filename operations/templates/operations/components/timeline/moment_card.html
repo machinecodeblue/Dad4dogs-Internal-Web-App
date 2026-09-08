@@ -29,7 +29,7 @@
 
         {% for item in forward_forms %}
         {% if item.event.pk == event.pk %}
-        {% include "operations/components/timeline/forward_panel.html" with visit=visit event=event forward_form=item.form only %}
+        {% include "operations/components/timeline/forward_panel.html" with visit=visit event=event forward_form=item.form csrf_token=csrf_token only %}
         {% endif %}
         {% endfor %}
     </div>

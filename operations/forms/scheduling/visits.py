@@ -87,7 +87,7 @@ class VisitForm(forms.Form):
         help_text='Number of visits, or last date — type or dictate either one.',
     )
     send_confirmation_email = forms.BooleanField(
-        label='Send booking confirmation email',
+        label='Send review & confirm link',
         required=False,
         initial=False,
         widget=forms.CheckboxInput(attrs={'class': 'confirm-email-checkbox'}),
@@ -144,7 +144,7 @@ class VisitForm(forms.Form):
                     service_field.initial = preferred.pk
             if self.client and self.client.owner_email:
                 self.fields['send_confirmation_email'].label = (
-                    f'Send booking confirmation to {self.client.owner_email}'
+                    f'Send review & confirm link to {self.client.owner_email}'
                 )
             else:
                 del self.fields['send_confirmation_email']
