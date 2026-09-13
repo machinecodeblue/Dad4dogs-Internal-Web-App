@@ -9,10 +9,32 @@ from operations.services.business_timezone import (
     get_business_timezone,
     get_business_timezone_name,
 )
+from operations.services.business_timezones import (
+    BUSINESS_TIMEZONE_VALUES,
+    parse_timezone_search_value,
+)
 from operations.services.datetime_parse import parse_datetime_text
 
 
 class BusinessTimezoneHelpersTests(TestCase):
+    def test_catalog_covers_target_markets(self):
+        for zone in (
+            'America/Toronto',
+            'America/Los_Angeles',
+            'Europe/London',
+            'Australia/Sydney',
+        ):
+            self.assertIn(zone, BUSINESS_TIMEZONE_VALUES)
+
+    def test_parse_timezone_search_value(self):
+        self.assertEqual(parse_timezone_search_value('Europe/London'), 'Europe/London')
+        self.assertEqual(
+            parse_timezone_search_value(
+                'United Kingdom — UK Time (London) (Europe/London)'
+            ),
+            'Europe/London',
+        )
+
     def test_default_timezone_is_toronto(self):
         profile = BusinessProfile.load()
         self.assertEqual(profile.timezone, 'America/Toronto')

@@ -154,7 +154,10 @@ class BusinessSettingsViewTests(TestCase):
         self.assertContains(response, 'Daily capacity')
         self.assertContains(response, 'Insurance max')
         self.assertContains(response, 'Timezone')
-        self.assertContains(response, 'Eastern Time (Toronto)')
+        self.assertContains(response, 'business-timezone-list')
+        self.assertContains(response, 'Canada — Eastern Time (Toronto)')
+        self.assertContains(response, 'United Kingdom — UK Time (London)')
+        self.assertContains(response, 'Australia — Eastern Time (Sydney)')
         self.assertContains(response, 'Google Contact Sync')
         self.assertContains(response, reverse('operations:contact_sync'))
 
@@ -179,6 +182,39 @@ class BusinessSettingsViewTests(TestCase):
         self.assertEqual(profile.timezone, 'America/Vancouver')
         self.assertEqual(caps.standard_capacity, 6)
         self.assertEqual(caps.insurance_ceiling, 9)
+
+    def test_settings_saves_uk_and_australia_timezones(self):
+        for zone in ('Europe/London', 'Australia/Sydney', 'America/Los_Angeles'):
+            response = self.client.post(reverse('operations:business_settings'), {
+                'business_name': 'Dad4dogs',
+                'business_email': 'david@dad4dogs.ca',
+                'address': '',
+                'hours_of_operation': '',
+                'timezone': zone,
+                'main_phone': '',
+                'secondary_phone': '',
+                'emergency_phone': '',
+                'standard_capacity': '8',
+                'insurance_ceiling': '10',
+            })
+            self.assertEqual(response.status_code, 302, zone)
+            self.assertEqual(BusinessProfile.load().timezone, zone)
+
+    def test_settings_accepts_datalist_label_form(self):
+        response = self.client.post(reverse('operations:business_settings'), {
+            'business_name': 'Dad4dogs',
+            'business_email': 'david@dad4dogs.ca',
+            'address': '',
+            'hours_of_operation': '',
+            'timezone': 'United Kingdom — UK Time (London) (Europe/London)',
+            'main_phone': '',
+            'secondary_phone': '',
+            'emergency_phone': '',
+            'standard_capacity': '8',
+            'insurance_ceiling': '10',
+        })
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(BusinessProfile.load().timezone, 'Europe/London')
 
     def test_dashboard_uses_saved_standard_capacity(self):
         caps = CapacitySettings.load()

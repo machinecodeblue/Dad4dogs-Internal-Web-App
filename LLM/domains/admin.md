@@ -48,15 +48,18 @@ Brand / contact baseline. Access via `BusinessProfile.load()` (active workspace)
 
 ### 2a. Per-tenant business timezone (**feature**)
 
-**What it is:** Every `Workspace` has its own `BusinessProfile.timezone`. A Toronto operator and a Calgary operator do **not** share one global app clock. The value is where the **business owner operates**, not where the app server or data center is hosted.
+**What it is:** Every `Workspace` has its own `BusinessProfile.timezone`. Operators in Toronto, Calgary, New York, London (UK), or Sydney do **not** share one global app clock. The value is where the **business owner operates**, not where the app server or data center is hosted.
 
-**Why:** Multi-tenant boarding businesses live in different zones. Booking entry (“11:00 AM”), agenda/capacity day bounds, and outbound calendar invite `TZID` must follow **that tenant’s** Settings timezone. Django still stores aware datetimes in UTC (`USE_TZ = True`); `settings.TIME_ZONE` is only a process fallback.
+**Why:** Multi-tenant boarding businesses live in different countries/zones. Booking entry (“11:00 AM”), agenda/capacity day bounds, and outbound calendar invite `TZID` must follow **that tenant’s** Settings timezone. Django still stores aware datetimes in UTC (`USE_TZ = True`); `settings.TIME_ZONE` is only a process fallback.
 
-**Runtime:**
+**Independent of address:** `BusinessProfile.address` remains a free-text textarea (invite LOCATION). Timezone is **not** derived from address — address may be blank or messy. Structured business address (country-aware street/city/region) is a **future** Settings epic, not a prerequisite.
 
-1. Staff set timezone on `/settings/` (curated IANA choices; labels may show a city for readability — stored value is the IANA id).
-2. `BusinessTimezoneMiddleware` activates `BusinessProfile.load().timezone` for the active workspace each request (`operations/services/business_timezone.py`).
-3. `datetime_parse`, capacity spans, and ICS generation use the activated zone / `get_business_timezone()`.
+**Catalog + UI:**
+
+1. Curated multi-market IANA list in `operations/services/business_timezones.py` (Canada, US, UK/Ireland, Australia) — expandable without schema change.
+2. `/settings/` uses a **searchable** text field + `<datalist>` (type a city/region). Stored value is always the IANA id (e.g. `Europe/London`).
+3. `BusinessTimezoneMiddleware` activates that zone each request (`business_timezone.py` helpers).
+4. `datetime_parse`, capacity spans, and ICS use the activated zone / `get_business_timezone()`.
 
 **Tenancy:**
 
@@ -64,7 +67,7 @@ Brand / contact baseline. Access via `BusinessProfile.load()` (active workspace)
 | --- | --- |
 | Single active workspace (`dad4dogs`) via `get_active_workspace()` | Each membership resolves a `Workspace`; Settings edits **that** profile’s timezone |
 
-**Not in scope:** per-customer timezone preferences; changing historical absolute timestamps when an operator flips timezone (existing aware datetimes keep the same instant; new wall-time entry uses the new zone).
+**Not in scope:** per-customer timezone preferences; deriving TZ from free-text address; full `zoneinfo.available_timezones()` dump; changing historical absolute timestamps when an operator flips timezone (existing aware datetimes keep the same instant; new wall-time entry uses the new zone).
 
 ### `CapacitySettings` (OneToOne → Workspace)
 

@@ -2,20 +2,13 @@ from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 
+from operations.services.business_timezones import (
+    BUSINESS_TIMEZONE_VALUES,
+    DEFAULT_BUSINESS_TIMEZONE,
+)
+
 DEFAULT_STANDARD_CAPACITY = 8
 DEFAULT_INSURANCE_CEILING = 10
-
-# Curated IANA timezones for Canadian operators (value stored; label is for Settings UI).
-BUSINESS_TIMEZONE_CHOICES = [
-    ('America/St_Johns', 'Newfoundland Time (St. John\'s)'),
-    ('America/Halifax', 'Atlantic Time (Halifax)'),
-    ('America/Toronto', 'Eastern Time (Toronto)'),
-    ('America/Winnipeg', 'Central Time (Winnipeg)'),
-    ('America/Edmonton', 'Mountain Time (Calgary / Edmonton)'),
-    ('America/Vancouver', 'Pacific Time (Vancouver)'),
-]
-BUSINESS_TIMEZONE_VALUES = {value for value, _label in BUSINESS_TIMEZONE_CHOICES}
-DEFAULT_BUSINESS_TIMEZONE = 'America/Toronto'
 
 
 class BusinessProfile(models.Model):
@@ -54,9 +47,12 @@ class BusinessProfile(models.Model):
     )
     timezone = models.CharField(
         max_length=64,
-        choices=BUSINESS_TIMEZONE_CHOICES,
         default=DEFAULT_BUSINESS_TIMEZONE,
-        help_text='Local timezone for this business. Booking times you enter use this zone.',
+        help_text=(
+            'IANA timezone where this business operates (not server location). '
+            'Independent of the address field. Booking times use this zone. '
+            'Catalog: operations.services.business_timezones.'
+        ),
     )
 
     main_phone = models.CharField(max_length=30, blank=True)

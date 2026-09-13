@@ -38,8 +38,17 @@
         {{ form.hours_of_operation }}
 
         <label for="{{ form.timezone.id_for_label }}">Timezone</label>
-        <p class="muted" style="margin-bottom:0.5rem">Where this business operates — not where the server is hosted. Booking times you enter use this zone.</p>
+        <p class="muted" style="margin-bottom:0.5rem">
+            Where this business operates — not where the server is hosted.
+            Independent of the address field (address may be blank).
+            Type a city or region to search (Canada, US, UK, Australia).
+        </p>
         {{ form.timezone }}
+        <datalist id="business-timezone-list">
+            {% for option in timezone_datalist %}
+            <option value="{{ option }}"></option>
+            {% endfor %}
+        </datalist>
         {% if form.timezone.errors %}<p class="muted" style="color:var(--danger)">{{ form.timezone.errors.0 }}</p>{% endif %}
     </div>
 

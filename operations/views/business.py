@@ -4,6 +4,7 @@ from django.shortcuts import redirect, render
 
 from operations.forms import BusinessProfileForm
 from operations.models import BusinessProfile, CapacitySettings
+from operations.services.business_timezones import BUSINESS_TIMEZONE_DATALIST
 from operations.services.context_tenant import get_active_workspace
 
 
@@ -33,4 +34,5 @@ def business_settings(request):
         'profile': profile,
         'workspace': workspace,
         'capacity_settings': capacity_settings,
+        'timezone_datalist': BUSINESS_TIMEZONE_DATALIST,
     })

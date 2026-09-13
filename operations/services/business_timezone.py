@@ -6,7 +6,7 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from django.conf import settings
 
-from operations.models.business import (
+from operations.services.business_timezones import (
     BUSINESS_TIMEZONE_VALUES,
     DEFAULT_BUSINESS_TIMEZONE,
 )

@@ -1,6 +1,10 @@
 from django import forms
 
 from operations.models import BusinessProfile, CapacitySettings
+from operations.services.business_timezones import (
+    BUSINESS_TIMEZONE_VALUES,
+    parse_timezone_search_value,
+)
 
 
 class BusinessProfileForm(forms.ModelForm):
@@ -56,7 +60,6 @@ class BusinessProfileForm(forms.ModelForm):
                 'rows': 3,
                 'placeholder': 'e.g. Mon–Fri 7:00 AM – 7:00 PM, weekends by appointment',
             }),
-            'timezone': forms.Select(),
             'main_phone': forms.TextInput(attrs={
                 'placeholder': 'Main business line',
                 'autocomplete': 'tel',
@@ -77,9 +80,35 @@ class BusinessProfileForm(forms.ModelForm):
     def __init__(self, *args, capacity_settings: CapacitySettings | None = None, **kwargs):
         self.capacity_settings = capacity_settings
         super().__init__(*args, **kwargs)
+        # Free-text + datalist so operators can search CA/US/UK/AU zones.
+        self.fields['timezone'] = forms.CharField(
+            label='Timezone',
+            required=True,
+            widget=forms.TextInput(attrs={
+                'list': 'business-timezone-list',
+                'autocomplete': 'off',
+                'spellcheck': 'false',
+                'placeholder': 'Type to search — e.g. London, Calgary, New York, Sydney',
+                'inputmode': 'search',
+            }),
+            help_text=(
+                'Where this business operates — not where the server is hosted. '
+                'Independent of the address field.'
+            ),
+            initial=getattr(self.instance, 'timezone', None) or 'America/Toronto',
+        )
         if capacity_settings is not None:
             self.fields['standard_capacity'].initial = capacity_settings.standard_capacity
             self.fields['insurance_ceiling'].initial = capacity_settings.insurance_ceiling
+
+    def clean_timezone(self):
+        raw = self.cleaned_data.get('timezone')
+        value = parse_timezone_search_value(raw)
+        if value not in BUSINESS_TIMEZONE_VALUES:
+            raise forms.ValidationError(
+                'Choose a timezone from the list (type a city or region to search).'
+            )
+        return value
 
     def clean(self):
         cleaned = super().clean()
