@@ -6,7 +6,12 @@ from .customers.test_views import CognitiveLoadUXTests, CustomerEditTests, Custo
 
 from .scheduling.test_agenda import AgendaTests, DashboardViewTests, DatetimeParseTests
 from .scheduling.test_calendar import GmailSendTests, PendingEventApproveTests, VisitEmailTests
-from .scheduling.test_visit_calendar import BookingManageViewTests, VisitCalendarHelpersTests
+from .scheduling.test_business_timezone import BusinessTimezoneHelpersTests
+from .scheduling.test_visit_calendar import (
+    BookingManageViewTests,
+    StaffCalendarChangeTests,
+    VisitCalendarHelpersTests,
+)
 from .scheduling.test_capacity import CapacityTimezoneTests, VisitCapacitySaveTests
 from .scheduling.test_checkin import VisitCheckInOutViewTests, VisitCheckOutTests
 from .scheduling.test_pricing import PricingEngineTests
@@ -57,6 +62,8 @@ __all__ = [
     'PendingEventApproveTests',
     'VisitCalendarHelpersTests',
     'BookingManageViewTests',
+    'StaffCalendarChangeTests',
+    'BusinessTimezoneHelpersTests',
     'BusinessProfileTests',
     'BusinessSettingsViewTests',
     'PwaTests',

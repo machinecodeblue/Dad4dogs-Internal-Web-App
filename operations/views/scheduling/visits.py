@@ -8,6 +8,7 @@ from django.views.decorators.http import require_http_methods, require_POST
 
 from operations.forms import VisitForm
 from operations.models import ClientProfile, Visit
+from operations.services import visit_calendar
 from operations.services.datetime_parse import parse_datetime_text
 from operations.services.visit_email import VisitEmailError, send_booking_review_link
 from operations.services.visit_repeat import FREQUENCY_NONE, repeat_summary
@@ -46,7 +47,7 @@ def visit_create(request, pk):
                         messages.success(request, f'Scheduled {client.dog_name}: {visits[0].schedule_display}')
                     if visit_form.cleaned_data.get('send_confirmation_email'):
                         try:
-                            send_booking_review_link(client, visits)
+                            send_booking_review_link(client, visits, request=request)
                             messages.success(
                                 request,
                                 f'Review & confirm link sent to {client.owner_email}.',
@@ -108,11 +109,49 @@ def visit_edit(request, pk):
 
     visit_form = VisitForm(instance=visit)
     if request.method == 'POST':
+        prior_start = visit.scheduled_start
+        prior_end = visit.scheduled_end
+        prior_service_id = visit.business_service_id
+        calendar_was_active = visit_calendar.calendar_ics_in_play(visit)
         visit_form = VisitForm(request.POST, instance=visit)
         if visit_form.is_valid():
             try:
                 visit = visit_form.save()
-                messages.success(request, f'Updated visit for {visit.client.dog_name}: {visit.schedule_display}')
+                messages.success(
+                    request,
+                    f'Updated visit for {visit.client.dog_name}: {visit.schedule_display}',
+                )
+                schedule_changed = (
+                    visit.scheduled_start != prior_start
+                    or visit.scheduled_end != prior_end
+                    or visit.business_service_id != prior_service_id
+                )
+                if calendar_was_active and schedule_changed:
+                    immediate = bool(
+                        visit_form.cleaned_data.get('send_calendar_invite_immediately')
+                    )
+                    try:
+                        result = visit_calendar.notify_staff_schedule_change(
+                            visit,
+                            immediate=immediate,
+                            cancelled=False,
+                            request=request,
+                        )
+                        if result == 'ics_request':
+                            messages.success(
+                                request,
+                                f'Updated calendar invite sent to {visit.client.owner_email}.',
+                            )
+                        else:
+                            messages.success(
+                                request,
+                                f'Schedule-change review link sent to {visit.client.owner_email}.',
+                            )
+                    except VisitEmailError as exc:
+                        messages.warning(
+                            request,
+                            f'Visit updated, but calendar email was not sent: {exc}',
+                        )
                 return redirect('operations:dog_detail', pk=visit.client_id)
             except ValidationError as e:
                 apply_visit_form_errors(visit_form, e)
@@ -124,6 +163,7 @@ def visit_edit(request, pk):
         'submit_label': 'Save Visit',
         'show_clone': False,
         'visit': visit,
+        'show_calendar_cancel_options': visit_calendar.calendar_ics_in_play(visit),
     })
 
 
@@ -140,7 +180,7 @@ def visit_send_confirmation(request, pk):
         messages.info(request, 'A review or calendar email was already started for this visit.')
         return redirect('operations:dog_detail', pk=dog_pk)
     try:
-        send_booking_review_link(visit.client, [visit])
+        send_booking_review_link(visit.client, [visit], request=request)
         messages.success(request, f'Review & confirm link sent to {visit.client.owner_email}.')
     except VisitEmailError as exc:
         messages.warning(request, f'Review email was not sent: {exc}')
@@ -150,12 +190,45 @@ def visit_send_confirmation(request, pk):
 @login_required
 @require_POST
 def visit_delete(request, pk):
-    visit = get_object_or_404(Visit, pk=pk)
+    visit = get_object_or_404(Visit.objects.select_related('client'), pk=pk)
     dog_pk = visit.client_id
     dog_name = visit.client.dog_name
     if not visit.is_editable:
         messages.error(request, 'Only scheduled visits can be removed.')
         return redirect('operations:dog_detail', pk=dog_pk)
-    visit.delete()
-    messages.success(request, f'Removed scheduled visit for {dog_name}.')
+
+    immediate = request.POST.get('send_calendar_invite_immediately') in {
+        'on', 'true', '1', 'yes',
+    }
+
+    if visit_calendar.can_hard_delete_visit(visit):
+        visit.delete()
+        messages.success(request, f'Removed scheduled visit for {dog_name}.')
+        return redirect('operations:dog_detail', pk=dog_pk)
+
+    # Invited visits: soft-cancel so UID/SEQUENCE survive for METHOD:CANCEL.
+    visit_calendar.soft_cancel_visit(visit)
+    try:
+        result = visit_calendar.notify_staff_schedule_change(
+            visit,
+            immediate=immediate,
+            cancelled=True,
+            request=request,
+        )
+        if result == 'ics_cancel':
+            messages.success(
+                request,
+                f'Cancelled {dog_name}\'s visit and sent a calendar cancellation.',
+            )
+        else:
+            messages.success(
+                request,
+                f'Cancelled {dog_name}\'s visit. Cancellation review link emailed '
+                f'to {visit.client.owner_email}.',
+            )
+    except VisitEmailError as exc:
+        messages.warning(
+            request,
+            f'Visit cancelled, but calendar email was not sent: {exc}',
+        )
     return redirect('operations:dog_detail', pk=dog_pk)

@@ -74,6 +74,7 @@ class BusinessProfileTests(TestCase):
                 'business_email': 'david@dad4dogs.ca',
                 'address': '123 Main St\nToronto, ON M5V 1A1',
                 'hours_of_operation': 'Mon–Fri 7:00 AM – 7:00 PM',
+                'timezone': 'America/Toronto',
                 'main_phone': '416-555-0100',
                 'secondary_phone': '416-555-0101',
                 'emergency_phone': '416-555-9999',
@@ -88,9 +89,32 @@ class BusinessProfileTests(TestCase):
         caps.refresh_from_db()
         self.assertEqual(profile.main_phone, '416-555-0100')
         self.assertEqual(profile.emergency_phone, '416-555-9999')
+        self.assertEqual(profile.timezone, 'America/Toronto')
         self.assertEqual(caps.standard_capacity, 8)
         self.assertEqual(caps.insurance_ceiling, 10)
         self.assertIn('Toronto', profile.formatted_address)
+
+    def test_save_business_timezone_edmonton(self):
+        caps = CapacitySettings.load()
+        form = BusinessProfileForm(
+            data={
+                'business_name': 'Dad4dogs',
+                'business_email': 'david@dad4dogs.ca',
+                'address': '',
+                'hours_of_operation': '',
+                'timezone': 'America/Edmonton',
+                'main_phone': '',
+                'secondary_phone': '',
+                'emergency_phone': '',
+                'standard_capacity': 8,
+                'insurance_ceiling': 10,
+            },
+            instance=BusinessProfile.load(),
+            capacity_settings=caps,
+        )
+        self.assertTrue(form.is_valid(), form.errors)
+        profile = form.save()
+        self.assertEqual(profile.timezone, 'America/Edmonton')
 
     def test_insurance_ceiling_cannot_be_below_standard(self):
         form = BusinessProfileForm(
@@ -99,6 +123,7 @@ class BusinessProfileTests(TestCase):
                 'business_email': 'david@dad4dogs.ca',
                 'address': '',
                 'hours_of_operation': '',
+                'timezone': 'America/Toronto',
                 'main_phone': '',
                 'secondary_phone': '',
                 'emergency_phone': '',
@@ -128,6 +153,8 @@ class BusinessSettingsViewTests(TestCase):
         self.assertContains(response, 'Emergency Contact Number')
         self.assertContains(response, 'Daily capacity')
         self.assertContains(response, 'Insurance max')
+        self.assertContains(response, 'Timezone')
+        self.assertContains(response, 'Eastern Time (Toronto)')
         self.assertContains(response, 'Google Contact Sync')
         self.assertContains(response, reverse('operations:contact_sync'))
 
@@ -137,6 +164,7 @@ class BusinessSettingsViewTests(TestCase):
             'business_email': 'david@dad4dogs.ca',
             'address': '123 Main St',
             'hours_of_operation': 'Daily 8 AM – 6 PM',
+            'timezone': 'America/Vancouver',
             'main_phone': '416-555-0100',
             'secondary_phone': '',
             'emergency_phone': '416-555-9999',
@@ -148,6 +176,7 @@ class BusinessSettingsViewTests(TestCase):
         caps = CapacitySettings.load()
         self.assertEqual(profile.main_phone, '416-555-0100')
         self.assertEqual(profile.hours_of_operation, 'Daily 8 AM – 6 PM')
+        self.assertEqual(profile.timezone, 'America/Vancouver')
         self.assertEqual(caps.standard_capacity, 6)
         self.assertEqual(caps.insurance_ceiling, 9)
 

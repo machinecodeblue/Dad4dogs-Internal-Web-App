@@ -83,14 +83,20 @@ def build_booking_invite_message(
     body: str,
     to: str,
     ics_bytes: bytes,
+    *,
+    method: str = 'REQUEST',
 ) -> MIMEMultipart:
     """
     Build a MIME message with:
-    1. multipart/alternative — plain text + inline text/calendar (method=REQUEST) for Gmail
+    1. multipart/alternative — plain text + inline text/calendar for Gmail
     2. attached .ics file — fail-safe for clients that need double-click import
     """
     if not ics_bytes:
         raise GmailSendError('Calendar payload is required for booking invites.')
+
+    method = (method or 'REQUEST').upper()
+    if method not in {'REQUEST', 'CANCEL'}:
+        raise GmailSendError(f'Unsupported calendar METHOD: {method}')
 
     outer = MIMEMultipart('mixed')
     outer['to'] = to.strip()
@@ -103,7 +109,7 @@ def build_booking_invite_message(
     calendar_inline = MIMEText(ics_bytes.decode('utf-8'), 'calendar', 'utf-8')
     calendar_inline.replace_header(
         'Content-Type',
-        'text/calendar; charset="UTF-8"; method=REQUEST',
+        f'text/calendar; charset="UTF-8"; method={method}',
     )
     alternative.attach(calendar_inline)
     outer.attach(alternative)
@@ -159,6 +165,8 @@ def send_gmail_booking_invite(
     body: str,
     to: str,
     ics_bytes: bytes,
+    *,
+    method: str = 'REQUEST',
 ) -> dict:
     """
     Send booking confirmation with calendar invite layers:
@@ -168,5 +176,7 @@ def send_gmail_booking_invite(
     if not recipient:
         raise GmailSendError('Recipient email is required.')
 
-    message = build_booking_invite_message(subject, body, recipient, ics_bytes)
+    message = build_booking_invite_message(
+        subject, body, recipient, ics_bytes, method=method,
+    )
     return _send_raw_mime(message)

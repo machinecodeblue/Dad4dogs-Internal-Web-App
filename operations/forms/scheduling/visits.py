@@ -92,6 +92,12 @@ class VisitForm(forms.Form):
         initial=False,
         widget=forms.CheckboxInput(attrs={'class': 'confirm-email-checkbox'}),
     )
+    send_calendar_invite_immediately = forms.BooleanField(
+        label='Send updated calendar invite immediately',
+        required=False,
+        initial=False,
+        widget=forms.CheckboxInput(attrs={'class': 'confirm-email-checkbox'}),
+    )
 
     def __init__(
         self,
@@ -137,7 +143,24 @@ class VisitForm(forms.Form):
                 'send_confirmation_email',
             ):
                 del self.fields[name]
+            from operations.services import visit_calendar
+
+            if (
+                visit_calendar.calendar_ics_in_play(instance)
+                and self.client
+                and self.client.owner_email
+            ):
+                self.fields['send_calendar_invite_immediately'].label = (
+                    'Send updated calendar invite immediately'
+                )
+                self.fields['send_calendar_invite_immediately'].help_text = (
+                    f'When checked, emails {self.client.owner_email} an ICS update now '
+                    '(skips the client review link). Leave unchecked to send a review link first.'
+                )
+            else:
+                del self.fields['send_calendar_invite_immediately']
         else:
+            del self.fields['send_calendar_invite_immediately']
             if preferred_service_slug:
                 preferred = service_field.queryset.filter(slug=preferred_service_slug).first()
                 if preferred:

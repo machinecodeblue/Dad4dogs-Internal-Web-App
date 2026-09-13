@@ -1,21 +1,22 @@
 # Domain: Admin
 
-**Covers:** baseline Dad4dogs business details — identity, address, hours, phone numbers, daily capacity, and (planned) stable document storage.
+**Covers:** baseline business details per workspace — identity, address, hours, **timezone**, phone numbers, daily capacity, and (planned) stable document storage.
 
 **Code packages:** `operations/models/tenant.py` (`Workspace`), `operations/models/business.py` (`BusinessProfile`, `CapacitySettings`), `forms/business.py`, `views/business.py`  
-**Bridge:** `operations/services/context_tenant.py` — `get_active_workspace()`  
+**Bridge:** `operations/services/context_tenant.py` — `get_active_workspace()`; `operations/services/business_timezone.py`; `BusinessTimezoneMiddleware`  
 **Template:** `operations/templates/operations/business_settings.html`
 
 ---
 
 ## 1. Purpose
 
-David needs a single place to maintain **stable business facts** that rarely change — contact info, hours, **daily capacity**, and eventually certificates and other documents. This is separate from:
+Each **tenant workspace** needs a single place to maintain **stable business facts** that rarely change — contact info, hours, **business timezone**, **daily capacity**, and eventually certificates and other documents. This is separate from:
 
 - **Customer COI** (`CustomerOwner`) — per-client insurance confirmation
 - **Django admin** (`/admin/`) — low-level data editing and auth login
+- **Customer / phone timezone** — not a product surface; we do not store owner timezones
 
-The **Settings** screen (`/settings/`) is the day-to-day admin tool for business baseline data.
+The **Settings** screen (`/settings/`) is the day-to-day admin tool for that workspace’s baseline data.
 
 ---
 
@@ -39,10 +40,31 @@ Brand / contact baseline. Access via `BusinessProfile.load()` (active workspace)
 | `business_email` | Primary business email for client communications |
 | `address` | Full mailing or service address (free text) |
 | `hours_of_operation` | When clients can reach you or drop off/pick up (free text) |
+| `timezone` | IANA timezone for **this workspace’s** business (default `America/Toronto`). See §2a. |
 | `main_phone` | Primary business line |
 | `secondary_phone` | Alternate line (e.g. secondary mobile) |
 | `emergency_phone` | Number clients call if there is an urgent problem |
 | `updated_at` | Last save timestamp |
+
+### 2a. Per-tenant business timezone (**feature**)
+
+**What it is:** Every `Workspace` has its own `BusinessProfile.timezone`. A Toronto operator and a Calgary operator do **not** share one global app clock. The value is where the **business owner operates**, not where the app server or data center is hosted.
+
+**Why:** Multi-tenant boarding businesses live in different zones. Booking entry (“11:00 AM”), agenda/capacity day bounds, and outbound calendar invite `TZID` must follow **that tenant’s** Settings timezone. Django still stores aware datetimes in UTC (`USE_TZ = True`); `settings.TIME_ZONE` is only a process fallback.
+
+**Runtime:**
+
+1. Staff set timezone on `/settings/` (curated IANA choices; labels may show a city for readability — stored value is the IANA id).
+2. `BusinessTimezoneMiddleware` activates `BusinessProfile.load().timezone` for the active workspace each request (`operations/services/business_timezone.py`).
+3. `datetime_parse`, capacity spans, and ICS generation use the activated zone / `get_business_timezone()`.
+
+**Tenancy:**
+
+| Today | Later (auth / membership) |
+| --- | --- |
+| Single active workspace (`dad4dogs`) via `get_active_workspace()` | Each membership resolves a `Workspace`; Settings edits **that** profile’s timezone |
+
+**Not in scope:** per-customer timezone preferences; changing historical absolute timestamps when an operator flips timezone (existing aware datetimes keep the same instant; new wall-time entry uses the new zone).
 
 ### `CapacitySettings` (OneToOne → Workspace)
 
@@ -64,6 +86,7 @@ Access via `CapacitySettings.load()` or `capacity.capacity_limits()`.
 4. When wiring into emails or PDFs, read from `BusinessProfile.load()`; do not hardcode David's details.
 5. Daily capacity is **not** a constant in `operations/capacity/`. Booking, dashboard, and check-in must call `capacity.capacity_limits()` (or use the `standard` / `ceiling` keys on an `assess_capacity` result). Package defaults 8 / 10 only when no usable `CapacitySettings` row.
 6. Do not put capacity orchestration methods on `Workspace` or `CapacitySettings`.
+7. Do **not** hardcode `America/Toronto` (or any zone) in booking/ICS/parse paths — use the active business timezone. Server/host location is irrelevant.
 
 ### Daily capacity (purpose)
 
@@ -88,7 +111,7 @@ How it is read at runtime (`operations/capacity/`):
 
 | Screen | URL | Contents |
 |--------|-----|----------|
-| Business settings | `/settings/` | Identity, location/hours, phones, **standard capacity** + **insurance max** (two models, one form), link to **Services**, **Google Contact Sync** |
+| Business settings | `/settings/` | Identity, location/hours, **timezone**, phones, **standard capacity** + **insurance max** (two models, one form), link to **Services**, **Google Contact Sync** |
 | Services catalog | `/settings/services/` | `BusinessService` CRUD + behavior rules (Phase 1; checkout still classic pricing) — see `services.md` |
 
 Drawer **Settings** links here (not a bottom-nav tab — see `platform.md` §4).
@@ -101,7 +124,7 @@ Django admin exposes **Workspace**, **Business profile**, and **Capacity setting
 
 | Form | File | Notes |
 |------|------|-------|
-| `BusinessProfileForm` | `forms/business.py` | Profile fields + capacity integers bound to `CapacitySettings`. Insurance max cannot be below standard. |
+| `BusinessProfileForm` | `forms/business.py` | Profile fields (including **timezone**) + capacity integers bound to `CapacitySettings`. Insurance max cannot be below standard. |
 
 ---
 

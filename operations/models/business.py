@@ -5,6 +5,18 @@ from django.db import models
 DEFAULT_STANDARD_CAPACITY = 8
 DEFAULT_INSURANCE_CEILING = 10
 
+# Curated IANA timezones for Canadian operators (value stored; label is for Settings UI).
+BUSINESS_TIMEZONE_CHOICES = [
+    ('America/St_Johns', 'Newfoundland Time (St. John\'s)'),
+    ('America/Halifax', 'Atlantic Time (Halifax)'),
+    ('America/Toronto', 'Eastern Time (Toronto)'),
+    ('America/Winnipeg', 'Central Time (Winnipeg)'),
+    ('America/Edmonton', 'Mountain Time (Calgary / Edmonton)'),
+    ('America/Vancouver', 'Pacific Time (Vancouver)'),
+]
+BUSINESS_TIMEZONE_VALUES = {value for value, _label in BUSINESS_TIMEZONE_CHOICES}
+DEFAULT_BUSINESS_TIMEZONE = 'America/Toronto'
+
 
 class BusinessProfile(models.Model):
     """
@@ -40,6 +52,12 @@ class BusinessProfile(models.Model):
         blank=True,
         help_text='When clients can reach you or drop off/pick up.',
     )
+    timezone = models.CharField(
+        max_length=64,
+        choices=BUSINESS_TIMEZONE_CHOICES,
+        default=DEFAULT_BUSINESS_TIMEZONE,
+        help_text='Local timezone for this business. Booking times you enter use this zone.',
+    )
 
     main_phone = models.CharField(max_length=30, blank=True)
     secondary_phone = models.CharField(
@@ -62,6 +80,13 @@ class BusinessProfile(models.Model):
     def __str__(self):
         return self.business_name or 'Dad4dogs'
 
+    def clean(self):
+        super().clean()
+        tz = (self.timezone or '').strip()
+        if tz not in BUSINESS_TIMEZONE_VALUES:
+            raise ValidationError({'timezone': 'Choose a timezone from the list.'})
+        self.timezone = tz
+
     @classmethod
     def load(cls) -> 'BusinessProfile':
         from operations.services.context_tenant import get_active_workspace
@@ -69,7 +94,10 @@ class BusinessProfile(models.Model):
         workspace = get_active_workspace()
         profile, _ = cls.objects.get_or_create(
             workspace=workspace,
-            defaults={'business_name': 'Dad4dogs'},
+            defaults={
+                'business_name': 'Dad4dogs',
+                'timezone': DEFAULT_BUSINESS_TIMEZONE,
+            },
         )
         return profile
 

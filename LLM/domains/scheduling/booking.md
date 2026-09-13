@@ -86,9 +86,10 @@ Select completed visit + new start date → copies duration, **local** time-of-d
 - Create checkbox: **Send review & confirm link** (default **off**) → Email A only (no `.ics`)
 - Client confirms on public manage page → Email B (`METHOD:REQUEST`, `SEQUENCE:0`)
 - Series: one token per visit; manage page may **Confirm all in series** in one click; each VEVENT still carries that visit’s manage URL
-- After invite issued, staff edit/cancel (default) → Email C (review change); ICS only after client approve
-- Staff edit override: **Send updated calendar invite immediately** (default off) → skip Email C; bump SEQUENCE and send REQUEST/CANCEL now
-- Client may reschedule on the manage page (capacity + overlap); cancel supported
-- OAuth failures → `GmailSendError` / `VisitEmailError`; **visit stays booked**; never 500
+- After invite issued, staff **edit** (default) → Email C (review change); ICS only after client approve
+- Staff edit/cancel override: **Send updated calendar invite immediately** (default off) → skip Email C; bump SEQUENCE and send REQUEST/CANCEL now
+- Invited visits **soft-cancel** (keep row + UID); never-invited visits may still hard-delete
+- Client may reschedule on the manage page (capacity + overlap); cancel sends CANCEL ICS when an invite was in play
+- OAuth failures → `GmailSendError` / `VisitEmailError`; **visit stays saved**; never 500
 
 Do not stamp a single `confirmation_email_sent_at` for both review and ICS — use invite lifecycle fields in `calendar_email.md`.

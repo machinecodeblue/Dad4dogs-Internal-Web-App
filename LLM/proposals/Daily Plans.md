@@ -35,7 +35,7 @@ No new feature work required for P0.
 
 **Shape:** Staff books → Email A (review link, no ICS) → client manage page POST confirm (optional **confirm all series**) → Email B `REQUEST`/`SEQUENCE:0`. Later changes: Email C then approve, **or** staff checkbox **Send updated calendar invite immediately**. Client reschedule on manage page in MVP. Per-visit tokens; inbound Gmail read **wontfix**.
 
-**Slices:** C1–C3 **landed** (model/token, manage page, Email A/B). Next: C4 staff edit → Email C + immediate-ICS override; C5 polish/tests/badges.
+**Slices:** C1–C4 **landed** (model/token, manage page, Email A/B/C, staff edit/cancel + immediate ICS). Next: **C5** visits-list invite badges / polish.
 
 **Refs:** `scheduling/calendar_email.md`, `scheduling/booking.md`.
 

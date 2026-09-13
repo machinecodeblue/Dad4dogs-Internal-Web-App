@@ -49,6 +49,7 @@
     <p><strong>Status:</strong>
         {% if state == 'awaiting_confirm' %}Awaiting your confirmation
         {% elif state == 'invite_issued' %}Confirmed
+        {% elif awaiting_cancel_confirm %}Please confirm cancellation
         {% elif state == 'awaiting_change_confirm' %}Please approve the updated schedule
         {% elif state == 'cancelled_invite' %}Cancelled
         {% else %}{{ state }}{% endif %}
@@ -77,7 +78,17 @@
 </div>
 {% endif %}
 
-{% if state == 'awaiting_change_confirm' %}
+{% if awaiting_cancel_confirm %}
+<div class="card">
+    <h2>Confirm cancellation</h2>
+    <p>Dad4dogs cancelled this booking. Confirm so your calendar can remove the event.</p>
+    <form method="post">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="approve_change">
+        <button type="submit" class="btn btn-primary">Confirm cancellation</button>
+    </form>
+</div>
+{% elif state == 'awaiting_change_confirm' %}
 <div class="card">
     <h2>Approve schedule change</h2>
     <p>Dad4dogs updated this booking. Approve to accept the new times, or reschedule / cancel below.</p>
@@ -122,7 +133,7 @@
 {% endif %}
 {% endif %}
 
-{% if state == 'cancelled_invite' or visit.status == 'cancelled' %}
+{% if state == 'cancelled_invite' %}
 <div class="card">
     <p>This booking is cancelled. Contact Dad4dogs if you need a new appointment.</p>
 </div>

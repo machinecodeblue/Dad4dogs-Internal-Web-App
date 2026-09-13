@@ -3,7 +3,7 @@ from django.utils import timezone
 
 
 def as_local(dt: datetime) -> datetime:
-    """Project-local datetime; naive values are treated as America/Toronto wall time."""
+    """Project-local datetime; naive values are treated as active business wall time."""
     if timezone.is_naive(dt):
         dt = timezone.make_aware(dt, timezone.get_current_timezone())
     return timezone.localtime(dt)

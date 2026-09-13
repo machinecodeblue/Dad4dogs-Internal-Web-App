@@ -99,7 +99,7 @@ def schedule_meet_greet(request, pk):
             )
             if form.cleaned_data.get('send_confirmation_email'):
                 try:
-                    send_booking_review_link(dog, [visit])
+                    send_booking_review_link(dog, [visit], request=request)
                     messages.success(request, f'Review & confirm link sent to {dog.owner_email}.')
                 except VisitEmailError as exc:
                     messages.warning(request, f'Booked, but review email was not sent: {exc}')
@@ -128,7 +128,7 @@ def schedule_evaluation(request, pk):
             )
             if form.cleaned_data.get('send_confirmation_email'):
                 try:
-                    send_booking_review_link(dog, [visit])
+                    send_booking_review_link(dog, [visit], request=request)
                     messages.success(request, f'Review & confirm link sent to {dog.owner_email}.')
                 except VisitEmailError as exc:
                     messages.warning(request, f'Booked, but review email was not sent: {exc}')

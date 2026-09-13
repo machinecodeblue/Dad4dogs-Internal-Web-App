@@ -32,6 +32,7 @@ class BusinessProfileForm(forms.ModelForm):
             'business_email',
             'address',
             'hours_of_operation',
+            'timezone',
             'main_phone',
             'secondary_phone',
             'emergency_phone',
@@ -55,6 +56,7 @@ class BusinessProfileForm(forms.ModelForm):
                 'rows': 3,
                 'placeholder': 'e.g. Mon–Fri 7:00 AM – 7:00 PM, weekends by appointment',
             }),
+            'timezone': forms.Select(),
             'main_phone': forms.TextInput(attrs={
                 'placeholder': 'Main business line',
                 'autocomplete': 'tel',

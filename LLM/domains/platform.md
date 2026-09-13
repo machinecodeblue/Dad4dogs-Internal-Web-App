@@ -47,7 +47,7 @@ python manage.py migrate
 python manage.py createsuperuser
 ```
 
-**Operator scope today:** single-operator via `get_active_workspace()` (slug `dad4dogs`). **Schema** is multi-tenant (`Workspace`, `tenant` FKs, `CapacitySettings`) — see Decision *Multi-tenant schema Option B*. Default QuerySet tenant filters, membership auth, and portable SQLite export remain **future** (`PROJECT.md` Rule C / §9.1; `billing.md` §8).
+**Operator scope today:** single-operator via `get_active_workspace()` (slug `dad4dogs`). **Schema** is multi-tenant (`Workspace`, `tenant` FKs, `BusinessProfile`, `CapacitySettings`) — see Decision *Multi-tenant schema Option B*. Each workspace has its own **business timezone** on `BusinessProfile` (Settings); `BusinessTimezoneMiddleware` activates it per request — independent of server/data-center location (`admin.md` §2a). Default QuerySet tenant filters, membership auth, and portable SQLite export remain **future** (`PROJECT.md` Rule C / §9.1; `billing.md` §8).
 
 ---
 

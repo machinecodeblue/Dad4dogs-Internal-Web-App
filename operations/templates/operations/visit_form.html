@@ -59,9 +59,20 @@
 
     {% if visit and visit.is_editable %}
     <form method="post" action="{% url 'operations:visit_delete' visit.pk %}" style="margin-top:1rem"
-          onsubmit="return confirm('Remove this scheduled visit?');">
+          onsubmit="return confirm('{% if show_calendar_cancel_options %}Cancel this visit? The client calendar will be updated after they confirm (or immediately if you check the box below).{% else %}Remove this scheduled visit?{% endif %}');">
         {% csrf_token %}
+        {% if show_calendar_cancel_options %}
+        <div class="email-confirm-card" style="margin-bottom:0.75rem">
+            <label>
+                <input type="checkbox" name="send_calendar_invite_immediately" value="1" class="confirm-email-checkbox">
+                <span><strong>Send updated calendar invite immediately</strong></span>
+            </label>
+            <p class="hint">When checked, emails a cancellation ICS now. Leave unchecked to send a review link first.</p>
+        </div>
+        <button type="submit" class="btn btn-outline btn-sm" style="color:var(--danger);border-color:var(--danger)">Cancel Visit</button>
+        {% else %}
         <button type="submit" class="btn btn-outline btn-sm" style="color:var(--danger);border-color:var(--danger)">Delete Visit</button>
+        {% endif %}
     </form>
     {% endif %}
 </div>

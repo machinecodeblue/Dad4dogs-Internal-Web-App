@@ -1,10 +1,11 @@
-from icalendar import Calendar, Event, vCalAddress, vText
+from icalendar import Calendar, Event, Timezone, vCalAddress, vText
 
 from django.conf import settings
 from django.utils import timezone
 
 from operations.models import BusinessProfile, ClientProfile, Visit
 from operations.services import visit_calendar
+from operations.services.business_timezone import get_business_timezone
 from operations.services.gmail_send import (
     GmailSendError,
     send_gmail,
@@ -21,16 +22,22 @@ def _calendar_invite_profile() -> BusinessProfile:
     return BusinessProfile.load()
 
 
-def _event_description(visit: Visit, notes_url: str) -> str:
+def _absolute_manage_url(visit: Visit, *, request=None) -> str:
+    try:
+        return visit_calendar.absolute_manage_url(visit, request=request)
+    except ValueError as exc:
+        raise VisitEmailError(str(exc)) from exc
+
+
+def _event_description(visit: Visit, notes_url: str, *, request=None) -> str:
     dog_name = visit.client.dog_name
     owner_name = visit.client.owner_name
     lines = [
         f'Dog: {dog_name}',
         f'Owner: {owner_name}',
     ]
-    manage = visit_calendar.manage_url(visit)
-    if manage:
-        lines.append(f'To reschedule or cancel, visit: {manage}')
+    manage = _absolute_manage_url(visit, request=request)
+    lines.append(f'To reschedule or cancel, visit: {manage}')
     if notes_url:
         lines.append(f'Contemporaneous notes tracking link: {notes_url}')
     if visit.notes.strip():
@@ -61,7 +68,12 @@ def _add_attendee(
     event.add('attendee', attendee, encode=0)
 
 
-def format_booking_review(client: ClientProfile, visits: list[Visit]) -> tuple[str, str]:
+def format_booking_review(
+    client: ClientProfile,
+    visits: list[Visit],
+    *,
+    request=None,
+) -> tuple[str, str]:
     """Email A — review & confirm link only (no ICS)."""
     if not visits:
         raise VisitEmailError('No visits to review.')
@@ -72,12 +84,12 @@ def format_booking_review(client: ClientProfile, visits: list[Visit]) -> tuple[s
 
     if len(visits) == 1:
         schedule_lines = [f'  {visits[0].schedule_display}']
-        manage_lines = [f'  {visit_calendar.manage_url(visits[0])}']
+        manage_lines = [f'  {_absolute_manage_url(visits[0], request=request)}']
         subject = f'Confirm {client.dog_name}\'s booking with Dad4dogs'
     else:
         schedule_lines = [f'  {visit.schedule_display}' for visit in visits]
         manage_lines = [
-            f'  {visit.schedule_display}: {visit_calendar.manage_url(visit)}'
+            f'  {visit.schedule_display}: {_absolute_manage_url(visit, request=request)}'
             for visit in visits
         ]
         subject = f'Confirm {client.dog_name}\'s bookings with Dad4dogs ({len(visits)})'
@@ -101,7 +113,12 @@ def format_booking_review(client: ClientProfile, visits: list[Visit]) -> tuple[s
     return subject, '\n'.join(body_lines)
 
 
-def format_booking_confirmation(client: ClientProfile, visits: list[Visit]) -> tuple[str, str]:
+def format_booking_confirmation(
+    client: ClientProfile,
+    visits: list[Visit],
+    *,
+    request=None,
+) -> tuple[str, str]:
     """Email B — body after client confirm, accompanying ICS."""
     if not visits:
         raise VisitEmailError('No visits to confirm.')
@@ -110,12 +127,12 @@ def format_booking_confirmation(client: ClientProfile, visits: list[Visit]) -> t
     if len(visits) == 1:
         schedule_lines = [f'  {visits[0].schedule_display}']
         schedule_heading = 'Your booking:'
-        manage_lines = [f'  {visit_calendar.manage_url(visits[0])}']
+        manage_lines = [f'  {_absolute_manage_url(visits[0], request=request)}']
     else:
         schedule_heading = f'Your {len(visits)} bookings:'
         schedule_lines = [f'  {visit.schedule_display}' for visit in visits]
         manage_lines = [
-            f'  {visit.schedule_display}: {visit_calendar.manage_url(visit)}'
+            f'  {visit.schedule_display}: {_absolute_manage_url(visit, request=request)}'
             for visit in visits
         ]
 
@@ -161,7 +178,12 @@ def format_booking_confirmation(client: ClientProfile, visits: list[Visit]) -> t
     return subject, '\n'.join(body_lines)
 
 
-def generate_booking_ics(visits: list[Visit], *, method: str = 'REQUEST') -> bytes:
+def generate_booking_ics(
+    visits: list[Visit],
+    *,
+    method: str = 'REQUEST',
+    request=None,
+) -> bytes:
     """
     Build an iCalendar REQUEST or CANCEL payload for one or more visits.
 
@@ -189,11 +211,17 @@ def generate_booking_ics(visits: list[Visit], *, method: str = 'REQUEST') -> byt
     organizer_cn = profile.calendar_organizer_name
     location = profile.calendar_location
     notes_url = (getattr(settings, 'BOOKING_CLIENT_NOTES_URL', '') or '').strip()
+    business_tz = get_business_timezone()
 
     cal = Calendar()
     cal.add('prodid', '-//Dad4dogs Booking System//dad4dogs.ca//')
     cal.add('version', '2.0')
     cal.add('method', method)
+    try:
+        cal.add_component(Timezone.from_tzinfo(business_tz))
+    except Exception:
+        # Older/edge tz databases — still emit aware DTSTART below.
+        pass
 
     now = timezone.now()
     for visit in sorted(visits, key=lambda v: v.scheduled_start):
@@ -201,18 +229,23 @@ def generate_booking_ics(visits: list[Visit], *, method: str = 'REQUEST') -> byt
         uid = visit_calendar.ensure_ics_uid(visit, save=True)
         dog_name = visit.client.dog_name
         owner_name = visit.client.owner_name
+        start_local = timezone.localtime(visit.scheduled_start, timezone=business_tz)
+        end_local = timezone.localtime(visit.scheduled_end, timezone=business_tz)
 
         event = Event()
         event.add('uid', uid)
         event.add('dtstamp', now)
-        event.add('dtstart', visit.scheduled_start)
-        event.add('dtend', visit.scheduled_end)
+        event.add('dtstart', start_local)
+        event.add('dtend', end_local)
         if method == 'CANCEL':
-            event.add('summary', f'Dad4dogs Stay: {dog_name} (CANCELLED)')
+            # Include local date so Gmail invite cards are harder to confuse across dogs.
+            local_day = start_local.strftime('%b %d')
+            event.add('summary', f'Dad4dogs Stay: {dog_name} ({local_day}) (CANCELLED)')
             event.add('status', 'CANCELLED')
         else:
-            event.add('summary', f'Dad4dogs Stay: {dog_name}')
-            event.add('description', _event_description(visit, notes_url))
+            local_day = start_local.strftime('%b %d')
+            event.add('summary', f'Dad4dogs Stay: {dog_name} ({local_day})')
+            event.add('description', _event_description(visit, notes_url, request=request))
             event.add('status', 'CONFIRMED')
         event.add('sequence', int(visit.ics_sequence or 0))
 
@@ -239,7 +272,12 @@ def generate_booking_ics(visits: list[Visit], *, method: str = 'REQUEST') -> byt
     return cal.to_ical()
 
 
-def send_booking_review_link(client: ClientProfile, visits: list[Visit]) -> int:
+def send_booking_review_link(
+    client: ClientProfile,
+    visits: list[Visit],
+    *,
+    request=None,
+) -> int:
     """Email A — plain review link; marks visits awaiting_confirm."""
     recipient = (client.owner_email or '').strip()
     if not recipient:
@@ -252,7 +290,7 @@ def send_booking_review_link(client: ClientProfile, visits: list[Visit]) -> int:
     for visit in visits:
         visit_calendar.mark_awaiting_confirm(visit)
 
-    subject, body = format_booking_review(client, visits)
+    subject, body = format_booking_review(client, visits, request=request)
     try:
         send_gmail(subject=subject, body=body, to=recipient)
     except GmailSendError as exc:
@@ -271,11 +309,103 @@ def send_booking_review_link(client: ClientProfile, visits: list[Visit]) -> int:
     return len(visits)
 
 
+def format_booking_change_review(
+    client: ClientProfile,
+    visits: list[Visit],
+    *,
+    cancelled: bool = False,
+    request=None,
+) -> tuple[str, str]:
+    """Email C — staff changed/cancelled; client must approve (no ICS)."""
+    if not visits:
+        raise VisitEmailError('No visits to review.')
+
+    visits = sorted(visits, key=lambda v: v.scheduled_start)
+    for visit in visits:
+        visit_calendar.ensure_calendar_manage_token(visit)
+
+    if cancelled:
+        subject = f'Confirm cancellation — {client.dog_name} at Dad4dogs'
+        intro = (
+            f'Dad4dogs has cancelled the booking for {client.dog_name}. '
+            'Please open the link below to confirm so your calendar can be updated.'
+        )
+    else:
+        subject = f'Review schedule change — {client.dog_name} at Dad4dogs'
+        intro = (
+            f'Dad4dogs updated the booking for {client.dog_name}. '
+            'Please review and approve the new times so your calendar can be updated.'
+        )
+
+    schedule_lines = [f'  {visit.schedule_display}' for visit in visits]
+    manage_lines = [
+        f'  {visit.schedule_display}: {_absolute_manage_url(visit, request=request)}'
+        for visit in visits
+    ]
+    body_lines = [
+        f'Hi {client.owner_name},',
+        '',
+        intro,
+        '',
+        'Details:',
+        *schedule_lines,
+        '',
+        'Open this secure link (confirming on the page is required before a calendar update is emailed):',
+        '',
+        *manage_lines,
+        '',
+        'Thank you,',
+        'David — Dad4dogs',
+    ]
+    return subject, '\n'.join(body_lines)
+
+
+def send_booking_change_review(
+    client: ClientProfile,
+    visits: list[Visit],
+    *,
+    cancelled: bool = False,
+    request=None,
+) -> int:
+    """Email C — marks visits awaiting_change_confirm."""
+    recipient = (client.owner_email or '').strip()
+    if not recipient:
+        raise VisitEmailError('This customer has no email address on file.')
+
+    visits = list(visits)
+    if not visits:
+        raise VisitEmailError('No visits to review.')
+
+    for visit in visits:
+        visit_calendar.mark_awaiting_change_confirm(visit)
+
+    subject, body = format_booking_change_review(
+        client, visits, cancelled=cancelled, request=request,
+    )
+    try:
+        send_gmail(subject=subject, body=body, to=recipient)
+    except GmailSendError as exc:
+        raise VisitEmailError(str(exc)) from exc
+
+    now = timezone.now()
+    visit_ids = [visit.pk for visit in visits]
+    Visit.objects.filter(pk__in=visit_ids).update(
+        calendar_review_sent_at=now,
+        updated_at=now,
+    )
+    for visit in visits:
+        visit.calendar_review_sent_at = now
+        visit.calendar_invite_state = Visit.CalendarInviteState.AWAITING_CHANGE_CONFIRM
+
+    return len(visits)
+
+
 def send_booking_ics_invite(
     client: ClientProfile,
     visits: list[Visit],
     *,
     method: str = 'REQUEST',
+    request=None,
 ) -> int:
     """Email B / B′ — ICS REQUEST or CANCEL using each visit’s ics_sequence."""
     recipient = (client.owner_email or '').strip()
@@ -286,7 +416,7 @@ def send_booking_ics_invite(
     if not visits:
         raise VisitEmailError('No visits to include in calendar invite.')
 
-    subject, body = format_booking_confirmation(client, visits)
+    subject, body = format_booking_confirmation(client, visits, request=request)
     if method.upper() == 'CANCEL':
         subject = f'Dad4dogs booking cancelled — {client.dog_name}'
         body = (
@@ -296,13 +426,14 @@ def send_booking_ics_invite(
             'Thank you,\nDavid — Dad4dogs'
         )
 
-    ics_bytes = generate_booking_ics(visits, method=method)
+    ics_bytes = generate_booking_ics(visits, method=method, request=request)
     try:
         send_gmail_booking_invite(
             subject=subject,
             body=body,
             to=recipient,
             ics_bytes=ics_bytes,
+            method=method,
         )
     except GmailSendError as exc:
         raise VisitEmailError(str(exc)) from exc
@@ -321,10 +452,15 @@ def send_booking_ics_invite(
     return len(visits)
 
 
-def send_booking_confirmation(client: ClientProfile, visits: list[Visit]) -> int:
+def send_booking_confirmation(
+    client: ClientProfile,
+    visits: list[Visit],
+    *,
+    request=None,
+) -> int:
     """
     Legacy name — now sends Email A (review link), not ICS.
 
     Prefer ``send_booking_review_link`` / ``send_booking_ics_invite`` at new call sites.
     """
-    return send_booking_review_link(client, visits)
+    return send_booking_review_link(client, visits, request=request)

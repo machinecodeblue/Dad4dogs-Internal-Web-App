@@ -5,7 +5,7 @@
 **Architecture decision:** `LLM/decisions/calendar_sync_architecture_plan.md`  
 **Services (target):** `visit_email.py` / optional `visit_ics.py`, `gmail_send.py`, `ical_feed.py`; manage views under `views/scheduling/`
 
-**Status:** Spec **accepted**; **C1–C3 landed** (invite fields, manage page, Email A review link on staff send, Email B ICS after client confirm / confirm-series / approve-change). **C4–C5 next** (staff edit → Email C by default, immediate-ICS override checkbox, badges, MIME CANCEL method header polish).
+**Status:** Spec **accepted**; **C1–C4 landed** (invite fields, manage page, Email A/B/C, staff edit/cancel with immediate-ICS override, MIME CANCEL). **C5 next** (visits-list invite badges, polish).
 
 ---
 
@@ -69,13 +69,19 @@ All commits are POST-only.
 | Approved / immediate reschedule | `REQUEST` | prior + 1 | `CONFIRMED` |
 | Approved / immediate cancel | `CANCEL` | prior + 1 | `CANCELLED` |
 
-- Same `UID` for the life of the visit.
+- Same `UID` for the life of the visit (`ics_uid`). UIDs are **`visit-{{id}}-{{uuid}}@domain`**, not `visit_{{id}}@domain` — pk-only UIDs collide after DB flush/reseed and make Gmail show an old dog’s invite card while the `.ics` attachment is correct.
+- `DTSTART` / `DTEND` use **this tenant’s** business timezone from Settings (`BusinessProfile.timezone` on the active `Workspace`, default `America/Toronto`) with `TZID`. Per-tenant feature — not a global Django `TIME_ZONE`, not a customer timezone preference (`admin.md` §2a).
 - `ATTENDEE` client `PARTSTAT=ACCEPTED` after web confirm (consent already collected).
 - `ORGANIZER` / `LOCATION` from `BusinessProfile`; refuse send if business email missing.
 - Layers when ICS is sent: inline `text/calendar` MIME + `dad4dogs_booking.ics` attachment (same as today).
 - Repeat series Email B: one `.ics`, multiple `VEVENT`s.
 
-Env (`config/settings.py`): `BOOKING_CLIENT_NOTES_URL`, `PUBLIC_SITE_URL`, `ICAL_UID_DOMAIN`.
+Env (`config/settings.py`):
+
+- `PUBLIC_SITE_URL` — **required for customer emails** when no HTTP request can build an absolute URL (staff send from the browser passes `request`, which also works). Example: `https://your-tunnel.ngrok-free.app` or `http://localhost:8000`. Without it, manage links would be path-only (`/bookings/manage/…`) and unusable in email clients.
+- `BOOKING_CLIENT_NOTES_URL`, `ICAL_UID_DOMAIN`
+
+Manage links in Email A/B/C and ICS `DESCRIPTION` are always absolute (`visit_calendar.absolute_manage_url`).
 
 ---
 

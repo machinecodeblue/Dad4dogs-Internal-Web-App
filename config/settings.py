@@ -68,6 +68,7 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'operations.middleware.NgrokCsrfMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'operations.middleware.BusinessTimezoneMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]

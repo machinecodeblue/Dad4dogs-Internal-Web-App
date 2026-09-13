@@ -26,7 +26,7 @@ def form_error_message(form) -> str:
 
 
 def parse_local_datetime_input(value: str):
-    """Parse an HTML datetime-local value as America/Toronto-aware."""
+    """Parse an HTML datetime-local value in the active business timezone."""
     text = (value or '').strip()
     if not text:
         raise ValidationError('Enter a date and time.')

@@ -51,7 +51,7 @@ A **Django 5 application platform** enabling independent pet-care professionals 
 * `contacts.md` — Google Contacts CSV import + vCard service package (`services/contacts/`).
 
 
-* `admin.md` — Business settings, baseline identity, capacity limits (`CapacitySettings`).
+* `admin.md` — Business settings, baseline identity, **per-tenant business timezone**, capacity limits (`CapacitySettings`).
 
 
 * `platform.md` — Dev server, HTTPS, ngrok, PWA, labeled-card UI policy, testing standards.
@@ -78,7 +78,7 @@ All core layers (`models/`, `forms/`, `views/`, `services/`) are organized into 
 * `operations/views/`: `__init__.py` (re-exports subpackages for urls.py), `customers/` (clients, intake, vaccinations, actions), `scheduling/` (dashboard, checkin, visits, timeline, calendar, helpers), `feed/` (private, public, helpers), `billing/` (list, detail, actions, helpers), `services/` (catalog, edit, rules, actions, helpers), `business.py`, `pwa.py`.
 
 
-* `operations/services/`: `context_tenant.py`, `timeline_media/` (image, video, capture, forwarding), `feed_interactions/` (access, emojis, slugs, reactions, comments, sharing, polling), `contacts/` (schemas, parsers, heuristics, matching, importers, session, vcard), `pricing_engine.py`, `statements/` (compile, format, send, unbilled, weeks), `addresses.py`, `phones.py`, `geolocation.py`, `visit_email.py`, `gmail_send.py`, `gmail_sync.py`.
+* `operations/services/`: `context_tenant.py`, `business_timezone.py` (per-workspace Settings timezone), `timeline_media/` (image, video, capture, forwarding), `feed_interactions/` (access, emojis, slugs, reactions, comments, sharing, polling), `contacts/` (schemas, parsers, heuristics, matching, importers, session, vcard), `pricing_engine.py`, `statements/` (compile, format, send, unbilled, weeks), `addresses.py`, `phones.py`, `geolocation.py`, `visit_email.py`, `gmail_send.py`, `gmail_sync.py`.
 
 
 * Legacy/Scheduling Root Modules: `pricing.py` (legacy fee engine), `capacity/` package (`limits`, `spans`, `engine` — daily occupancy math).
@@ -140,6 +140,7 @@ Dad4dogs Internal Web App/
 | PostgreSQL Operational Engine | **Done**<br> | `domains/platform.md`<br> |
 | Multi-Tenant Schema Partitioning (Phase 1) | **Done**<br> | `domains/admin.md` |
 | `CapacitySettings` Model & Logic Split | **Done**<br> | `domains/admin.md` |
+| Per-tenant business timezone (Settings) | **Done**<br> | `domains/admin.md` §2a<br> |
 | Services Catalog Scaffolding (Phase 1) | **Done**<br> | `domains/services.md`<br> |
 | Weekly Statement Send Automation | **Done**<br> | `domains/billing/email.md`<br> |
 | Client calendar confirm (unidirectional ICS) | **Spec accepted**<br>(impl C1–C5) | `domains/scheduling/calendar_email.md`<br> |

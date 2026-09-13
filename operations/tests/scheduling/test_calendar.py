@@ -100,7 +100,10 @@ class PendingEventApproveTests(TestCase):
         self.assertFalse(Visit.objects.filter(client=self.dog).exists())
 
 
-@override_settings(BOOKING_CLIENT_NOTES_URL='https://dad4dogs.ca/dash/')
+@override_settings(
+    BOOKING_CLIENT_NOTES_URL='https://dad4dogs.ca/dash/',
+    PUBLIC_SITE_URL='https://app.example.test',
+)
 class VisitEmailTests(TestCase):
     def setUp(self):
         self.dog = ClientProfile.objects.create(
@@ -126,6 +129,7 @@ class VisitEmailTests(TestCase):
         self.assertIn('Alexa Green', body)
         self.assertIn('Gate code 1234', body)
         self.assertIn('Apr 11, 2026', body)
+        self.assertIn('https://app.example.test/bookings/manage/', body)
 
     @override_settings(PUBLIC_SITE_URL='https://happywaffle.ngrok.app')
     def test_format_confirmation_includes_feed_url_when_public_site_set(self):
@@ -153,7 +157,10 @@ class VisitEmailTests(TestCase):
         events = [c for c in cal.walk() if c.name == 'VEVENT']
         self.assertEqual(len(events), 1)
         event = events[0]
-        self.assertIn('visit_', str(event.get('uid')))
+        self.assertIn(f'visit-{visit.pk}-', str(event.get('uid')))
+        self.assertIn('Winston', str(event.get('summary')))
+        ics_text = ics_bytes.decode('utf-8')
+        self.assertIn('TZID=America/Toronto', ics_text)
         description = str(event.get('description'))
         self.assertIn('Gate code 1234', description)
         self.assertIn('https://dad4dogs.ca/dash/', description)
@@ -229,6 +236,7 @@ class VisitEmailTests(TestCase):
         )
         self.assertIn('attachment', attachment.get('Content-Disposition', ''))
 
+    @override_settings(PUBLIC_SITE_URL='https://app.example.test')
     @patch('operations.services.visit_email.send_gmail')
     def test_send_booking_confirmation_sends_review_link(self, mock_send):
         mock_send.return_value = {'id': 'msg-123'}
@@ -249,7 +257,7 @@ class VisitEmailTests(TestCase):
         kwargs = mock_send.call_args.kwargs
         self.assertEqual(kwargs['to'], 'alexagreen4@outlook.com')
         self.assertIn('Confirm', kwargs['subject'])
-        self.assertIn('/bookings/manage/', kwargs['body'])
+        self.assertIn('https://app.example.test/bookings/manage/', kwargs['body'])
         self.assertNotIn('ics_bytes', kwargs)
         for visit in visits:
             visit.refresh_from_db()

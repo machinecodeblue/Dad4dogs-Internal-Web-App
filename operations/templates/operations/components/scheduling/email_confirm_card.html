@@ -4,6 +4,21 @@
         {{ visit_form.send_confirmation_email }}
         <span><strong>{{ visit_form.send_confirmation_email.label }}</strong></span>
     </label>
-    <p class="hint">Check this to email the customer after you schedule. Leave unchecked to book without notifying them.</p>
+    <p class="hint">Check this to email the customer a review link after you schedule (no calendar invite until they confirm). Leave unchecked to book without notifying them.</p>
+</div>
+{% endif %}
+{% if visit_form.send_calendar_invite_immediately %}
+<div class="email-confirm-card">
+    <label for="{{ visit_form.send_calendar_invite_immediately.id_for_label }}">
+        {{ visit_form.send_calendar_invite_immediately }}
+        <span><strong>{{ visit_form.send_calendar_invite_immediately.label }}</strong></span>
+    </label>
+    <p class="hint">
+        {% if visit_form.send_calendar_invite_immediately.help_text %}
+        {{ visit_form.send_calendar_invite_immediately.help_text }}
+        {% else %}
+        When checked, emails an updated calendar invite now. Leave unchecked to send a review link first.
+        {% endif %}
+    </p>
 </div>
 {% endif %}
