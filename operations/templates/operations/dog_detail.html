@@ -117,12 +117,16 @@
         <a href="{% url 'operations:evaluation_outcome' visit.pk %}" class="book-link">Record outcome</a>
         {% endif %}
         {% if visit.calculated_fee != None %}<span class="muted"> · ${{ visit.calculated_fee }} CAD</span>{% endif %}
-        {% if visit.confirmation_email_sent_at %}
-        <span class="muted"> · emailed {{ visit.confirmation_email_sent_at|date:"M j" }}</span>
-        {% elif visit.status != 'cancelled' and dog.owner_email %}
+        {% if visit.calendar_invite_list_label %}
+        {% if visit.calendar_invite_needs_attention %}
+        <span class="badge badge-warn">{{ visit.calendar_invite_list_label|upper }}</span>
+        {% else %}
+        <span class="muted"> · {{ visit.calendar_invite_list_label }}{% if visit.calendar_invite_sent_at %} {{ visit.calendar_invite_sent_at|date:"M j" }}{% elif visit.calendar_review_sent_at %} {{ visit.calendar_review_sent_at|date:"M j" }}{% endif %}</span>
+        {% endif %}
+        {% elif visit.can_send_calendar_review_link and dog.owner_email %}
         <form method="post" action="{% url 'operations:visit_send_confirmation' visit.pk %}">
             {% csrf_token %}
-            <button type="submit" class="book-link" style="background:none;border:none;padding:0;cursor:pointer;width:auto">Send email</button>
+            <button type="submit" class="book-link" style="background:none;border:none;padding:0;cursor:pointer;width:auto">Send review link</button>
         </form>
         {% endif %}
     </div>

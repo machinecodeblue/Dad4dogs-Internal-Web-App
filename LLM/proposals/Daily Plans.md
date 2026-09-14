@@ -35,7 +35,7 @@ No new feature work required for P0.
 
 **Shape:** Staff books → Email A (review link, no ICS) → client manage page POST confirm (optional **confirm all series**) → Email B `REQUEST`/`SEQUENCE:0`. Later changes: Email C then approve, **or** staff checkbox **Send updated calendar invite immediately**. Client reschedule on manage page in MVP. Per-visit tokens; inbound Gmail read **wontfix**.
 
-**Slices:** C1–C4 **landed** (model/token, manage page, Email A/B/C, staff edit/cancel + immediate ICS). Next: **C5** visits-list invite badges / polish.
+**Slices:** C1–C5 **landed** (through dog-detail invite-state badges). Calendar confirm package complete for MVP; series edit/delete remains separate P1.3.
 
 **Refs:** `scheduling/calendar_email.md`, `scheduling/booking.md`.
 

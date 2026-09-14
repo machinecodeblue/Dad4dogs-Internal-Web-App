@@ -306,3 +306,31 @@ class Visit(TenantAwareModel):
             and self.status == self.Status.COMPLETED
             and not self.meet_greet_outcome
         )
+
+    @property
+    def calendar_invite_list_label(self) -> str:
+        """Short dog-detail list label for calendar invite lifecycle (empty if none)."""
+        state = self.calendar_invite_state
+        if state == self.CalendarInviteState.AWAITING_CONFIRM:
+            return 'Awaiting confirm'
+        if state == self.CalendarInviteState.INVITE_ISSUED:
+            return 'Invite sent'
+        if state == self.CalendarInviteState.AWAITING_CHANGE_CONFIRM:
+            return 'Awaiting change'
+        if state == self.CalendarInviteState.CANCELLED_INVITE:
+            return 'Cal cancelled'
+        return ''
+
+    @property
+    def calendar_invite_needs_attention(self) -> bool:
+        return self.calendar_invite_state in {
+            self.CalendarInviteState.AWAITING_CONFIRM,
+            self.CalendarInviteState.AWAITING_CHANGE_CONFIRM,
+        }
+
+    @property
+    def can_send_calendar_review_link(self) -> bool:
+        return (
+            self.status != self.Status.CANCELLED
+            and self.calendar_invite_state == self.CalendarInviteState.NONE
+        )

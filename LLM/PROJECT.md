@@ -143,7 +143,7 @@ Dad4dogs Internal Web App/
 | Per-tenant business timezone (Settings) | **Done**<br> | `domains/admin.md` §2a<br> |
 | Services Catalog Scaffolding (Phase 1) | **Done**<br> | `domains/services.md`<br> |
 | Weekly Statement Send Automation | **Done**<br> | `domains/billing/email.md`<br> |
-| Client calendar confirm (unidirectional ICS) | **Spec accepted**<br>(impl C1–C5) | `domains/scheduling/calendar_email.md`<br> |
+| Client calendar confirm (unidirectional ICS) | **Done**<br>(C1–C5) | `domains/scheduling/calendar_email.md`<br> |
 | Calendar Inbound `.ics` (staff file import) | **Parked**<br> | `domains/scheduling/calendar_email.md`<br> |
 | Services Phase 2 (Engine Cutover) | **Done**<br> | `domains/services.md`<br> |
 | Default Tenant QuerySet / Middleware (Phase 2) | **Planned**<br> | `domains/admin.md` |

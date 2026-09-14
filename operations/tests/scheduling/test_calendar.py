@@ -282,7 +282,7 @@ class VisitEmailTests(TestCase):
         form = VisitForm(instance=visit)
         self.assertNotIn('send_confirmation_email', form.fields)
 
-    def test_dog_detail_offers_send_email_when_unsent(self):
+    def test_dog_detail_offers_send_review_link_when_unsent(self):
         CustomerOwner.ensure_for_client(self.dog)
         visit = Visit.objects.create(
             client=self.dog,
@@ -292,26 +292,43 @@ class VisitEmailTests(TestCase):
         user = get_user_model().objects.create_user('david-email', 'e@example.com', 'pass')
         self.client.force_login(user)
         response = self.client.get(reverse('operations:dog_detail', args=[self.dog.pk]))
-        self.assertContains(response, 'Send email')
+        self.assertContains(response, 'Send review link')
         self.assertContains(
             response,
             reverse('operations:visit_send_confirmation', args=[visit.pk]),
         )
-        self.assertNotContains(response, 'emailed')
+        self.assertNotContains(response, 'INVITE SENT')
 
-    def test_dog_detail_shows_emailed_date_when_sent(self):
+    def test_dog_detail_shows_invite_sent_badge(self):
         CustomerOwner.ensure_for_client(self.dog)
         Visit.objects.create(
             client=self.dog,
             scheduled_start=datetime(2026, 4, 11, 13, 0, tzinfo=TZ),
             scheduled_end=datetime(2026, 4, 11, 18, 0, tzinfo=TZ),
-            confirmation_email_sent_at=datetime(2026, 4, 10, 12, 0, tzinfo=TZ),
+            calendar_invite_state=Visit.CalendarInviteState.INVITE_ISSUED,
+            calendar_invite_sent_at=datetime(2026, 4, 10, 12, 0, tzinfo=TZ),
         )
         user = get_user_model().objects.create_user('david-emailed', 'e2@example.com', 'pass')
         self.client.force_login(user)
         response = self.client.get(reverse('operations:dog_detail', args=[self.dog.pk]))
-        self.assertContains(response, 'emailed Apr 10')
-        self.assertNotContains(response, 'Send email')
+        self.assertContains(response, 'Invite sent')
+        self.assertContains(response, 'Apr 10')
+        self.assertNotContains(response, 'Send review link')
+
+    def test_dog_detail_shows_awaiting_confirm_badge(self):
+        CustomerOwner.ensure_for_client(self.dog)
+        Visit.objects.create(
+            client=self.dog,
+            scheduled_start=datetime(2026, 4, 11, 13, 0, tzinfo=TZ),
+            scheduled_end=datetime(2026, 4, 11, 18, 0, tzinfo=TZ),
+            calendar_invite_state=Visit.CalendarInviteState.AWAITING_CONFIRM,
+            calendar_review_sent_at=datetime(2026, 4, 10, 12, 0, tzinfo=TZ),
+        )
+        user = get_user_model().objects.create_user('david-await', 'e5@example.com', 'pass')
+        self.client.force_login(user)
+        response = self.client.get(reverse('operations:dog_detail', args=[self.dog.pk]))
+        self.assertContains(response, 'AWAITING CONFIRM')
+        self.assertNotContains(response, 'Send review link')
 
     @patch('operations.views.scheduling.visits.send_booking_review_link')
     def test_send_confirmation_view_calls_email(self, mock_send):

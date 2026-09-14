@@ -5,7 +5,7 @@
 **Architecture decision:** `LLM/decisions/calendar_sync_architecture_plan.md`  
 **Services (target):** `visit_email.py` / optional `visit_ics.py`, `gmail_send.py`, `ical_feed.py`; manage views under `views/scheduling/`
 
-**Status:** Spec **accepted**; **C1–C4 landed** (invite fields, manage page, Email A/B/C, staff edit/cancel with immediate-ICS override, MIME CANCEL). **C5 next** (visits-list invite badges, polish).
+**Status:** Spec **accepted**; **C1–C5 landed** (invite fields, manage page, Email A/B/C, staff edit/cancel + immediate ICS, dog-detail invite-state badges).
 
 ---
 
@@ -92,7 +92,7 @@ Manage links in Email A/B/C and ICS `DESCRIPTION` are always absolute (`visit_ca
 | Create checkbox | **Send review & confirm link** (default **off**) → Email A only |
 | Edit/cancel after `invite_issued` (default) | Queue Email C; set `awaiting_change_confirm`; **no** ICS yet |
 | Edit checkbox **Send updated calendar invite immediately** | Skip Email C; `ics_sequence += 1`; send REQUEST or CANCEL now |
-| Visits list | Show invite state (awaiting confirm / invite sent / awaiting change confirm) |
+| Visits list (dog detail) | Invite-state badges: **Awaiting confirm** / **Awaiting change** (warn), **Invite sent** / **Cal cancelled** (muted + date); **Send review link** only when state is `none` |
 
 OAuth failures → `GmailSendError` / `VisitEmailError`; **never 500** the booking. Fix tokens: `python oauth_setup.py`.
 
