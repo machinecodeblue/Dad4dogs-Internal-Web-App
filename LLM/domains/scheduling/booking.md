@@ -55,7 +55,9 @@ Dog detail CTAs point at the dedicated URLs above.
 
 ---
 
-## Repeat (create only — not on edit)
+## Repeat (create + series edit/delete)
+
+### Create
 
 - **Repeat:** none | daily | weekly | weekdays | monthly
 - **Every** N days/weeks/months
@@ -64,8 +66,15 @@ Dog detail CTAs point at the dedicated URLs above.
 - **Same-dog overlap:** windows must not overlap (`scheduled_start < other.end AND scheduled_end > other.start`). Checked in `Visit.clean()` even when `skip_capacity=True`, and in `VisitForm.clean()`. Back-to-back (end == next start) allowed. Cancelled visits ignored. Different dogs → capacity, not this rule.
 - Capacity in `VisitForm.clean()` → non-field errors. After `is_valid()`, `save_all()` uses `visit.save(skip_capacity=True)`. Direct `Visit.save()`, clone, admin still run capacity. Overlap is **not** skipped. Details: [`capacity.md`](capacity.md).
 - `VisitForm.save_all()` creates series + visits in one transaction.
-- **Edit:** `save(update_fields=['scheduled_start', 'scheduled_end', 'notes', 'business_service', 'updated_at'], skip_capacity=True)` — do not write status, fees, series, or `confirmation_email_sent_at` from a stale instance.
 - `VisitSeries` when Repeat is not “Does not repeat” — including a series of **one**. Non-repeating → `series=None`.
+
+### Edit / delete entire remaining series (P1.3)
+
+- **Edit:** single visit as today, **or** “All remaining scheduled visits in this series” (`apply_to_series`).
+- Series edit **shifts** every `status=scheduled` member by the same delta as the edited visit’s old→new start (and applies new duration to all if the anchor duration changed). Checked-in / completed / cancelled siblings are left unchanged.
+- Validation is **all-or-nothing** via `operations/services/visit_series_ops.py` (overlap + capacity for the batch). Form skips single-occurrence capacity when `apply_to_series=series`.
+- **Delete/cancel:** “This visit only” or “All remaining scheduled in this series” — each visit uses C4 calendar rules (hard delete if never invited; else soft-cancel + Email C / immediate CANCEL).
+- Calendar: optional **Send updated calendar invite immediately** applies to each affected invited visit (N emails in MVP).
 
 ---
 

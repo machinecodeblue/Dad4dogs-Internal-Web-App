@@ -12,6 +12,12 @@ from operations.services import visit_calendar
 from operations.services.datetime_parse import parse_datetime_text
 from operations.services.visit_email import VisitEmailError, send_booking_review_link
 from operations.services.visit_repeat import FREQUENCY_NONE, repeat_summary
+from operations.services.visit_series_ops import (
+    cancel_scheduled_series,
+    cancel_scheduled_series_counts,
+    series_has_scheduled_siblings,
+    shift_scheduled_series,
+)
 from operations.views.scheduling.helpers import apply_visit_form_errors
 
 
@@ -102,7 +108,7 @@ def duplicate_visit(request, pk):
 @login_required
 @require_http_methods(['GET', 'POST'])
 def visit_edit(request, pk):
-    visit = get_object_or_404(Visit, pk=pk)
+    visit = get_object_or_404(Visit.objects.select_related('series', 'client'), pk=pk)
     if not visit.is_editable:
         messages.error(request, 'Only scheduled visits can be edited.')
         return redirect('operations:dog_detail', pk=visit.client_id)
@@ -116,46 +122,79 @@ def visit_edit(request, pk):
         visit_form = VisitForm(request.POST, instance=visit)
         if visit_form.is_valid():
             try:
-                visit = visit_form.save()
-                messages.success(
-                    request,
-                    f'Updated visit for {visit.client.dog_name}: {visit.schedule_display}',
+                apply_series = visit_form.cleaned_data.get('apply_to_series') == 'series'
+                new_start = visit_form.cleaned_data['scheduled_start']
+                new_end = visit_form.cleaned_data['scheduled_end']
+                new_service = visit_form.cleaned_data.get('business_service')
+                new_service_id = new_service.pk if new_service is not None else None
+                immediate = bool(
+                    visit_form.cleaned_data.get('send_calendar_invite_immediately')
                 )
                 schedule_changed = (
-                    visit.scheduled_start != prior_start
-                    or visit.scheduled_end != prior_end
-                    or visit.business_service_id != prior_service_id
+                    new_start != prior_start
+                    or new_end != prior_end
+                    or new_service_id != prior_service_id
                 )
-                if calendar_was_active and schedule_changed:
-                    immediate = bool(
-                        visit_form.cleaned_data.get('send_calendar_invite_immediately')
+
+                if apply_series and schedule_changed:
+                    result = shift_scheduled_series(
+                        visit,
+                        prior_start=prior_start,
+                        prior_end=prior_end,
+                        new_start=new_start,
+                        new_end=new_end,
+                        notes=visit_form.cleaned_data.get('notes', ''),
+                        business_service=visit_form.cleaned_data.get('business_service'),
+                        immediate_calendar=immediate,
+                        request=request,
                     )
-                    try:
-                        result = visit_calendar.notify_staff_schedule_change(
-                            visit,
-                            immediate=immediate,
-                            cancelled=False,
-                            request=request,
-                        )
-                        if result == 'ics_request':
-                            messages.success(
-                                request,
-                                f'Updated calendar invite sent to {visit.client.owner_email}.',
-                            )
-                        else:
-                            messages.success(
-                                request,
-                                f'Schedule-change review link sent to {visit.client.owner_email}.',
-                            )
-                    except VisitEmailError as exc:
-                        messages.warning(
+                    messages.success(
+                        request,
+                        f'Updated {len(result.updated)} scheduled visit(s) in the series '
+                        f'for {visit.client.dog_name}.',
+                    )
+                    if result.unchanged_other_statuses:
+                        messages.info(
                             request,
-                            f'Visit updated, but calendar email was not sent: {exc}',
+                            f'{result.unchanged_other_statuses} checked-in/completed/'
+                            f'cancelled visit(s) in the series were left unchanged.',
                         )
+                    for err in result.calendar_errors:
+                        messages.warning(request, f'Calendar email issue: {err}')
+                else:
+                    visit = visit_form.save()
+                    messages.success(
+                        request,
+                        f'Updated visit for {visit.client.dog_name}: {visit.schedule_display}',
+                    )
+                    if calendar_was_active and schedule_changed:
+                        try:
+                            cal_result = visit_calendar.notify_staff_schedule_change(
+                                visit,
+                                immediate=immediate,
+                                cancelled=False,
+                                request=request,
+                            )
+                            if cal_result == 'ics_request':
+                                messages.success(
+                                    request,
+                                    f'Updated calendar invite sent to {visit.client.owner_email}.',
+                                )
+                            else:
+                                messages.success(
+                                    request,
+                                    f'Schedule-change review link sent to {visit.client.owner_email}.',
+                                )
+                        except VisitEmailError as exc:
+                            messages.warning(
+                                request,
+                                f'Visit updated, but calendar email was not sent: {exc}',
+                            )
                 return redirect('operations:dog_detail', pk=visit.client_id)
             except ValidationError as e:
                 apply_visit_form_errors(visit_form, e)
 
+    series_scheduled_count, _other = cancel_scheduled_series_counts(visit)
     return render(request, 'operations/visit_form.html', {
         'client': visit.client,
         'visit_form': visit_form,
@@ -164,6 +203,8 @@ def visit_edit(request, pk):
         'show_clone': False,
         'visit': visit,
         'show_calendar_cancel_options': visit_calendar.calendar_ics_in_play(visit),
+        'show_series_cancel_options': series_has_scheduled_siblings(visit),
+        'series_scheduled_count': series_scheduled_count,
     })
 
 
@@ -190,7 +231,10 @@ def visit_send_confirmation(request, pk):
 @login_required
 @require_POST
 def visit_delete(request, pk):
-    visit = get_object_or_404(Visit.objects.select_related('client'), pk=pk)
+    visit = get_object_or_404(
+        Visit.objects.select_related('client', 'series'),
+        pk=pk,
+    )
     dog_pk = visit.client_id
     dog_name = visit.client.dog_name
     if not visit.is_editable:
@@ -200,6 +244,32 @@ def visit_delete(request, pk):
     immediate = request.POST.get('send_calendar_invite_immediately') in {
         'on', 'true', '1', 'yes',
     }
+    apply_series = request.POST.get('apply_to_series') == 'series'
+
+    if apply_series and visit.series_id:
+        try:
+            result = cancel_scheduled_series(
+                visit,
+                immediate_calendar=immediate,
+                request=request,
+            )
+        except ValidationError as exc:
+            messages.error(request, '; '.join(exc.messages) if hasattr(exc, 'messages') else str(exc))
+            return redirect('operations:visit_edit', pk=visit.pk)
+        removed = len(result.updated) + result.hard_deleted
+        messages.success(
+            request,
+            f'Cancelled/removed {removed} scheduled visit(s) in the series for {dog_name}.',
+        )
+        if result.unchanged_other_statuses:
+            messages.info(
+                request,
+                f'{result.unchanged_other_statuses} checked-in/completed/'
+                f'cancelled visit(s) in the series were left unchanged.',
+            )
+        for err in result.calendar_errors:
+            messages.warning(request, f'Calendar email issue: {err}')
+        return redirect('operations:dog_detail', pk=dog_pk)
 
     if visit_calendar.can_hard_delete_visit(visit):
         visit.delete()
@@ -209,13 +279,13 @@ def visit_delete(request, pk):
     # Invited visits: soft-cancel so UID/SEQUENCE survive for METHOD:CANCEL.
     visit_calendar.soft_cancel_visit(visit)
     try:
-        result = visit_calendar.notify_staff_schedule_change(
+        cal_result = visit_calendar.notify_staff_schedule_change(
             visit,
             immediate=immediate,
             cancelled=True,
             request=request,
         )
-        if result == 'ics_cancel':
+        if cal_result == 'ics_cancel':
             messages.success(
                 request,
                 f'Cancelled {dog_name}\'s visit and sent a calendar cancellation.',

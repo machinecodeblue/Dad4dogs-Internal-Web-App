@@ -98,6 +98,16 @@ class VisitForm(forms.Form):
         initial=False,
         widget=forms.CheckboxInput(attrs={'class': 'confirm-email-checkbox'}),
     )
+    apply_to_series = forms.ChoiceField(
+        label='Apply changes to',
+        required=False,
+        choices=(
+            ('this', 'This visit only'),
+            ('series', 'All remaining scheduled visits in this series'),
+        ),
+        initial='this',
+        widget=forms.RadioSelect,
+    )
 
     def __init__(
         self,
@@ -144,6 +154,21 @@ class VisitForm(forms.Form):
             ):
                 del self.fields[name]
             from operations.services import visit_calendar
+            from operations.services.visit_series_ops import series_has_scheduled_siblings
+
+            if series_has_scheduled_siblings(instance):
+                scheduled_n = instance.series.visits.filter(
+                    status=instance.Status.SCHEDULED,
+                ).count()
+                self.fields['apply_to_series'].choices = (
+                    ('this', 'This visit only'),
+                    (
+                        'series',
+                        f'All {scheduled_n} remaining scheduled visits in this series',
+                    ),
+                )
+            else:
+                del self.fields['apply_to_series']
 
             if (
                 visit_calendar.calendar_ics_in_play(instance)
@@ -161,6 +186,7 @@ class VisitForm(forms.Form):
                 del self.fields['send_calendar_invite_immediately']
         else:
             del self.fields['send_calendar_invite_immediately']
+            del self.fields['apply_to_series']
             if preferred_service_slug:
                 preferred = service_field.queryset.filter(slug=preferred_service_slug).first()
                 if preferred:
@@ -228,6 +254,9 @@ class VisitForm(forms.Form):
 
         cleaned['occurrences'] = self._build_occurrences(cleaned)
         if self._occurrence_limit_exceeded(cleaned):
+            return cleaned
+        # Series bulk shift validates capacity/overlap for the whole batch.
+        if self.instance and cleaned.get('apply_to_series') == 'series':
             return cleaned
         self._validate_occurrence_capacity(
             cleaned['occurrences'],

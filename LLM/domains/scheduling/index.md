@@ -106,7 +106,7 @@ Tests live in `operations/tests/scheduling/`:
 
 ## Not yet built
 
-- Edit/delete entire repeat series at once (ops UX; distinct from series “confirm all” on the client manage page)
+_(none in scheduling MVP — series edit/delete landed; see [`booking.md`](booking.md).)_
 
 Unidirectional client calendar confirm is **Done** (C1–C5) — see [`calendar_email.md`](calendar_email.md).
 

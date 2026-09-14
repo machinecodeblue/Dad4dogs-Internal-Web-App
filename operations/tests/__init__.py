@@ -12,6 +12,7 @@ from .scheduling.test_visit_calendar import (
     StaffCalendarChangeTests,
     VisitCalendarHelpersTests,
 )
+from .scheduling.test_visit_series_ops import VisitSeriesEditViewTests, VisitSeriesOpsTests
 from .scheduling.test_capacity import CapacityTimezoneTests, VisitCapacitySaveTests
 from .scheduling.test_checkin import VisitCheckInOutViewTests, VisitCheckOutTests
 from .scheduling.test_pricing import PricingEngineTests
@@ -64,6 +65,8 @@ __all__ = [
     'BookingManageViewTests',
     'StaffCalendarChangeTests',
     'BusinessTimezoneHelpersTests',
+    'VisitSeriesOpsTests',
+    'VisitSeriesEditViewTests',
     'BusinessProfileTests',
     'BusinessSettingsViewTests',
     'PwaTests',

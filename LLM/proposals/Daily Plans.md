@@ -39,13 +39,11 @@ No new feature work required for P0.
 
 **Refs:** `scheduling/calendar_email.md`, `scheduling/booking.md`.
 
-### 3. Edit / delete entire repeat series
+### 3. Edit / delete entire repeat series — **Done**
 
-**Today:** Series create works; per-visit edit/delete only.
+Shift or cancel all **still-scheduled** members of a `VisitSeries` from visit edit/delete (`visit_series_ops.py`). Checked-in/completed left unchanged. Calendar follow-up reuses C4.
 
-**Why:** Common correction path (“move the whole weekly run”) without N clicks and capacity thrash.
-
-**Refs:** `scheduling/booking.md`, `scheduling/index.md`.
+**Refs:** `scheduling/booking.md`.
 
 ---
 

@@ -49,6 +49,16 @@
         <label for="{{ visit_form.notes.id_for_label }}" style="margin-top:1rem;display:block">Notes (optional)</label>
         {{ visit_form.notes }}
 
+        {% if visit_form.apply_to_series %}
+        <fieldset style="margin-top:1rem;border:none;padding:0">
+            <legend style="font-size:0.95rem;font-weight:600;margin-bottom:0.35rem">{{ visit_form.apply_to_series.label }}</legend>
+            {% for radio in visit_form.apply_to_series %}
+            <label style="display:block;margin-bottom:0.35rem">{{ radio.tag }} {{ radio.choice_label }}</label>
+            {% endfor %}
+            <p class="muted" style="font-size:0.85rem">Checked-in or completed visits in the series are left unchanged.</p>
+        </fieldset>
+        {% endif %}
+
         {% include "operations/components/scheduling/email_confirm_card.html" with visit_form=visit_form only %}
 
         <div class="actions" style="margin-top:0.75rem">
@@ -59,8 +69,21 @@
 
     {% if visit and visit.is_editable %}
     <form method="post" action="{% url 'operations:visit_delete' visit.pk %}" style="margin-top:1rem"
-          onsubmit="return confirm('{% if show_calendar_cancel_options %}Cancel this visit? The client calendar will be updated after they confirm (or immediately if you check the box below).{% else %}Remove this scheduled visit?{% endif %}');">
+          onsubmit="var series=this.querySelector('input[name=apply_to_series][value=series]'); var bulk=series&&series.checked; return confirm(bulk ? 'Cancel/remove all {{ series_scheduled_count }} remaining scheduled visits in this series?' : '{% if show_calendar_cancel_options %}Cancel this visit?{% else %}Remove this scheduled visit?{% endif %}');">
         {% csrf_token %}
+        {% if show_series_cancel_options %}
+        <fieldset style="margin-bottom:0.75rem;border:none;padding:0">
+            <legend style="font-size:0.95rem;font-weight:600;margin-bottom:0.35rem">Cancel</legend>
+            <label style="display:block;margin-bottom:0.35rem">
+                <input type="radio" name="apply_to_series" value="this" checked>
+                This visit only
+            </label>
+            <label style="display:block;margin-bottom:0.35rem">
+                <input type="radio" name="apply_to_series" value="series">
+                All {{ series_scheduled_count }} remaining scheduled visits in this series
+            </label>
+        </fieldset>
+        {% endif %}
         {% if show_calendar_cancel_options %}
         <div class="email-confirm-card" style="margin-bottom:0.75rem">
             <label>
